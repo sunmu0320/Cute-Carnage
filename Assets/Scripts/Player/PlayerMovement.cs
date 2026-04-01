@@ -36,6 +36,7 @@ public class PlayerMovement : MonoBehaviour
 
     float currentMoveBlend;
     float moveBlendVelocity;
+    bool isMovementLocked;
 
     void Awake()
     {
@@ -46,6 +47,12 @@ public class PlayerMovement : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        if (isMovementLocked)
+        {
+            UpdateAnimation(Vector2.zero, false, false, false);
+            return;
+        }
+
         // Read input axes.
         // - "Horizontal" is typically mapped to A/D or Left/Right arrows.
         // - "Vertical" is typically mapped to W/S or Up/Down arrows.
@@ -81,6 +88,11 @@ public class PlayerMovement : MonoBehaviour
         float currentSpeed = runPressed ? moveSpeed * sprintMultiplier : moveSpeed;
         Move(moveDir, currentSpeed);
         Rotate(moveDir);
+    }
+
+    public void SetMovementLocked(bool locked)
+    {
+        isMovementLocked = locked;
     }
 
     void UpdateAnimation(Vector2 input, bool isMoving, bool keyboardMovePressed, bool runPressed)

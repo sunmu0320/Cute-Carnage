@@ -3,6 +3,12 @@ using UnityEngine;
 
 public class PlayerInteractor : MonoBehaviour
 {
+    const string IsGatheringParameter = "IsGathering";
+    const string GatherTypeParameter = "GatherType";
+    const int GatherTypeNone = 0;
+    const int GatherTypePickup = 1;
+    const int GatherTypeLogging = 2;
+
     [Header("Interaction")]
     [SerializeField, Tooltip("How far the player can reach to interact.")]
     float interactionRadius = 2f;
@@ -16,10 +22,8 @@ public class PlayerInteractor : MonoBehaviour
     [Header("Gather Animation")]
     [SerializeField, Tooltip("Animator used to trigger gather animations. Auto-found in children if left empty.")]
     Animator playerAnimator;
-    [SerializeField, Tooltip("Animator trigger parameter for pickup-style gathering.")]
-    string pickupTriggerParameter = "GatherPickup";
-    [SerializeField, Tooltip("Animator trigger parameter for logging-style gathering.")]
-    string loggingTriggerParameter = "GatherLogging";
+    [SerializeField, Tooltip("Optional movement script to lock while gathering.")]
+    PlayerMovement playerMovement;
 
     [Header("Gather Timing")]
     [SerializeField, Tooltip("Time in seconds required to finish gathering a resource node.")]
@@ -37,6 +41,8 @@ public class PlayerInteractor : MonoBehaviour
     {
         if (playerAnimator == null)
             playerAnimator = GetComponentInChildren<Animator>();
+        if (playerMovement == null)
+            playerMovement = GetComponent<PlayerMovement>();
     }
 
     void Update()
@@ -65,7 +71,7 @@ public class PlayerInteractor : MonoBehaviour
     IEnumerator GatherResourceOverTime(ResourceNode resourceNode)
     {
         isGathering = true;
-        TriggerGatherAnimationIfNeeded(resourceNode);
+        BeginGatherState(resourceNode);
         CreateGatherBar(resourceNode);
 
         float elapsed = 0f;
@@ -73,8 +79,7 @@ public class PlayerInteractor : MonoBehaviour
         {
             if (resourceNode == null || !resourceNode.CanInteract(this))
             {
-                CleanupGatherBar();
-                isGathering = false;
+                EndGatherState();
                 yield break;
             }
 
@@ -89,8 +94,7 @@ public class PlayerInteractor : MonoBehaviour
         if (resourceNode != null && resourceNode.CanInteract(this))
             resourceNode.Interact(this);
 
-        CleanupGatherBar();
-        isGathering = false;
+        EndGatherState();
     }
 
     void CreateGatherBar(ResourceNode resourceNode)
@@ -118,23 +122,39 @@ public class PlayerInteractor : MonoBehaviour
         activeGatherBar = null;
     }
 
-    void TriggerGatherAnimationIfNeeded(IInteractable interactable)
+    void BeginGatherState(ResourceNode resourceNode)
     {
+        if (playerMovement != null)
+            playerMovement.SetMovementLocked(true);
+
         if (playerAnimator == null)
             return;
 
-        ResourceNode resourceNode = interactable as ResourceNode;
-        if (resourceNode == null)
-            return;
+        int gatherType = GatherTypeNone;
+        if (resourceNode != null)
+        {
+            gatherType = resourceNode.GatherAnimationType == GatherAnimationType.Logging
+                ? GatherTypeLogging
+                : GatherTypePickup;
+        }
 
-        string triggerParameter = resourceNode.GatherAnimationType == GatherAnimationType.Logging
-            ? loggingTriggerParameter
-            : pickupTriggerParameter;
+        playerAnimator.SetInteger(GatherTypeParameter, gatherType);
+        playerAnimator.SetBool(IsGatheringParameter, true);
+    }
 
-        if (string.IsNullOrWhiteSpace(triggerParameter))
-            return;
+    void EndGatherState()
+    {
+        if (playerMovement != null)
+            playerMovement.SetMovementLocked(false);
 
-        playerAnimator.SetTrigger(triggerParameter);
+        if (playerAnimator != null)
+        {
+            playerAnimator.SetBool(IsGatheringParameter, false);
+            playerAnimator.SetInteger(GatherTypeParameter, GatherTypeNone);
+        }
+
+        CleanupGatherBar();
+        isGathering = false;
     }
 
     IInteractable FindNearestValidInteractable()

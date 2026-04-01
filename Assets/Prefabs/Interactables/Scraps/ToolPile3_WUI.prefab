@@ -308,6 +308,37 @@ MonoBehaviour:
   promptUI: {fileID: 4330752061424426896}
   promptMessage: E - Gather
   playerTag: Player
+--- !u!1 &2295270886860085555
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6639485622880471525}
+  m_Layer: 0
+  m_Name: GatherBarAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6639485622880471525
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2295270886860085555}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.084, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3530661693475572739}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6941772928786941788
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,6 +368,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 6639485622880471525}
   - {fileID: 2494451270270688613}
   - {fileID: 1614036888868207378}
   - {fileID: 4080457725700576894}
@@ -411,6 +443,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3530661693475572739}
     m_Modifications:
+    - target: {fileID: 3853760121678634079, guid: e4b09f3aa5d8bb64fbc1aeb43473426a, type: 3}
+      propertyPath: gatherBarAnchor
+      value: 
+      objectReference: {fileID: 6639485622880471525}
     - target: {fileID: 8367771552950041343, guid: e4b09f3aa5d8bb64fbc1aeb43473426a, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0

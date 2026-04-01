@@ -130,6 +130,37 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleBillboard
   targetCamera: {fileID: 0}
+--- !u!1 &2993995562977340612
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 8769907549097347823}
+  m_Layer: 0
+  m_Name: GatherBarAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &8769907549097347823
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2993995562977340612}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 7.87, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7612011785806574018}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3198144581532515312
 GameObject:
   m_ObjectHideFlags: 0
@@ -261,6 +292,7 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
+  - {fileID: 8769907549097347823}
   - {fileID: 3288019815433951734}
   - {fileID: 2106527773158932398}
   - {fileID: 7411105722245977982}
@@ -450,6 +482,14 @@ PrefabInstance:
     - target: {fileID: 931691503833693289, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4455181019768882628, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+      propertyPath: gatherBarAnchor
+      value: 
+      objectReference: {fileID: 8769907549097347823}
+    - target: {fileID: 4455181019768882628, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+      propertyPath: gatherAnimationType
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
       propertyPath: m_Name
