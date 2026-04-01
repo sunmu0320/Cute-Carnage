@@ -9,6 +9,15 @@ public class ResourceNode : BaseInteractable
     [SerializeField, Tooltip("Amount granted when gathered.")]
     int amount = 1;
 
+    [SerializeField, Tooltip("Animation style this node should use for gathering.")]
+    GatherAnimationType gatherAnimationType = GatherAnimationType.Pickup;
+
+    [SerializeField, Tooltip("Optional anchor where the world gather bar appears.")]
+    Transform gatherBarAnchor;
+
+    public GatherAnimationType GatherAnimationType => gatherAnimationType;
+    public Transform GatherBarAnchor => gatherBarAnchor;
+
     public override string GetInteractionPrompt()
     {
         return $"Press E to gather {resourceType}";
