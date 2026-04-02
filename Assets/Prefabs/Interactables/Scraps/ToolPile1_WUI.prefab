@@ -409,7 +409,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3607218302345421953}
-  m_Layer: 0
+  - component: {fileID: 3517910996873171091}
+  - component: {fileID: 7555768978828882756}
+  m_Layer: 6
   m_Name: ToolPile1_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -429,12 +431,52 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 9146934271133587681}
   - {fileID: 2815427168286898489}
   - {fileID: 8967935050269180774}
   - {fileID: 4636480070989261198}
+  - {fileID: 9146934271133587681}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &3517910996873171091
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7613023753575376286}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.52, y: 1, z: 2.14}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &7555768978828882756
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7613023753575376286}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Tool
+  canUse: 1
+  oneTimeUse: 1
+  resourceType: 2
+  amount: 1
+  gatherAnimationType: 0
+  gatherBarAnchor: {fileID: 9146934271133587681}
 --- !u!1001 &2425193467148670376
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -487,17 +529,43 @@ PrefabInstance:
       propertyPath: m_Name
       value: ToolPile1
       objectReference: {fileID: 0}
+    - target: {fileID: 1004791040373667371, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6600903943419572668, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
       propertyPath: gatherBarAnchor
       value: 
       objectReference: {fileID: 9146934271133587681}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7523210219449379702, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
+    - {fileID: 6600903943419572668, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1004791040373667371, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 222731250416488695}
   m_SourcePrefab: {fileID: 100100000, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
 --- !u!4 &2815427168286898489 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 484819259256990865, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
   m_PrefabInstance: {fileID: 2425193467148670376}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &3195788525405021059 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1004791040373667371, guid: e0f90e2678215684ea0a5aaf351b762e, type: 3}
+  m_PrefabInstance: {fileID: 2425193467148670376}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &222731250416488695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3195788525405021059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake

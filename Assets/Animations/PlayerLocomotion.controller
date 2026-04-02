@@ -79,7 +79,7 @@ AnimatorStateMachine:
   m_StateMachineTransitions: {}
   m_StateMachineBehaviours: []
   m_AnyStatePosition: {x: 50, y: 20, z: 0}
-  m_EntryPosition: {x: 50, y: 120, z: 0}
+  m_EntryPosition: {x: 40, y: 120, z: 0}
   m_ExitPosition: {x: 800, y: 120, z: 0}
   m_ParentStateMachinePosition: {x: 800, y: 20, z: 0}
   m_DefaultState: {fileID: -2513700475111056072}
@@ -92,28 +92,22 @@ AnimatorController:
   m_Name: PlayerLocomotion
   serializedVersion: 5
   m_AnimatorParameters:
+  - m_Name: MoveBlend
+    m_Type: 1
+    m_DefaultFloat: 0
+    m_DefaultInt: 0
+    m_DefaultBool: 0
+    m_Controller: {fileID: 9100000}
   - m_Name: IsGathering
     m_Type: 4
     m_DefaultFloat: 0
     m_DefaultInt: 0
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
-  - m_Name: None
+  - m_Name: GatherType
     m_Type: 3
     m_DefaultFloat: 0
     m_DefaultInt: 0
-    m_DefaultBool: 0
-    m_Controller: {fileID: 9100000}
-  - m_Name: Pickup
-    m_Type: 3
-    m_DefaultFloat: 0
-    m_DefaultInt: 1
-    m_DefaultBool: 0
-    m_Controller: {fileID: 9100000}
-  - m_Name: Logging
-    m_Type: 3
-    m_DefaultFloat: 0
-    m_DefaultInt: 2
     m_DefaultBool: 0
     m_Controller: {fileID: 9100000}
   m_AnimatorLayers:
@@ -141,7 +135,7 @@ AnimatorStateTransition:
     m_ConditionEvent: IsGathering
     m_EventTreshold: 0
   - m_ConditionMode: 6
-    m_ConditionEvent: Pickup
+    m_ConditionEvent: GatherType
     m_EventTreshold: 1
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: 2567612249990454797}
@@ -285,7 +279,7 @@ AnimatorStateTransition:
     m_ConditionEvent: IsGathering
     m_EventTreshold: 0
   - m_ConditionMode: 6
-    m_ConditionEvent: Logging
+    m_ConditionEvent: GatherType
     m_EventTreshold: 2
   m_DstStateMachine: {fileID: 0}
   m_DstState: {fileID: -6083434707568404003}

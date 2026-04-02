@@ -409,7 +409,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8903178773333941926}
-  m_Layer: 0
+  - component: {fileID: 5883658229438936074}
+  - component: {fileID: 2988866936236889225}
+  m_Layer: 6
   m_Name: BeanCan_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -429,12 +431,54 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 3497427807047997538}
   - {fileID: 3274711669474557468}
   - {fileID: 1979573771616635935}
   - {fileID: 5933338640248718473}
+  - {fileID: 3497427807047997538}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &5883658229438936074
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8366074222437967040}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 1.1542723
+  m_Height: 2.843743
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2988866936236889225
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8366074222437967040}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Can
+  canUse: 1
+  oneTimeUse: 1
+  resourceType: 1
+  amount: 1
+  gatherAnimationType: 0
+  gatherBarAnchor: {fileID: 3497427807047997538}
 --- !u!1001 &2510073616183422053
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -446,6 +490,10 @@ PrefabInstance:
     - target: {fileID: 354762799686764739, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
       propertyPath: m_Name
       value: BeanCan
+      objectReference: {fileID: 0}
+    - target: {fileID: 354762799686764739, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 1128026699022865017, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
       propertyPath: m_LocalPosition.x
@@ -491,11 +539,33 @@ PrefabInstance:
       propertyPath: gatherBarAnchor
       value: 
       objectReference: {fileID: 3497427807047997538}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 3425760755391984164, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
+    - {fileID: 4293482647588364290, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 354762799686764739, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 2052618248834850974}
   m_SourcePrefab: {fileID: 100100000, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
+--- !u!1 &2754457245221332134 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 354762799686764739, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}
+  m_PrefabInstance: {fileID: 2510073616183422053}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &2052618248834850974
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2754457245221332134}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake
 --- !u!4 &3274711669474557468 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 1128026699022865017, guid: e29a72ca4165bed459d11bedf5f55132, type: 3}

@@ -9,7 +9,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3329286529701741015}
-  m_Layer: 0
+  - component: {fileID: 5732858546049605130}
+  - component: {fileID: 3847021754029643681}
+  m_Layer: 6
   m_Name: MetalPile2_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -29,12 +31,52 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1057337260096298140}
   - {fileID: 8475791189794748341}
   - {fileID: 587776228906491442}
   - {fileID: 7595564741872685410}
+  - {fileID: 1057337260096298140}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &5732858546049605130
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 828379803831864093}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.5, y: 1, z: 2.41}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3847021754029643681
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 828379803831864093}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Metal
+  canUse: 1
+  oneTimeUse: 1
+  resourceType: 2
+  amount: 1
+  gatherAnimationType: 0
+  gatherBarAnchor: {fileID: 1057337260096298140}
 --- !u!1 &1209909558018741847
 GameObject:
   m_ObjectHideFlags: 0
@@ -447,6 +489,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: MetalPile2
       objectReference: {fileID: 0}
+    - target: {fileID: 6020179681102650408, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6395156733556524690, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -491,13 +537,35 @@ PrefabInstance:
       propertyPath: gatherBarAnchor
       value: 
       objectReference: {fileID: 1057337260096298140}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 7647203998966092660, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
+    - {fileID: 9069601731009986890, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6020179681102650408, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8695410971067510082}
   m_SourcePrefab: {fileID: 100100000, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
 --- !u!4 &8475791189794748341 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6395156733556524690, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
   m_PrefabInstance: {fileID: 3269655131188916519}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &9145649220574358799 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6020179681102650408, guid: cf655667a4d7325489c64b5d25a6e0ac, type: 3}
+  m_PrefabInstance: {fileID: 3269655131188916519}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8695410971067510082
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9145649220574358799}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake

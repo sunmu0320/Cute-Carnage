@@ -115,6 +115,12 @@ public class PlayerMovement : MonoBehaviour
         }
 
         currentMoveBlend = Mathf.SmoothDamp(currentMoveBlend, targetMoveBlend, ref moveBlendVelocity, moveBlendSmoothTime);
+        if (targetMoveBlend == 0f)
+            moveBlendVelocity = 0f;
+
+        // Prevent tiny floating-point drift from making MoveBlend never fully reach 0.
+        if (Mathf.Abs(currentMoveBlend) < 0.001f)
+            currentMoveBlend = 0f;
         if (animator != null && !string.IsNullOrEmpty(moveBlendParameter))
             animator.SetFloat(moveBlendParameter, currentMoveBlend);
     }

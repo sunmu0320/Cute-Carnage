@@ -74,6 +74,9 @@ public class PlayerInteractor : MonoBehaviour
         BeginGatherState(resourceNode);
         CreateGatherBar(resourceNode);
 
+        SimpleShake shake = resourceNode.GetComponentInChildren<SimpleShake>();
+        float shakeTimer = 0f;
+
         float elapsed = 0f;
         while (elapsed < gatherDurationSeconds)
         {
@@ -88,8 +91,17 @@ public class PlayerInteractor : MonoBehaviour
             if (activeGatherBar != null)
                 activeGatherBar.SetProgress(progress);
 
+            shakeTimer -= Time.deltaTime;
+            if (shake != null && shakeTimer <= 0f)
+            {
+                shake.Shake(0.1f, 0.05f);
+                shakeTimer = 0.15f;
+            }
+
+
             yield return null;
         }
+        
 
         if (resourceNode != null && resourceNode.CanInteract(this))
             resourceNode.Interact(this);

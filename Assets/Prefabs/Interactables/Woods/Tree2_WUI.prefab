@@ -272,7 +272,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7612011785806574018}
-  m_Layer: 0
+  - component: {fileID: 6690841262601384214}
+  - component: {fileID: 6914338880193685932}
+  m_Layer: 6
   m_Name: Tree2_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -292,12 +294,52 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 8769907549097347823}
   - {fileID: 3288019815433951734}
   - {fileID: 2106527773158932398}
   - {fileID: 7411105722245977982}
+  - {fileID: 8769907549097347823}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &6690841262601384214
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4080773195737527922}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &6914338880193685932
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4080773195737527922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Tree
+  canUse: 1
+  oneTimeUse: 1
+  resourceType: 0
+  amount: 1
+  gatherAnimationType: 1
+  gatherBarAnchor: {fileID: 8769907549097347823}
 --- !u!1 &4485842281364657450
 GameObject:
   m_ObjectHideFlags: 0
@@ -495,13 +537,39 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree2
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    - target: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
+    m_RemovedComponents:
+    - {fileID: 5414483471286395906, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+    - {fileID: 4455181019768882628, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4498691441210717044}
   m_SourcePrefab: {fileID: 100100000, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
 --- !u!4 &3288019815433951734 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 931691503833693289, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
   m_PrefabInstance: {fileID: 2400256859348100511}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4993224011359217372 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+  m_PrefabInstance: {fileID: 2400256859348100511}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4498691441210717044
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4993224011359217372}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake

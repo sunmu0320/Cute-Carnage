@@ -264,7 +264,7 @@ Transform:
   m_GameObject: {fileID: 3349303256898393048}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 8.51, z: 0}
+  m_LocalPosition: {x: 0, y: 4.12, z: -2.96}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -297,7 +297,7 @@ Transform:
   m_GameObject: {fileID: 5192796808210010792}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 7.14, z: -2.14}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -340,7 +340,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3402804846880297368}
-  m_Layer: 0
+  - component: {fileID: 3285646115820829047}
+  - component: {fileID: 5273897866199446557}
+  m_Layer: 6
   m_Name: Tree1_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -360,12 +362,52 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 6768758204502667857}
   - {fileID: 4381545844536518390}
   - {fileID: 339281275184064471}
   - {fileID: 2277083124235094243}
+  - {fileID: 6768758204502667857}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!65 &3285646115820829047
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5769198594944497629}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1.7915583, y: 3.2219105, z: 1.8451853}
+  m_Center: {x: -0.15852356, y: 1.1109552, z: -0.2761016}
+--- !u!114 &5273897866199446557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5769198594944497629}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Tree
+  canUse: 1
+  oneTimeUse: 1
+  resourceType: 0
+  amount: 1
+  gatherAnimationType: 1
+  gatherBarAnchor: {fileID: 6768758204502667857}
 --- !u!1 &6223493627144827528
 GameObject:
   m_ObjectHideFlags: 0
@@ -455,6 +497,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Tree1
       objectReference: {fileID: 0}
+    - target: {fileID: 1945382237213718834, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
+      propertyPath: m_Layer
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 7380830500340458922, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -495,13 +541,35 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 771186246893753837, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
+    - {fileID: 348501798405373639, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 1945382237213718834, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1409702013596049377}
   m_SourcePrefab: {fileID: 100100000, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
 --- !u!4 &4381545844536518390 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 7380830500340458922, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
   m_PrefabInstance: {fileID: 6531233790144627548}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &4637854744266881646 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 1945382237213718834, guid: 4057d2401a3a37a4aa4548be1836b69b, type: 3}
+  m_PrefabInstance: {fileID: 6531233790144627548}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &1409702013596049377
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4637854744266881646}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake

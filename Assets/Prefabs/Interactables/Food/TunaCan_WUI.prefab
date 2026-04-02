@@ -109,7 +109,9 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 312022484203831997}
-  m_Layer: 0
+  - component: {fileID: 6777398444414839099}
+  - component: {fileID: 2491802924200265746}
+  m_Layer: 6
   m_Name: TunaCan_WUI
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -129,12 +131,54 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 4329503972156959565}
   - {fileID: 8640877635298270447}
   - {fileID: 4385349117622554505}
   - {fileID: 6564630384787435681}
+  - {fileID: 4329503972156959565}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &6777398444414839099
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2544903386510447214}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.714854
+  m_Height: 1.827977
+  m_Direction: 1
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &2491802924200265746
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2544903386510447214}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 01ac5fe75bb533b41860c1783c2f4bf4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
+  interactName: Can
+  canUse: 1
+  oneTimeUse: 0
+  resourceType: 1
+  amount: 1
+  gatherAnimationType: 0
+  gatherBarAnchor: {fileID: 4329503972156959565}
 --- !u!1001 &1122235086201322196
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -150,6 +194,10 @@ PrefabInstance:
     - target: {fileID: 8301183169317584001, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
       propertyPath: m_Name
       value: TunaCan
+      objectReference: {fileID: 0}
+    - target: {fileID: 8301183169317584001, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8680805590132352571, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
       propertyPath: m_LocalPosition.x
@@ -191,16 +239,38 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents: []
+    m_RemovedComponents:
+    - {fileID: 1029149800902103746, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
+    - {fileID: 6131882891749345105, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8301183169317584001, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3838025975618286523}
   m_SourcePrefab: {fileID: 100100000, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
 --- !u!4 &8640877635298270447 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 8680805590132352571, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
   m_PrefabInstance: {fileID: 1122235086201322196}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &8980530329980913237 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8301183169317584001, guid: 4c31aa68f9c55ae49a678a499a996aae, type: 3}
+  m_PrefabInstance: {fileID: 1122235086201322196}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3838025975618286523
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8980530329980913237}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::SimpleShake
 --- !u!1001 &5593563293259842425
 PrefabInstance:
   m_ObjectHideFlags: 0

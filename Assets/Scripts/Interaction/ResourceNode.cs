@@ -18,6 +18,7 @@ public class ResourceNode : BaseInteractable
     public GatherAnimationType GatherAnimationType => gatherAnimationType;
     public Transform GatherBarAnchor => gatherBarAnchor;
 
+
     public override string GetInteractionPrompt()
     {
         return $"Press E to gather {resourceType}";
