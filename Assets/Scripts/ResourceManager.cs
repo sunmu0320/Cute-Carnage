@@ -24,28 +24,7 @@ public class ResourceManager : MonoBehaviour
         Debug.Log($"Added {amount} {type}. New total: {resources[type]}");
     }
 
-    public void RemoveResource(ResourceType type, int amount)
-    {
-        if (amount <= 0)
-        {
-            return;
-        }
-
-        InitializeIfNeeded();
-
-        int current = resources[type];
-        int removed = Math.Min(current, amount);
-
-        if (removed <= 0)
-        {
-            return;
-        }
-
-        resources[type] = Math.Max(0, current - amount);
-        Debug.Log($"Removed {removed} {type}. New total: {resources[type]}");
-    }
-
-    public bool HasEnough(ResourceType type, int amount)
+    public bool HasResource(ResourceType type, int amount)
     {
         if (amount <= 0)
         {
@@ -54,6 +33,51 @@ public class ResourceManager : MonoBehaviour
 
         InitializeIfNeeded();
         return resources[type] >= amount;
+    }
+
+    public bool TrySpendResource(ResourceType type, int amount)
+    {
+        if (amount <= 0)
+        {
+            return false;
+        }
+
+        InitializeIfNeeded();
+
+        if (!HasResource(type, amount))
+        {
+            return false;
+        }
+
+        resources[type] -= amount;
+        Debug.Log($"Spent {amount} {type}. New total: {resources[type]}");
+        return true;
+    }
+
+    public void RemoveResource(ResourceType type, int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        if (TrySpendResource(type, amount))
+        {
+            return;
+        }
+
+        int available = GetAmount(type);
+        if (available <= 0)
+        {
+            return;
+        }
+
+        TrySpendResource(type, available);
+    }
+
+    public bool HasEnough(ResourceType type, int amount)
+    {
+        return HasResource(type, amount);
     }
 
     public int GetAmount(ResourceType type)

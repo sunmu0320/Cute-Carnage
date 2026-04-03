@@ -1,12 +1,20 @@
 using System;
 using System.IO;
 using UnityEngine;
+using UnityEngine.UI;
 using TMPro;
 
 public class HUDController : MonoBehaviour
 {
     [Header("Player HP (Top Left)")]
     [SerializeField] private TextMeshProUGUI hpText;
+
+    [Header("Player Hunger (Top Left, below HP)")]
+    [Tooltip("Optional. If assigned, HUD shows current/max hunger on hungerText.")]
+    [SerializeField] private HungerSystem hungerSystem;
+
+    [Tooltip("Optional. TMP line directly under HP; format: Hunger 80 / 100.")]
+    [SerializeField] private TextMeshProUGUI hungerText;
 
     [Header("Gameplay Sources (Optional)")]
     [Tooltip("Optional. If assigned, HUD will read current/max HP from this component.")]
@@ -22,6 +30,16 @@ public class HUDController : MonoBehaviour
     [Header("Status (Top Center)")]
     [SerializeField] private TextMeshProUGUI dayText;
     [SerializeField] private TextMeshProUGUI phaseText;
+
+    [Header("Day Timer Bar (Top Center)")]
+    [Tooltip("Optional. If assigned, HUD will read remaining time/progress from this DayTimeManager.")]
+    [SerializeField] private DayTimeManager dayTimeManager;
+
+    [Tooltip("Optional. The UI Image used as the filled portion of the bar. Must be set to Image.Type = Filled.")]
+    [SerializeField] private Image dayTimerBarFillImage;
+
+    [Tooltip("Optional. If assigned, HUD will render remaining time as MM:SS on/within the bar.")]
+    [SerializeField] private TextMeshProUGUI dayTimerText;
 
     private void Awake()
     {
@@ -105,11 +123,11 @@ public class HUDController : MonoBehaviour
     private void ApplyPlaceholderText()
     {
         SetTextOrIgnore(hpText, "HP 100 / 100");
+        SetTextOrIgnore(hungerText, GetFallbackHungerText());
         SetTextOrIgnore(foodText, "Food : 0");
         SetTextOrIgnore(scrapText, "Scrap : 0");
         SetTextOrIgnore(woodText, "Wood : 0");
         SetTextOrIgnore(dayText, GetFallbackDayText());
-        SetTextOrIgnore(phaseText, GetFallbackPhaseText());
     }
 
     private void RefreshFromSources()
@@ -131,14 +149,49 @@ public class HUDController : MonoBehaviour
             SetTextOrIgnore(woodText, "Wood : 0");
         }
 
-        // Day/Phase (placeholder fallback; wire real time system later).
+        // Hunger (optional). HungerSystem owns values; HUD only displays rounded integers.
+        if (hungerSystem != null && hungerText != null)
+        {
+            int cur = Mathf.RoundToInt(hungerSystem.CurrentHunger);
+            int max = Mathf.RoundToInt(hungerSystem.MaxHunger);
+            SetTextOrIgnore(hungerText, $"Hunger {cur} / {max}");
+        }
+        else
+        {
+            SetTextOrIgnore(hungerText, GetFallbackHungerText());
+        }
+
+        // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
         SetTextOrIgnore(dayText, GetFallbackDayText());
-        SetTextOrIgnore(phaseText, GetFallbackPhaseText());
-        // TODO: Later: connect to your time/day-phase system and update dayText/phaseText safely.
+
+        // Day timer bar (optional). If dayTimeManager isn't assigned, leave any existing inspector UI intact.
+        if (dayTimeManager != null)
+        {
+            float remainingSeconds = dayTimeManager.RemainingTimeSeconds;
+            // NormalizedTime is day-progress (0 -> 1). We want remaining fraction (1 -> 0).
+            float remainingNormalized = 1f - dayTimeManager.NormalizedTime;
+            float fillAmount = Mathf.Clamp01(remainingNormalized);
+
+            if (dayTimerBarFillImage != null)
+                dayTimerBarFillImage.fillAmount = fillAmount;
+
+            if (dayTimerText != null)
+                SetTextOrIgnore(dayTimerText, FormatRemainingTime(remainingSeconds));
+        }
     }
 
     private static string GetFallbackDayText() => "DAY 1";
+    private static string GetFallbackHungerText() => "Hunger 100 / 100";
     private static string GetFallbackPhaseText() => "SCAVENGE";
+
+    private static string FormatRemainingTime(float seconds)
+    {
+        // Use ceil so the display doesn't "flicker" early when the timer is counting down.
+        int totalSeconds = Mathf.Max(0, Mathf.CeilToInt(seconds));
+        int minutes = totalSeconds / 60;
+        int remainingSeconds = totalSeconds % 60;
+        return $"{minutes:00}:{remainingSeconds:00}";
+    }
 
     private static void SetTextOrIgnore(TextMeshProUGUI target, string value)
     {

@@ -174,7 +174,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::ResourceNode
   interactName: Can
   canUse: 1
-  oneTimeUse: 0
+  oneTimeUse: 1
   resourceType: 1
   amount: 1
   gatherAnimationType: 0
