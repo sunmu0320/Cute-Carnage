@@ -19,6 +19,15 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField, Tooltip("Press this key to interact with the nearest valid target.")]
     KeyCode interactionKey = KeyCode.E;
 
+    [SerializeField, Tooltip("Shared resource inventory used by interactables (fences, nodes, towers, chests).")]
+    ResourceManager resourceManager;
+
+    [SerializeField, Tooltip("Optional world prompt UI that follows the current target.")]
+    WorldPromptUI worldPromptUI;
+
+    [SerializeField, Tooltip("Max colliders scanned each frame by NonAlloc overlap.")]
+    int overlapBufferSize = 32;
+
     [Header("Gather Animation")]
     [SerializeField, Tooltip("Animator used to trigger gather animations. Auto-found in children if left empty.")]
     Animator playerAnimator;
@@ -34,8 +43,10 @@ public class PlayerInteractor : MonoBehaviour
     IInteractable currentInteractable;
     bool isGathering;
     WorldGatherBar activeGatherBar;
+    Collider[] overlapBuffer;
 
     public IInteractable CurrentInteractable => currentInteractable;
+    public ResourceManager ResourceManager => resourceManager;
 
     void Awake()
     {
@@ -43,29 +54,21 @@ public class PlayerInteractor : MonoBehaviour
             playerAnimator = GetComponentInChildren<Animator>();
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
+        if (resourceManager == null)
+            resourceManager = FindObjectOfType<ResourceManager>();
+        if (worldPromptUI == null)
+            worldPromptUI = FindObjectOfType<WorldPromptUI>();
+
+        if (overlapBufferSize < 4)
+            overlapBufferSize = 4;
+        overlapBuffer = new Collider[overlapBufferSize];
     }
 
     void Update()
     {
-        // Re-scan every frame so we always know the nearest valid target.
-        currentInteractable = FindNearestValidInteractable();
-
-        if (currentInteractable == null)
-            return;
-
-        if (Input.GetKeyDown(interactionKey))
-        {
-            ResourceNode resourceNode = currentInteractable as ResourceNode;
-            if (resourceNode != null)
-            {
-                if (!isGathering)
-                    StartCoroutine(GatherResourceOverTime(resourceNode));
-            }
-            else
-            {
-                currentInteractable.Interact(this);
-            }
-        }
+        RefreshCurrentInteractable();
+        RefreshPrompt();
+        HandleInteractInput();
     }
 
     IEnumerator GatherResourceOverTime(ResourceNode resourceNode)
@@ -169,19 +172,29 @@ public class PlayerInteractor : MonoBehaviour
         isGathering = false;
     }
 
-    IInteractable FindNearestValidInteractable()
+    void RefreshCurrentInteractable()
     {
-        Collider[] nearbyColliders = Physics.OverlapSphere(
+        IInteractable nearestInteractable = FindNearestInteractable();
+        currentInteractable = nearestInteractable;
+    }
+
+    IInteractable FindNearestInteractable()
+    {
+        int hitCount = Physics.OverlapSphereNonAlloc(
             transform.position,
             interactionRadius,
+            overlapBuffer,
             interactableLayerMask);
 
         IInteractable nearestInteractable = null;
         float nearestDistanceSqr = float.MaxValue;
 
-        for (int i = 0; i < nearbyColliders.Length; i++)
+        for (int i = 0; i < hitCount; i++)
         {
-            Collider candidateCollider = nearbyColliders[i];
+            Collider candidateCollider = overlapBuffer[i];
+            if (candidateCollider == null)
+                continue;
+
             IInteractable candidateInteractable = ResolveInteractable(candidateCollider);
 
             if (candidateInteractable == null)
@@ -190,7 +203,7 @@ public class PlayerInteractor : MonoBehaviour
             if (!candidateInteractable.CanInteract(this))
                 continue;
 
-            float distanceSqr = (candidateCollider.transform.position - transform.position).sqrMagnitude;
+            float distanceSqr = (candidateInteractable.GetInteractPosition() - transform.position).sqrMagnitude;
             if (distanceSqr < nearestDistanceSqr)
             {
                 nearestDistanceSqr = distanceSqr;
@@ -199,6 +212,48 @@ public class PlayerInteractor : MonoBehaviour
         }
 
         return nearestInteractable;
+    }
+
+    void RefreshPrompt()
+    {
+        if (worldPromptUI == null)
+            return;
+
+        bool shouldHide = currentInteractable == null;
+        InteractablePromptData promptData = default;
+
+        if (!shouldHide)
+        {
+            promptData = currentInteractable.GetInteractionPromptData(this);
+            shouldHide = string.IsNullOrWhiteSpace(promptData.actionText);
+        }
+
+        if (shouldHide)
+            worldPromptUI.Hide();
+        else
+            worldPromptUI.Show(currentInteractable, promptData);
+    }
+
+    void HandleInteractInput()
+    {
+        if (!Input.GetKeyDown(interactionKey))
+            return;
+
+        if (currentInteractable == null)
+            return;
+
+        if (!currentInteractable.CanInteract(this))
+            return;
+
+        ResourceNode resourceNode = currentInteractable as ResourceNode;
+        if (resourceNode != null)
+        {
+            if (!isGathering)
+                StartCoroutine(GatherResourceOverTime(resourceNode));
+            return;
+        }
+
+        currentInteractable.Interact(this);
     }
 
     IInteractable ResolveInteractable(Collider candidateCollider)

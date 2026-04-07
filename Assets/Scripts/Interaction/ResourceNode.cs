@@ -18,18 +18,17 @@ public class ResourceNode : BaseInteractable
     public GatherAnimationType GatherAnimationType => gatherAnimationType;
     public Transform GatherBarAnchor => gatherBarAnchor;
 
-
-    public override string GetInteractionPrompt()
+    public override InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
     {
-        return $"Press E to gather {resourceType}";
+        return InteractablePromptData.CreateSimple("Press E to Gather");
     }
 
     protected override void OnInteract(PlayerInteractor interactor)
     {
-        ResourceManager resourceManager = FindObjectOfType<ResourceManager>();
+        ResourceManager resourceManager = interactor != null ? interactor.ResourceManager : null;
         if (resourceManager == null)
         {
-            Debug.LogWarning($"[{nameof(ResourceNode)}] No {nameof(ResourceManager)} found for {gameObject.name}.");
+            Debug.LogWarning($"[{nameof(ResourceNode)}] No {nameof(ResourceManager)} found on {nameof(PlayerInteractor)} for {gameObject.name}.");
             return;
         }
 

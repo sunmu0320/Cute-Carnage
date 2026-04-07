@@ -1,31 +1,39 @@
 using UnityEngine;
 
-public class ExamplePromptInteractable : MonoBehaviour
+public class ExamplePromptInteractable : MonoBehaviour, IInteractable
 {
-    [Header("Prompt")]
-    [SerializeField] private WorldPromptUI promptUI;
+    [Header("Legacy Example (Non-Driving)")]
     [SerializeField] private string promptMessage = "E - Gather";
-    [SerializeField] private string playerTag = "Player";
 
-    private void OnTriggerEnter(Collider other)
+    private void Awake()
     {
-        if (!other.CompareTag(playerTag))
-            return;
-
-        if (promptUI == null)
-            return;
-
-        promptUI.Show(promptMessage);
+        if (FindObjectOfType<PlayerInteractor>() != null)
+        {
+            Debug.LogWarning("[ExamplePromptInteractable] Unified PlayerInteractor prompt system detected. Keep this script non-driving to avoid duplicate prompts.");
+        }
     }
 
-    private void OnTriggerExit(Collider other)
+    public Transform GetUIAnchor()
     {
-        if (!other.CompareTag(playerTag))
-            return;
+        return transform;
+    }
 
-        if (promptUI == null)
-            return;
+    public Vector3 GetInteractPosition()
+    {
+        return transform.position;
+    }
 
-        promptUI.Hide();
+    public bool CanInteract(PlayerInteractor interactor)
+    {
+        return true;
+    }
+
+    public InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
+    {
+        return InteractablePromptData.CreateSimple(promptMessage);
+    }
+
+    public void Interact(PlayerInteractor interactor)
+    {
     }
 }

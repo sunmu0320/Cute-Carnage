@@ -1,6 +1,10 @@
+using UnityEngine;
+
 public interface IInteractable
 {
-    string GetInteractionPrompt();
+    Transform GetUIAnchor();
+    Vector3 GetInteractPosition();
     bool CanInteract(PlayerInteractor interactor);
+    InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor);
     void Interact(PlayerInteractor interactor);
 }

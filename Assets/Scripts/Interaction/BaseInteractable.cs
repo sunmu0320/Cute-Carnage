@@ -12,11 +12,24 @@ public abstract class BaseInteractable : MonoBehaviour, IInteractable
     [SerializeField, Tooltip("If true, this interactable can only be used once.")]
     protected bool oneTimeUse = false;
 
+    [SerializeField, Tooltip("Optional world-space anchor for interaction UI.")]
+    Transform uiAnchor;
+
     bool hasBeenUsed;
 
-    public virtual string GetInteractionPrompt()
+    public virtual Transform GetUIAnchor()
     {
-        return $"Press E to interact with {interactName}";
+        return uiAnchor != null ? uiAnchor : transform;
+    }
+
+    public virtual Vector3 GetInteractPosition()
+    {
+        return transform.position;
+    }
+
+    public virtual InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
+    {
+        return InteractablePromptData.CreateSimple($"Press E to interact with {interactName}");
     }
 
     public virtual bool CanInteract(PlayerInteractor interactor)

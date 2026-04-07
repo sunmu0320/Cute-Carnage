@@ -149,7 +149,7 @@ GameObject:
   - component: {fileID: 6610247141654786306}
   - component: {fileID: 1477843567342458508}
   m_Layer: 0
-  m_Name: WorldPromptRoot
+  m_Name: GatherWorldPromptRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

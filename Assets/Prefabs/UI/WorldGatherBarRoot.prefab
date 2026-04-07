@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 9012032746038995785}
   - component: {fileID: 4890323041639008873}
   - component: {fileID: 92352056997406519}
+  - component: {fileID: -1666033181791549558}
   m_Layer: 0
   m_Name: WorldGatherBarRoot
   m_TagString: Untagged
@@ -75,6 +76,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldGatherBar
   fillImage: {fileID: 4602867349108360217}
+--- !u!222 &-1666033181791549558
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2006212489256310441}
+  m_CullTransparentMesh: 1
 --- !u!1 &5653199668714693960
 GameObject:
   m_ObjectHideFlags: 0
