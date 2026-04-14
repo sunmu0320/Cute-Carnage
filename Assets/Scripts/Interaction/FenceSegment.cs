@@ -33,6 +33,7 @@ public class FenceTierData
 
 public class FenceSegment : MonoBehaviour, IInteractable
 {
+    // Tier Data
     [Header("Fence Tiers")]
     [SerializeField] private List<FenceTierData> tiers = new List<FenceTierData>
     {
@@ -42,6 +43,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
         new FenceTierData()
     };
 
+    // Runtime State
     [Header("Fence Runtime State")]
     [SerializeField, Tooltip("0-based index of the active tier.")] private int currentTierIndex;
     [SerializeField] private float currentHp;
@@ -53,6 +55,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
     public int CurrentTierNumber => currentTierIndex + 1;
     public float CurrentHp => currentHp;
     public float MaxHp => CurrentTier.MaxHp;
+    public bool IsDestroyed => currentHp <= 0f;
 
     private FenceTierData CurrentTier
     {
@@ -87,6 +90,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
         EnsureValidState();
     }
 
+    // Damage / Repair
     public void TakeDamage(float amount)
     {
         EnsureValidState();
@@ -99,7 +103,9 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
         float oldHp = currentHp;
         currentHp = Mathf.Max(0f, currentHp - amount);
-        Debug.Log($"[{nameof(FenceSegment)}] {name} took {amount} damage. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}.");
+        Debug.Log(
+            $"[{nameof(FenceSegment)}] {name} took {amount} damage. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}. " +
+            $"Destroyed: {IsDestroyed}.");
     }
 
     public bool CanRepair()
@@ -232,6 +238,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
             $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#} (fillHpToMax={fillHpToMax}).");
     }
 
+    // Interaction / UI
     public Transform GetUIAnchor()
     {
         return uiAnchor != null ? uiAnchor : transform;
@@ -244,19 +251,40 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
     public bool CanInteract(PlayerInteractor interactor)
     {
-        return CanRepair();
+        // Keep fence targetable so status prompts can show at broken/damaged/full states.
+        return true;
     }
 
     public InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
     {
         ResourceManager manager = interactor != null ? interactor.ResourceManager : null;
         bool canAfford = HasEnoughResources(manager);
+        string actionText;
+        bool isFullHealth = currentHp >= MaxHp;
+        int woodCost = GetRequiredWood();
+        int scrapCost = GetRequiredScrap();
+
+        if (IsDestroyed)
+        {
+            actionText = "Fence is broken - Press E to Repair";
+        }
+        else if (!isFullHealth)
+        {
+            actionText = "Press E to Repair";
+        }
+        else
+        {
+            actionText = "Fence is fully repaired";
+            woodCost = 0;
+            scrapCost = 0;
+            canAfford = true;
+        }
 
         return new InteractablePromptData
         {
-            actionText = CanRepair() ? "Press E to Repair" : "Fence is fully repaired",
-            woodCost = GetRequiredWood(),
-            scrapCost = GetRequiredScrap(),
+            actionText = actionText,
+            woodCost = woodCost,
+            scrapCost = scrapCost,
             canAfford = canAfford
         };
     }
@@ -271,6 +299,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
     // if (fenceSegment.ShouldShowWoodCost())  show wood icon with count fenceSegment.GetRequiredWood();
     // if (fenceSegment.ShouldShowScrapCost()) show scrap icon with count fenceSegment.GetRequiredScrap();
     // bool canAfford = fenceSegment.HasEnoughResources(resourceManager); // color icons green/red.
+    // Validation
     private void EnsureValidState()
     {
         if (tiers == null)

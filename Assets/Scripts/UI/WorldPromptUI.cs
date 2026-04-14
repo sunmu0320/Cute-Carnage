@@ -16,14 +16,24 @@ public class WorldPromptUI : MonoBehaviour
     [Header("Optional Colors")]
     [SerializeField] private Color canAffordColor = Color.white;
     [SerializeField] private Color cannotAffordColor = Color.red;
+    [Header("Prompt Layout")]
+    [SerializeField, Tooltip("When action text is long, push cost sections down to avoid overlap.")]
+    private Vector2 longTextCostOffset = new Vector2(0f, -22f);
+    [SerializeField, Tooltip("Character count threshold before applying long-text offset.")]
+    private int longTextThreshold = 26;
 
     private Transform currentAnchor;
     private IInteractable currentTarget;
     private bool isVisible;
+    private RectTransform woodCostRect;
+    private RectTransform scrapCostRect;
+    private Vector2 woodCostBasePos;
+    private Vector2 scrapCostBasePos;
 
     private void Awake()
     {
         AutoAssignReferencesIfMissing();
+        CacheCostSectionLayout();
         WarnIfMultiplePromptSystems();
         // Prompt should start hidden every time.
         Hide();
@@ -130,7 +140,36 @@ public class WorldPromptUI : MonoBehaviour
         if (scrapCostText != null)
             scrapCostText.color = dataColor;
 
+        ApplyCostLayoutOffset(data.actionText, showWood || showScrap);
         Debug.Log("[WorldPromptUI] UI data updated.");
+    }
+
+    private void CacheCostSectionLayout()
+    {
+        if (woodCostSection != null)
+        {
+            woodCostRect = woodCostSection.GetComponent<RectTransform>();
+            if (woodCostRect != null)
+                woodCostBasePos = woodCostRect.anchoredPosition;
+        }
+
+        if (scrapCostSection != null)
+        {
+            scrapCostRect = scrapCostSection.GetComponent<RectTransform>();
+            if (scrapCostRect != null)
+                scrapCostBasePos = scrapCostRect.anchoredPosition;
+        }
+    }
+
+    private void ApplyCostLayoutOffset(string promptText, bool hasVisibleCost)
+    {
+        bool shouldOffset = hasVisibleCost && !string.IsNullOrWhiteSpace(promptText) && promptText.Length >= Mathf.Max(0, longTextThreshold);
+
+        if (woodCostRect != null)
+            woodCostRect.anchoredPosition = shouldOffset ? woodCostBasePos + longTextCostOffset : woodCostBasePos;
+
+        if (scrapCostRect != null)
+            scrapCostRect.anchoredPosition = shouldOffset ? scrapCostBasePos + longTextCostOffset : scrapCostBasePos;
     }
 
     private void AutoAssignReferencesIfMissing()
