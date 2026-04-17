@@ -4,6 +4,7 @@ public class PlayerAutoCombat : MonoBehaviour
 {
     [Header("References")]
     [SerializeField] private PlayerWeaponController weaponController;
+    [SerializeField] private PlayerInteractor interactor;
     [SerializeField] private Transform combatLookRoot;
     [SerializeField] private SimpleProjectile projectilePrefab;
     [SerializeField] private Transform projectileSpawnPoint;
@@ -25,12 +26,18 @@ public class PlayerAutoCombat : MonoBehaviour
     private bool feedbackInitialized;
     private bool isFeedbackAnimating;
     private float feedbackTimer;
+    private bool hasWarnedMissingInteractor;
 
     private void Awake()
     {
         if (weaponController == null)
         {
             weaponController = GetComponent<PlayerWeaponController>();
+        }
+
+        if (interactor == null)
+        {
+            interactor = GetComponent<PlayerInteractor>();
         }
 
         if (attackFeedbackRoot != null)
@@ -42,6 +49,18 @@ public class PlayerAutoCombat : MonoBehaviour
 
     private void Update()
     {
+        if (interactor == null && !hasWarnedMissingInteractor)
+        {
+            Debug.LogWarning("[PlayerAutoCombat] Missing PlayerInteractor reference. Repair-state combat blocking is disabled.", this);
+            hasWarnedMissingInteractor = true;
+        }
+
+        if (interactor != null && interactor.IsRepairing)
+        {
+            currentTarget = null;
+            return;
+        }
+
         WeaponData weaponData = GetCurrentWeaponData();
         if (weaponData == null)
         {

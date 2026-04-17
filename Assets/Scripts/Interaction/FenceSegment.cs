@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 [Serializable]
 public class FenceTierData
@@ -31,7 +32,7 @@ public class FenceTierData
     }
 }
 
-public class FenceSegment : MonoBehaviour, IInteractable
+public class FenceSegment : MonoBehaviour, IInteractable, IRepairable
 {
     // Tier Data
     [Header("Fence Tiers")]
@@ -51,6 +52,41 @@ public class FenceSegment : MonoBehaviour, IInteractable
     [Header("Interaction (IInteractable Example)")]
     [SerializeField, Tooltip("Optional world-space anchor for this fence prompt.")]
     private Transform uiAnchor;
+
+    [Header("World HP Bar (DayTimerBar)")]
+    [SerializeField, Tooltip("Optional anchor for the HP bar. If null, uses uiAnchor or this transform.")]
+    private Transform hpBarAnchor;
+
+    [SerializeField, Tooltip("Local position when hpBarAnchor is null (bar sits below prompt anchor).")]
+    private Vector3 hpBarLocalOffset = new Vector3(0f, -0.35f, 0f);
+
+    [SerializeField, Tooltip("Reuse DayTimerBar prefab as a world-space HP fill bar.")]
+    private GameObject dayTimerBarPrefab;
+
+    [SerializeField, Tooltip("Lower sorting so WorldPromptUI can draw above the bar.")]
+    private int hpBarCanvasSortingOrder = -10;
+
+    [SerializeField, Tooltip("Hide the bar when HP is full.")]
+    private bool hideHpBarWhenFull = true;
+
+    private GameObject hpBarInstance;
+    private Image hpFillImage;
+
+    [Header("Continuous Repair (Repair State)")]
+    [SerializeField, Tooltip("HP restored per second while the player is in repair state.")]
+    private float repairRatePerSecond = 10f;
+
+    [SerializeField, Tooltip("Max HP restored per paid resource chunk before another spend is required.")]
+    private float repairHpPerWood = 20f;
+
+    [SerializeField, Tooltip("Resource spent when a new repair chunk starts.")]
+    private ResourceType repairResourceType = ResourceType.Wood;
+
+    [SerializeField, Tooltip("How much of the repair resource to spend per chunk.")]
+    private int repairCostPerChunk = 1;
+
+    private bool hasActiveRepairChunk;
+    private float repairedInCurrentChunk;
 
     public int CurrentTierNumber => currentTierIndex + 1;
     public float CurrentHp => currentHp;
@@ -83,11 +119,17 @@ public class FenceSegment : MonoBehaviour, IInteractable
     private void Awake()
     {
         EnsureValidState();
+        TrySpawnWorldHpBar();
+        RefreshWorldHpBar();
     }
 
     private void OnValidate()
     {
         EnsureValidState();
+        if (hpBarInstance != null)
+        {
+            RefreshWorldHpBar();
+        }
     }
 
     // Damage / Repair
@@ -106,12 +148,45 @@ public class FenceSegment : MonoBehaviour, IInteractable
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} took {amount} damage. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}. " +
             $"Destroyed: {IsDestroyed}.");
+
+        RefreshWorldHpBar();
     }
 
     public bool CanRepair()
     {
         EnsureValidState();
         return currentHp < MaxHp;
+    }
+
+    public bool IsDamaged
+    {
+        get
+        {
+            EnsureValidState();
+            return currentHp < MaxHp;
+        }
+    }
+
+    public bool IsFullyRepaired()
+    {
+        EnsureValidState();
+        return currentHp >= MaxHp;
+    }
+
+    public bool CanAffordNextRepairChunk(ResourceManager resourceManager)
+    {
+        if (resourceManager == null)
+        {
+            return false;
+        }
+
+        int cost = Mathf.Max(0, repairCostPerChunk);
+        if (cost <= 0)
+        {
+            return true;
+        }
+
+        return resourceManager.HasResource(repairResourceType, cost);
     }
 
     public int GetRequiredWood()
@@ -161,6 +236,88 @@ public class FenceSegment : MonoBehaviour, IInteractable
         return availableWood >= requiredWood && availableScrap >= requiredScrap;
     }
 
+    public bool TickRepair(float deltaTime, ResourceManager resourceManager)
+    {
+        try
+        {
+            EnsureValidState();
+
+            if (!IsDamaged)
+            {
+                return true;
+            }
+
+            if (resourceManager == null)
+            {
+                return false;
+            }
+
+            float dt = Mathf.Max(0f, deltaTime);
+            if (dt <= 0f)
+            {
+                return true;
+            }
+
+            if (!hasActiveRepairChunk)
+            {
+                int cost = Mathf.Max(0, repairCostPerChunk);
+                if (cost > 0 && !resourceManager.TrySpendResource(repairResourceType, cost))
+                {
+                    return false;
+                }
+
+                hasActiveRepairChunk = true;
+                repairedInCurrentChunk = 0f;
+            }
+
+            float rate = Mathf.Max(0f, repairRatePerSecond);
+            float repairAmount = rate * dt;
+
+            float remainingMissingHp = MaxHp - currentHp;
+            float chunkCap = Mathf.Max(0.01f, repairHpPerWood);
+            float remainingChunkHp = chunkCap - repairedInCurrentChunk;
+
+            repairAmount = Mathf.Min(repairAmount, remainingMissingHp);
+            repairAmount = Mathf.Min(repairAmount, Mathf.Max(0f, remainingChunkHp));
+
+            currentHp += repairAmount;
+            currentHp = Mathf.Min(currentHp, MaxHp);
+            repairedInCurrentChunk += repairAmount;
+
+            if (repairedInCurrentChunk >= chunkCap - 0.001f)
+            {
+                hasActiveRepairChunk = false;
+                repairedInCurrentChunk = 0f;
+            }
+
+            if (!IsDamaged)
+            {
+                return true;
+            }
+
+            if (!hasActiveRepairChunk)
+            {
+                int cost = Mathf.Max(0, repairCostPerChunk);
+                if (cost > 0 && !resourceManager.HasResource(repairResourceType, cost))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            RefreshWorldHpBar();
+        }
+    }
+
+    public void CancelRepair()
+    {
+        hasActiveRepairChunk = false;
+        repairedInCurrentChunk = 0f;
+    }
+
     public bool TryRepair(ResourceManager resourceManager)
     {
         EnsureValidState();
@@ -205,6 +362,8 @@ public class FenceSegment : MonoBehaviour, IInteractable
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} repaired successfully. Spent Wood {requiredWood}, Scrap {requiredScrap}. " +
             $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}.");
+
+        RefreshWorldHpBar();
         return true;
     }
 
@@ -236,6 +395,98 @@ public class FenceSegment : MonoBehaviour, IInteractable
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} upgraded Tier {oldTierNumber} -> {CurrentTierNumber} ({CurrentTier.TierName}). " +
             $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#} (fillHpToMax={fillHpToMax}).");
+
+        RefreshWorldHpBar();
+    }
+
+    void TrySpawnWorldHpBar()
+    {
+        if (hpBarInstance != null)
+        {
+            return;
+        }
+
+        if (dayTimerBarPrefab == null)
+        {
+            return;
+        }
+
+        Transform parent = hpBarAnchor != null ? hpBarAnchor : uiAnchor != null ? uiAnchor : transform;
+        hpBarInstance = Instantiate(dayTimerBarPrefab);
+        hpBarInstance.name = $"{dayTimerBarPrefab.name}_HP_{name}";
+
+        Transform barTransform = hpBarInstance.transform;
+        barTransform.SetParent(parent, false);
+        barTransform.localRotation = Quaternion.identity;
+
+        if (hpBarAnchor != null)
+        {
+            barTransform.localPosition = Vector3.zero;
+        }
+        else
+        {
+            barTransform.localPosition = hpBarLocalOffset;
+        }
+
+        Canvas barCanvas = hpBarInstance.GetComponent<Canvas>();
+        if (barCanvas != null)
+        {
+            barCanvas.sortingOrder = hpBarCanvasSortingOrder;
+        }
+
+        CacheHpFillImageFromPrefab();
+    }
+
+    void CacheHpFillImageFromPrefab()
+    {
+        hpFillImage = null;
+        if (hpBarInstance == null)
+        {
+            return;
+        }
+
+        foreach (Image image in hpBarInstance.GetComponentsInChildren<Image>(true))
+        {
+            if (image != null && image.type == Image.Type.Filled)
+            {
+                hpFillImage = image;
+                break;
+            }
+        }
+
+        if (hpFillImage == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(FenceSegment)}] {name}: DayTimerBar prefab has no Image with Type Filled (expected BarFill). HP bar will not update.",
+                this);
+        }
+    }
+
+    void RefreshWorldHpBar()
+    {
+        if (hpBarInstance == null)
+        {
+            return;
+        }
+
+        EnsureValidState();
+
+        float max = Mathf.Max(0.01f, MaxHp);
+        float fill = Mathf.Clamp01(currentHp / max);
+
+        if (hpFillImage != null)
+        {
+            hpFillImage.fillAmount = fill;
+        }
+
+        bool visible = true;
+
+        if (hideHpBarWhenFull)
+        {
+            visible = IsDamaged;
+        }
+
+        hpBarInstance.SetActive(visible);
     }
 
     // Interaction / UI
@@ -291,8 +542,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
     public void Interact(PlayerInteractor interactor)
     {
-        ResourceManager manager = interactor != null ? interactor.ResourceManager : null;
-        TryRepair(manager);
+        // HP repair during play uses IRepairable.TickRepair from PlayerInteractor while in Repairing state.
     }
 
     // Future icon-based UI usage example (when player is near this fence):

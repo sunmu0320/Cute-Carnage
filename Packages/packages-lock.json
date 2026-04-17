@@ -10,13 +10,14 @@
       "hash": "fd8ff1fb700caf062eb5cce364c1d0a85f99ebe6"
     },
     "com.coplaydev.unity-mcp": {
-      "version": "file:com.coplaydev.unity-mcp",
+      "version": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
       "depth": 0,
-      "source": "embedded",
+      "source": "git",
       "dependencies": {
         "com.unity.nuget.newtonsoft-json": "3.0.2",
         "com.unity.test-framework": "1.1.31"
-      }
+      },
+      "hash": "73eb27aeccfa8e0676eaf3304136e9b85953d913"
     },
     "com.unity.2d.sprite": {
       "version": "1.0.0",
@@ -25,7 +26,7 @@
       "dependencies": {}
     },
     "com.unity.ai.assistant": {
-      "version": "2.2.0-pre.1",
+      "version": "2.6.0-pre.1",
       "depth": 0,
       "source": "registry",
       "dependencies": {
