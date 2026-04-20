@@ -3,24 +3,44 @@ using UnityEngine;
 public class SimpleProjectile : MonoBehaviour
 {
     [SerializeField] private float speed = 10f;
+    // Projectile owns damage tuning (set in projectile prefab/inspector).
     [SerializeField] private float damage = 5f;
+    [SerializeField, Tooltip("Visual-only rotation offset for mesh axis alignment. Try (0, 0, 90) or (0, 90, 0).")]
+    private Vector3 rotationOffsetEuler;
 
     private Vector3 moveDirection;
     private Vector3 startPosition;
     private float maxTravelDistance;
     private bool isInitialized;
+    private int zombieLayer = -1;
 
-    public void Initialize(Vector3 direction, float damageAmount, float travelDistance)
+    private void Awake()
+    {
+        zombieLayer = LayerMask.NameToLayer("Zombie");
+    }
+
+    // Backward-compatible overload: damage now stays projectile-owned.
+    public void Initialize(Vector3 direction, float _unusedDamageAmount, float travelDistance)
+    {
+        Initialize(direction, travelDistance);
+    }
+
+    public void Initialize(Vector3 direction, float travelDistance)
+    {
+        InitializeMovement(direction, travelDistance);
+    }
+
+    private void InitializeMovement(Vector3 direction, float travelDistance)
     {
         Vector3 safeDirection = direction;
-        safeDirection.y = 0f;
         if (safeDirection.sqrMagnitude <= 0.0001f)
         {
             safeDirection = transform.forward;
         }
 
         moveDirection = safeDirection.normalized;
-        damage = Mathf.Max(0.01f, damageAmount);
+        Quaternion baseRotation = Quaternion.LookRotation(moveDirection);
+        transform.rotation = baseRotation * Quaternion.Euler(rotationOffsetEuler);
         maxTravelDistance = Mathf.Max(0.05f, travelDistance);
         startPosition = transform.position;
         isInitialized = true;
@@ -44,12 +64,28 @@ public class SimpleProjectile : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
-        TryHitZombie(other != null ? other.GetComponentInParent<BasicZombie>() : null);
+        TryHitCollider(other);
     }
 
-    private void OnCollisionEnter(Collision collision)
+    private void TryHitCollider(Collider hitCollider)
     {
-        TryHitZombie(collision != null ? collision.collider.GetComponentInParent<BasicZombie>() : null);
+        if (hitCollider == null)
+        {
+            return;
+        }
+
+        if (zombieLayer >= 0 && hitCollider.gameObject.layer != zombieLayer)
+        {
+            return;
+        }
+
+        BasicZombie zombie = hitCollider.GetComponentInParent<BasicZombie>();
+        if (zombie == null)
+        {
+            return;
+        }
+
+        TryHitZombie(zombie);
     }
 
     private void TryHitZombie(BasicZombie zombie)

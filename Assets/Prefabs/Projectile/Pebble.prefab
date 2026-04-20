@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 4270689599176849611}
   - component: {fileID: 3078784406149097746}
   m_Layer: 0
-  m_Name: Projectile
+  m_Name: Pebble
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -48,7 +48,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9576d2692f23274b8dfa84a53cd4224, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleProjectile
-  speed: 15
+  speed: 11
   damage: 5
 --- !u!33 &1695346596684375334
 MeshFilter:
