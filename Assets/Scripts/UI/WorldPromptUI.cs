@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class WorldPromptUI : MonoBehaviour
 {
@@ -21,14 +22,18 @@ public class WorldPromptUI : MonoBehaviour
     private Vector2 longTextCostOffset = new Vector2(0f, -22f);
     [SerializeField, Tooltip("Character count threshold before applying long-text offset.")]
     private int longTextThreshold = 26;
+    [SerializeField, Tooltip("Text height ratio (vs single-line) to treat as wrapped and shift cost rows down.")]
+    private float wrappedHeightRatioThreshold = 1.15f;
 
     private Transform currentAnchor;
     private IInteractable currentTarget;
     private bool isVisible;
     private RectTransform woodCostRect;
     private RectTransform scrapCostRect;
+    private RectTransform actionTextRect;
     private Vector2 woodCostBasePos;
     private Vector2 scrapCostBasePos;
+    private float singleLineActionTextHeight = -1f;
 
     private void Awake()
     {
@@ -159,17 +164,70 @@ public class WorldPromptUI : MonoBehaviour
             if (scrapCostRect != null)
                 scrapCostBasePos = scrapCostRect.anchoredPosition;
         }
+
+        if (actionText != null)
+        {
+            actionTextRect = actionText.rectTransform;
+            if (actionTextRect != null)
+            {
+                singleLineActionTextHeight = Mathf.Max(1f, actionTextRect.rect.height);
+            }
+        }
     }
 
     private void ApplyCostLayoutOffset(string promptText, bool hasVisibleCost)
     {
-        bool shouldOffset = hasVisibleCost && !string.IsNullOrWhiteSpace(promptText) && promptText.Length >= Mathf.Max(0, longTextThreshold);
+        bool hasPrompt = !string.IsNullOrWhiteSpace(promptText);
+        bool shouldOffset = hasVisibleCost && hasPrompt;
+        float offsetMagnitude = Mathf.Abs(longTextCostOffset.y);
+
+        if (shouldOffset)
+        {
+            bool isWrapped = IsPromptLikelyWrapped(promptText, out float preferredHeight, out float baselineHeight);
+            if (isWrapped)
+            {
+                // Push cost rows below wrapped text with a small visual gap.
+                float wrappedExtra = Mathf.Max(0f, preferredHeight - baselineHeight) + 8f;
+                offsetMagnitude = Mathf.Max(offsetMagnitude, wrappedExtra);
+            }
+            else
+            {
+                // Even for short prompts with visible costs, force a minimum safe separation.
+                offsetMagnitude = Mathf.Max(offsetMagnitude, 28f);
+            }
+        }
+
+        Vector2 effectiveOffset = shouldOffset
+            ? new Vector2(longTextCostOffset.x, -offsetMagnitude)
+            : Vector2.zero;
 
         if (woodCostRect != null)
-            woodCostRect.anchoredPosition = shouldOffset ? woodCostBasePos + longTextCostOffset : woodCostBasePos;
+            woodCostRect.anchoredPosition = woodCostBasePos + effectiveOffset;
 
         if (scrapCostRect != null)
-            scrapCostRect.anchoredPosition = shouldOffset ? scrapCostBasePos + longTextCostOffset : scrapCostBasePos;
+            scrapCostRect.anchoredPosition = scrapCostBasePos + effectiveOffset;
+    }
+
+    private bool IsPromptLikelyWrapped(string promptText)
+    {
+        return IsPromptLikelyWrapped(promptText, out _, out _);
+    }
+
+    private bool IsPromptLikelyWrapped(string promptText, out float preferredHeight, out float baselineHeight)
+    {
+        preferredHeight = 0f;
+        baselineHeight = 0f;
+
+        if (actionText == null || actionTextRect == null || string.IsNullOrWhiteSpace(promptText))
+        {
+            return false;
+        }
+
+        actionText.ForceMeshUpdate();
+        preferredHeight = actionText.GetPreferredValues(promptText, actionTextRect.rect.width, 0f).y;
+        baselineHeight = singleLineActionTextHeight > 0f ? singleLineActionTextHeight : Mathf.Max(1f, actionText.fontSize + 4f);
+        float threshold = baselineHeight * Mathf.Max(1f, wrappedHeightRatioThreshold);
+        return preferredHeight > threshold;
     }
 
     private void AutoAssignReferencesIfMissing()

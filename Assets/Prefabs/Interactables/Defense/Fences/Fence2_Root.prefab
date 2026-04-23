@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5474541135101519003}
   - component: {fileID: 9193642061320381398}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Fence2_Root
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -27,11 +27,12 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: -2.44, y: -0, z: -3.9871516}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 2, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7061450028385782166}
   - {fileID: 7531420260362432085}
+  - {fileID: 1596408671585042020}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &9193642061320381398
@@ -68,8 +69,17 @@ MonoBehaviour:
     woodCost: 1
     scrapCost: 2
   currentTierIndex: 0
-  currentHp: 95
+  currentHp: 100
   uiAnchor: {fileID: 7531420260362432085}
+  hpBarAnchor: {fileID: 1596408671585042020}
+  hpBarLocalOffset: {x: 0, y: -0.35, z: 0}
+  dayTimerBarPrefab: {fileID: 2006212489256310441, guid: 0ac71c9b68d619d45a6a244f07647501, type: 3}
+  hpBarCanvasSortingOrder: -10
+  hideHpBarWhenFull: 1
+  repairRatePerSecond: 10
+  repairHpPerWood: 20
+  repairResourceType: 0
+  repairCostPerChunk: 1
 --- !u!1 &8144808883961798429
 GameObject:
   m_ObjectHideFlags: 0
@@ -79,7 +89,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7531420260362432085}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: UIAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -101,6 +111,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5474541135101519003}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &8493355647270690952
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1596408671585042020}
+  m_Layer: 6
+  m_Name: HPBarAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1596408671585042020
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8493355647270690952}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: 1, z: -0.7}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5474541135101519003}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1001 &7586671935288224302
 PrefabInstance:
   m_ObjectHideFlags: 0

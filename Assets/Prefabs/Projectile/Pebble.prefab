@@ -48,8 +48,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c9576d2692f23274b8dfa84a53cd4224, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleProjectile
-  speed: 11
-  damage: 5
+  speed: 20
+  arrivalThreshold: 0.05
+  rotationOffsetEuler: {x: 0, y: 0, z: 0}
 --- !u!33 &1695346596684375334
 MeshFilter:
   m_ObjectHideFlags: 0

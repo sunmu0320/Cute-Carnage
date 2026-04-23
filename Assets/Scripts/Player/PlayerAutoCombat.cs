@@ -6,11 +6,15 @@ public class PlayerAutoCombat : MonoBehaviour
     [SerializeField] private PlayerWeaponController weaponController;
     [SerializeField] private PlayerInteractor interactor;
     [SerializeField] private Transform combatLookRoot;
-    [SerializeField] private SimpleProjectile projectilePrefab;
+    [SerializeField] private SimpleProjectile projectileVisualPrefab;
     [SerializeField] private Transform projectileSpawnPoint;
+    [SerializeField] private GameObject hitVfxPrefab;
+    [SerializeField] private LayerMask targetLayerMask = ~0;
 
     [Header("Targeting")]
     [SerializeField] private float targetRefreshInterval = 0.2f;
+    [SerializeField] private float hitRadius = 0.25f;
+    [SerializeField] private float missEndpointDistance = 0f;
 
     [Header("Attack Feedback (Prototype)")]
     [SerializeField] private Transform attackFeedbackRoot;
@@ -27,6 +31,7 @@ public class PlayerAutoCombat : MonoBehaviour
     private bool isFeedbackAnimating;
     private float feedbackTimer;
     private bool hasWarnedMissingInteractor;
+    private readonly Collider[] hitBuffer = new Collider[64];
 
     private void Awake()
     {
@@ -163,9 +168,9 @@ public class PlayerAutoCombat : MonoBehaviour
 
     private bool TrySpawnProjectileAttack(WeaponData weaponData)
     {
-        if (projectilePrefab == null)
+        if (projectileVisualPrefab == null)
         {
-            Debug.LogWarning("[PlayerAutoCombat] Missing projectilePrefab reference.", this);
+            Debug.LogWarning("[PlayerAutoCombat] Missing projectileVisualPrefab reference.", this);
             return false;
         }
 
@@ -177,24 +182,164 @@ public class PlayerAutoCombat : MonoBehaviour
         Transform spawnRoot = projectileSpawnPoint != null ? projectileSpawnPoint : transform;
         Vector3 spawnPosition = spawnRoot.position;
 
-        Vector3 targetPosition = currentTarget.transform.position;
-        Vector3 direction = targetPosition - spawnPosition;
-        direction.y = 0f;
+        Vector3 targetAimPoint = GetZombieAimPoint(currentTarget);
+        Vector3 direction = targetAimPoint - spawnPosition;
 
         if (direction.sqrMagnitude <= 0.0001f)
         {
             direction = spawnRoot.forward;
         }
 
-        SimpleProjectile projectileInstance = Instantiate(projectilePrefab, spawnPosition, Quaternion.LookRotation(direction.normalized, Vector3.up));
+        Vector3 fireDirection = direction.normalized;
+        float maxDistance = Mathf.Max(0.01f, weaponData.attackRange);
+        float missDistance = missEndpointDistance > 0f ? missEndpointDistance : maxDistance;
+        Vector3 missEndPoint = spawnPosition + fireDirection * missDistance;
+
+        bool hasHit = TryResolveHitAtAttackTime(
+            spawnPosition,
+            fireDirection,
+            maxDistance,
+            out BasicZombie hitZombie,
+            out Vector3 resolvedHitPoint);
+
+        Vector3 projectileEndPoint = missEndPoint;
+        BasicZombie deferredTarget = null;
+        float deferredDamage = 0f;
+        GameObject deferredHitVfxPrefab = null;
+        Vector3 deferredHitPoint = projectileEndPoint;
+        if (hasHit && hitZombie != null && !hitZombie.IsDead)
+        {
+            projectileEndPoint = resolvedHitPoint;
+            deferredTarget = hitZombie;
+            deferredDamage = Mathf.Max(0f, weaponData.damage);
+            deferredHitVfxPrefab = hitVfxPrefab;
+            deferredHitPoint = resolvedHitPoint;
+        }
+
+        Vector3 projectileTravel = projectileEndPoint - spawnPosition;
+        float projectileDistance = projectileTravel.magnitude;
+        Vector3 projectileDirection = fireDirection;
+        if (projectileDistance > 0.001f)
+        {
+            projectileDirection = projectileTravel / projectileDistance;
+        }
+        else
+        {
+            projectileDistance = 0.05f;
+        }
+
+        SimpleProjectile projectileInstance = Instantiate(
+            projectileVisualPrefab,
+            spawnPosition,
+            Quaternion.LookRotation(projectileDirection, Vector3.up));
+
         if (projectileInstance == null)
         {
             Debug.LogWarning("[PlayerAutoCombat] Failed to instantiate projectile.", this);
             return false;
         }
 
-        projectileInstance.Initialize(direction, weaponData.damage, weaponData.attackRange);
+        projectileInstance.InitializeDeferred(
+            projectileDirection,
+            projectileDistance,
+            projectileEndPoint,
+            deferredTarget,
+            deferredDamage,
+            deferredHitVfxPrefab,
+            deferredHitPoint);
         return true;
+    }
+
+    private bool TryResolveHitAtAttackTime(
+        Vector3 shotOrigin,
+        Vector3 shotDirection,
+        float maxDistance,
+        out BasicZombie resolvedZombie,
+        out Vector3 resolvedHitPoint)
+    {
+        resolvedZombie = null;
+        float clampedDistance = Mathf.Max(0.01f, maxDistance);
+        float clampedHitRadius = Mathf.Max(0.01f, hitRadius);
+        Vector3 shotEnd = shotOrigin + shotDirection * clampedDistance;
+        resolvedHitPoint = shotEnd;
+
+        int hitCount = Physics.OverlapCapsuleNonAlloc(
+            shotOrigin,
+            shotEnd,
+            clampedHitRadius,
+            hitBuffer,
+            targetLayerMask,
+            QueryTriggerInteraction.Collide);
+
+        if (hitCount <= 0)
+        {
+            return false;
+        }
+
+        float bestLineDistanceSqr = float.MaxValue;
+        float bestForwardDistance = float.MaxValue;
+
+        for (int i = 0; i < hitCount; i++)
+        {
+            Collider hit = hitBuffer[i];
+            if (hit == null)
+            {
+                continue;
+            }
+
+            BasicZombie zombie = hit.GetComponentInParent<BasicZombie>();
+            if (!IsValidTarget(zombie))
+            {
+                continue;
+            }
+
+            Vector3 candidateCenter = hit.bounds.center;
+            Vector3 toCandidate = candidateCenter - shotOrigin;
+            float forwardDistance = Vector3.Dot(toCandidate, shotDirection);
+            if (forwardDistance < 0f || forwardDistance > clampedDistance)
+            {
+                continue;
+            }
+
+            Vector3 closestPointOnLine = shotOrigin + shotDirection * forwardDistance;
+            Vector3 closestPointOnZombie = hit.ClosestPoint(closestPointOnLine);
+            float lineDistanceSqr = (closestPointOnZombie - closestPointOnLine).sqrMagnitude;
+            if (lineDistanceSqr > clampedHitRadius * clampedHitRadius)
+            {
+                continue;
+            }
+
+            bool isBetterHit = lineDistanceSqr < bestLineDistanceSqr ||
+                (Mathf.Approximately(lineDistanceSqr, bestLineDistanceSqr) && forwardDistance < bestForwardDistance);
+
+            if (!isBetterHit)
+            {
+                continue;
+            }
+
+            bestLineDistanceSqr = lineDistanceSqr;
+            bestForwardDistance = forwardDistance;
+            resolvedZombie = zombie;
+            resolvedHitPoint = closestPointOnZombie;
+        }
+
+        return resolvedZombie != null;
+    }
+
+    private Vector3 GetZombieAimPoint(BasicZombie zombie)
+    {
+        if (zombie == null)
+        {
+            return transform.position;
+        }
+
+        Collider zombieCollider = zombie.GetComponentInChildren<Collider>();
+        if (zombieCollider != null)
+        {
+            return zombieCollider.bounds.center;
+        }
+
+        return zombie.transform.position;
     }
 
     private bool CanAttack(WeaponData weaponData)

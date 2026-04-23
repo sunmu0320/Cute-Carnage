@@ -16,6 +16,19 @@ public class TowerSlot : MonoBehaviour, IInteractable
     [SerializeField]
     private GameObject slotVisualRoot;
 
+    [SerializeField]
+    private Transform slotMarker;
+
+    private void Awake()
+    {
+        RefreshSlotVisualState();
+    }
+
+    private void OnValidate()
+    {
+        RefreshSlotVisualState();
+    }
+
     public Transform GetUIAnchor()
     {
         return spawnPoint != null ? spawnPoint : transform;
@@ -57,10 +70,19 @@ public class TowerSlot : MonoBehaviour, IInteractable
         Transform origin = spawnPoint != null ? spawnPoint : transform;
         currentTower = Instantiate(towerPrefab, origin.position, origin.rotation);
         hasTower = true;
+        RefreshSlotVisualState();
+    }
 
+    private void RefreshSlotVisualState()
+    {
         if (slotVisualRoot != null)
         {
-            slotVisualRoot.SetActive(false);
+            slotVisualRoot.SetActive(!hasTower);
+        }
+
+        if (slotMarker != null)
+        {
+            slotMarker.gameObject.SetActive(!hasTower);
         }
     }
 }

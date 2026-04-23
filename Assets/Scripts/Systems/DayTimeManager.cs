@@ -47,11 +47,7 @@ public class DayTimeManager : MonoBehaviour
 
     private void Awake()
     {
-        totalDuration = SafeDuration(dayDurationSeconds);
-        currentTime = dayDurationSeconds;
-        hasDayEnded = false;
-        isPaused = false;
-        isCountingDown = autoStartOnAwake;
+        ResetTimerState(autoStartOnAwake);
     }
 
     private void Update()
@@ -73,20 +69,21 @@ public class DayTimeManager : MonoBehaviour
 
     public void StartDay()
     {
-        totalDuration = SafeDuration(dayDurationSeconds);
-        currentTime = dayDurationSeconds;
-        hasDayEnded = false;
-        isPaused = false;
-        isCountingDown = true;
+        ResetTimerState(true);
     }
 
     public void ResetDay()
     {
+        ResetTimerState(true);
+    }
+
+    private void ResetTimerState(bool shouldCountDown)
+    {
         totalDuration = SafeDuration(dayDurationSeconds);
-        currentTime = dayDurationSeconds;
+        currentTime = totalDuration;
         hasDayEnded = false;
         isPaused = false;
-        isCountingDown = true;
+        isCountingDown = shouldCountDown;
     }
 
     public void Pause()

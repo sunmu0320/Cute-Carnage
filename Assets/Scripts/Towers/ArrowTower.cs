@@ -5,14 +5,18 @@ public class ArrowTower : MonoBehaviour
     [Header("Attack")]
     [SerializeField] private float attackRange = 6f;
     [SerializeField] private float attackInterval = 1f;
+    [SerializeField] private float damage = 5f;
+    [SerializeField] private float hitRadius = 0.25f;
     [SerializeField] private float targetAimHeightOffset = 0.75f;
 
     [Header("References")]
     [SerializeField] private Transform aimYawPivot;
     [SerializeField] private Transform firePoint;
-    [SerializeField] private GameObject projectilePrefab;
+    [SerializeField] private GameObject projectileVisualPrefab;
+    [SerializeField] private GameObject hitVfxPrefab;
     [SerializeField] private LayerMask targetLayerMask;
 
+    private readonly Collider[] hitBuffer = new Collider[64];
     private float attackTimer;
     private Transform currentTarget;
 
@@ -159,7 +163,7 @@ public class ArrowTower : MonoBehaviour
 
         attackTimer = 0f;
 
-        if (firePoint == null || projectilePrefab == null || currentTarget == null)
+        if (firePoint == null || projectileVisualPrefab == null || currentTarget == null)
         {
             return;
         }
@@ -172,26 +176,166 @@ public class ArrowTower : MonoBehaviour
         }
 
         Vector3 fireDirection = rawFireDirection.normalized;
+        Vector3 missEndPoint = firePoint.position + fireDirection * Mathf.Max(0.01f, attackRange);
+
+        bool hasHit = TryResolveHitAtFireTime(
+            firePoint.position,
+            fireDirection,
+            out BasicZombie hitZombie,
+            out Vector3 hitPoint);
+
+        Vector3 projectileEndPoint = missEndPoint;
+        BasicZombie deferredTarget = null;
+        float deferredDamage = 0f;
+        GameObject deferredHitVfxPrefab = null;
+        Vector3 deferredHitPoint = projectileEndPoint;
+        if (hasHit && hitZombie != null && !hitZombie.IsDead)
+        {
+            projectileEndPoint = hitPoint;
+            deferredTarget = hitZombie;
+            deferredDamage = Mathf.Max(0f, damage);
+            deferredHitVfxPrefab = hitVfxPrefab;
+            deferredHitPoint = hitPoint;
+        }
 
         GameObject projectileObject = Instantiate(
-            projectilePrefab,
+            projectileVisualPrefab,
             firePoint.position,
             Quaternion.identity);
 
         SimpleProjectile projectile = projectileObject.GetComponent<SimpleProjectile>();
         if (projectile == null)
         {
-            Debug.LogWarning($"[ArrowTower] projectilePrefab '{projectilePrefab.name}' has no SimpleProjectile component.", this);
+            Debug.LogWarning($"[ArrowTower] projectileVisualPrefab '{projectileVisualPrefab.name}' has no SimpleProjectile component.", this);
             Destroy(projectileObject);
             return;
         }
 
-        projectile.Initialize(fireDirection, attackRange);
+        Vector3 projectileTravel = projectileEndPoint - firePoint.position;
+        float projectileDistance = projectileTravel.magnitude;
+        Vector3 projectileDirection = fireDirection;
+        if (projectileDistance <= 0.001f)
+        {
+            projectileDistance = 0.05f;
+        }
+        else
+        {
+            projectileDirection = projectileTravel / projectileDistance;
+        }
+
+        projectile.InitializeDeferred(
+            projectileDirection,
+            projectileDistance,
+            projectileEndPoint,
+            deferredTarget,
+            deferredDamage,
+            deferredHitVfxPrefab,
+            deferredHitPoint);
+    }
+
+    private bool TryResolveHitAtFireTime(
+        Vector3 shotOrigin,
+        Vector3 shotDirection,
+        out BasicZombie resolvedZombie,
+        out Vector3 resolvedHitPoint)
+    {
+        resolvedZombie = null;
+        resolvedHitPoint = shotOrigin + shotDirection * Mathf.Max(0.01f, attackRange);
+
+        float clampedRange = Mathf.Max(0.01f, attackRange);
+        float clampedRadius = Mathf.Max(0.01f, hitRadius);
+        Vector3 shotEnd = shotOrigin + shotDirection * clampedRange;
+
+        int count = Physics.OverlapCapsuleNonAlloc(
+            shotOrigin,
+            shotEnd,
+            clampedRadius,
+            hitBuffer,
+            targetLayerMask,
+            QueryTriggerInteraction.Collide);
+
+        if (count <= 0)
+        {
+            return false;
+        }
+
+        float bestLineDistanceSqr = float.MaxValue;
+        float bestForwardDistance = float.MaxValue;
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider hit = hitBuffer[i];
+            if (hit == null)
+            {
+                continue;
+            }
+
+            BasicZombie zombie = hit.GetComponentInParent<BasicZombie>();
+            if (zombie == null || zombie.IsDead || !zombie.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            Vector3 candidateCenter = hit.bounds.center;
+            Vector3 toCandidate = candidateCenter - shotOrigin;
+            float forwardDistance = Vector3.Dot(toCandidate, shotDirection);
+            if (forwardDistance < 0f || forwardDistance > clampedRange)
+            {
+                continue;
+            }
+
+            Vector3 closestPointOnLine = shotOrigin + shotDirection * forwardDistance;
+            Vector3 closestPointOnZombie = hit.ClosestPoint(closestPointOnLine);
+            float lineDistanceSqr = (closestPointOnZombie - closestPointOnLine).sqrMagnitude;
+            if (lineDistanceSqr > clampedRadius * clampedRadius)
+            {
+                continue;
+            }
+
+            bool isBetter = lineDistanceSqr < bestLineDistanceSqr ||
+                (Mathf.Approximately(lineDistanceSqr, bestLineDistanceSqr) && forwardDistance < bestForwardDistance);
+
+            if (!isBetter)
+            {
+                continue;
+            }
+
+            bestLineDistanceSqr = lineDistanceSqr;
+            bestForwardDistance = forwardDistance;
+            resolvedZombie = zombie;
+            resolvedHitPoint = closestPointOnZombie;
+        }
+
+        return resolvedZombie != null;
     }
 
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.9f);
         Gizmos.DrawWireSphere(transform.position, Mathf.Max(0.01f, attackRange));
+
+        if (firePoint == null || currentTarget == null)
+        {
+            return;
+        }
+
+        Vector3 toTarget = GetTargetAimPoint() - firePoint.position;
+        if (toTarget.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        Vector3 direction = toTarget.normalized;
+        float range = Mathf.Max(0.01f, attackRange);
+        float radius = Mathf.Max(0.01f, hitRadius);
+        Vector3 end = firePoint.position + direction * range;
+
+        Gizmos.color = new Color(0.3f, 0.8f, 1f, 0.8f);
+        Gizmos.DrawWireSphere(firePoint.position, radius);
+        Gizmos.DrawWireSphere(end, radius);
+        Gizmos.DrawLine(firePoint.position + Vector3.right * radius, end + Vector3.right * radius);
+        Gizmos.DrawLine(firePoint.position - Vector3.right * radius, end - Vector3.right * radius);
+        Gizmos.DrawLine(firePoint.position + Vector3.forward * radius, end + Vector3.forward * radius);
+        Gizmos.DrawLine(firePoint.position - Vector3.forward * radius, end - Vector3.forward * radius);
     }
 }
