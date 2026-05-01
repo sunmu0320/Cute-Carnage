@@ -1,7 +1,11 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class BasicZombie : MonoBehaviour
 {
+    /// <summary>Prototype: all BasicZombie instances in the play session (OnEnable/OnDestroy).</summary>
+    public static int AliveZombieCount { get; private set; }
+
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float attackRange = 1.4f;
@@ -13,6 +17,17 @@ public class BasicZombie : MonoBehaviour
     [Header("Targeting")]
     [SerializeField] private float targetRefreshInterval = 1f;
 
+    [SerializeField] private float forwardDetectRange = 1.6f;
+    [SerializeField] private float forwardDetectRadius = 0.6f;
+    [SerializeField] private float forwardDetectStartOffset = 0.2f;
+    [SerializeField] private LayerMask forwardDetectMask = ~0;
+    [SerializeField] private string[] baseCoreNameCandidates = { "BaseCore", "Base Core", "Core", "HomeBase", "Base" };
+
+    [Header("Debug Gizmos")]
+    [SerializeField] private bool drawDetectGizmoAlways = false;
+    [SerializeField] private Color detectGizmoColor = new Color(0.2f, 1f, 0.4f, 0.8f);
+    [SerializeField] private Color attackRangeGizmoColor = new Color(1f, 0.4f, 0.3f, 0.6f);
+
     [Header("Health (Prototype)")]
     [SerializeField] private float maxHp = 30f;
     [SerializeField] private KeyCode debugDamageKey = KeyCode.K;
@@ -22,7 +37,24 @@ public class BasicZombie : MonoBehaviour
     [SerializeField] private float lungeDistance = 0.12f;
     [SerializeField] private float lungeDuration = 0.12f;
 
+    private enum TargetKind
+    {
+        None,
+        Fence,
+        Tower,
+        Player,
+        BaseCore
+    }
+
+    private TargetKind currentTargetKind;
     private FenceSegment currentTargetFence;
+    private ArrowTower currentTargetTower;
+    private PlayerHealth currentTargetPlayer;
+    private BaseCore currentTargetBaseCore;
+    private Transform currentTargetTransform;
+    private Transform cachedBaseCoreTransform;
+    private readonly Collider[] forwardHitBuffer = new Collider[16];
+
     private float attackTimer;
     private float targetRefreshTimer;
 
@@ -39,6 +71,17 @@ public class BasicZombie : MonoBehaviour
     public bool IsDead => currentHp <= 0f;
 
     private float StoppingDistance => Mathf.Max(0.1f, attackRange * 0.85f);
+    private float AttackRangeSqr => attackRange * attackRange;
+
+    private void OnEnable()
+    {
+        AliveZombieCount++;
+    }
+
+    private void OnDestroy()
+    {
+        AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
+    }
 
     private void Awake()
     {
@@ -51,25 +94,32 @@ public class BasicZombie : MonoBehaviour
     {
         attackTimer = 0f;
         targetRefreshTimer = 0f;
-        FindNearestFence();
+        EnsureBaseCoreCached();
+        SelectFrontTarget();
     }
 
     private void Update()
     {
         if (IsDead)
+        {
             return;
+        }
 
         if (Input.GetKeyDown(debugDamageKey))
+        {
             TakeDamage(debugDamageAmount);
+        }
 
         RefreshTargetIfNeeded();
-
-        if (currentTargetFence == null)
-            return;
 
         if (isLunging)
         {
             UpdateAttackLunge();
+            return;
+        }
+
+        if (currentTargetTransform == null)
+        {
             return;
         }
 
@@ -79,86 +129,459 @@ public class BasicZombie : MonoBehaviour
 
     private void RefreshTargetIfNeeded()
     {
-        bool targetInvalid = currentTargetFence == null || currentTargetFence.IsDestroyed;
+        bool targetInvalid = IsCurrentTargetInvalid();
 
         targetRefreshTimer -= Time.deltaTime;
         if (targetInvalid || targetRefreshTimer <= 0f)
         {
-            FindNearestFence();
+            SelectFrontTarget();
             targetRefreshTimer = Mathf.Max(0.1f, targetRefreshInterval);
         }
     }
 
-    public void FindNearestFence()
+    void EnsureBaseCoreCached()
     {
-        FenceSegment[] fences = FindObjectsOfType<FenceSegment>();
-
-        FenceSegment nearestFence = null;
-        float nearestDistanceSqr = float.MaxValue;
-        Vector3 myPos = transform.position;
-        myPos.y = 0f;
-
-        for (int i = 0; i < fences.Length; i++)
+        if (cachedBaseCoreTransform == null)
         {
-            FenceSegment fence = fences[i];
-            if (fence == null || fence.IsDestroyed)
-                continue;
+            cachedBaseCoreTransform = ResolveBaseCoreTransform();
+        }
+    }
 
-            Vector3 fencePos = fence.transform.position;
-            fencePos.y = 0f;
+    Transform ResolveBaseCoreTransform()
+    {
+        Scene scene = gameObject.scene;
+        if (!scene.IsValid() || !scene.isLoaded)
+        {
+            return null;
+        }
 
-            float distanceSqr = (fencePos - myPos).sqrMagnitude;
-            if (distanceSqr < nearestDistanceSqr)
+        GameObject[] roots = scene.GetRootGameObjects();
+        for (int i = 0; i < roots.Length; i++)
+        {
+            if (roots[i] == null)
             {
-                nearestDistanceSqr = distanceSqr;
-                nearestFence = fence;
+                continue;
+            }
+
+            // Prefer the same "HomeBase + PersistentId" rule as GameManager, when present.
+            if (roots[i].name == "HomeBase")
+            {
+                PersistentId rootPersistentId = roots[i].GetComponent<PersistentId>();
+                if (rootPersistentId != null)
+                {
+                    return roots[i].transform;
+                }
+
+                PersistentId[] childPersistentIds = roots[i].GetComponentsInChildren<PersistentId>(true);
+                if (childPersistentIds.Length > 0 && childPersistentIds[0] != null)
+                {
+                    return childPersistentIds[0].transform;
+                }
             }
         }
 
-        currentTargetFence = nearestFence;
+        for (int i = 0; i < roots.Length; i++)
+        {
+            if (roots[i] == null)
+            {
+                continue;
+            }
+
+            GameObject found = FindBaseObjectByNameRecursive(roots[i].transform);
+            if (found != null)
+            {
+                return found.transform;
+            }
+        }
+
+        return null;
+    }
+
+    GameObject FindBaseObjectByNameRecursive(Transform root)
+    {
+        if (root == null)
+        {
+            return null;
+        }
+
+        if (baseCoreNameCandidates != null)
+        {
+            for (int i = 0; i < baseCoreNameCandidates.Length; i++)
+            {
+                if (root.name == baseCoreNameCandidates[i])
+                {
+                    return root.gameObject;
+                }
+            }
+        }
+
+        for (int c = 0; c < root.childCount; c++)
+        {
+            GameObject childFound = FindBaseObjectByNameRecursive(root.GetChild(c));
+            if (childFound != null)
+            {
+                return childFound;
+            }
+        }
+
+        return null;
+    }
+
+    bool IsCurrentTargetInvalid()
+    {
+        // Idling with no target is valid; re-pick on interval only (avoids OverlapCapsule every frame).
+        if (currentTargetKind == TargetKind.None)
+        {
+            return false;
+        }
+
+        if (currentTargetTransform == null)
+        {
+            return true;
+        }
+
+        if (!currentTargetTransform.gameObject.activeInHierarchy)
+        {
+            return true;
+        }
+
+        switch (currentTargetKind)
+        {
+            case TargetKind.Fence:
+                return currentTargetFence == null || currentTargetFence.IsDestroyed;
+            case TargetKind.Tower:
+                return currentTargetTower == null;
+            case TargetKind.Player:
+                return currentTargetPlayer == null || currentTargetPlayer.IsDead;
+            case TargetKind.BaseCore:
+                if (cachedBaseCoreTransform == null)
+                {
+                    return true;
+                }
+
+                if (!cachedBaseCoreTransform)
+                {
+                    return true;
+                }
+
+                if (!cachedBaseCoreTransform.gameObject.activeInHierarchy)
+                {
+                    return true;
+                }
+
+                if (currentTargetBaseCore == null)
+                {
+                    currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
+                }
+
+                return currentTargetBaseCore != null && currentTargetBaseCore.IsDestroyed;
+        }
+
+        return true;
+    }
+
+    void SelectFrontTarget()
+    {
+        ClearTargetSelection();
+
+        if (cachedBaseCoreTransform == null || !cachedBaseCoreTransform)
+        {
+            cachedBaseCoreTransform = null;
+        }
+
+        EnsureBaseCoreCached();
+
+        Vector3 forward = GetPlanarForward();
+        float range = Mathf.Max(0.01f, forwardDetectRange);
+        float radius = Mathf.Max(0.01f, forwardDetectRadius);
+        float startOff = forwardDetectStartOffset;
+        Vector3 pos = transform.position;
+        pos.y = 0f;
+        Vector3 fFlat = new Vector3(forward.x, 0f, forward.z).normalized;
+
+        Vector3 p0 = transform.position + fFlat * startOff;
+        Vector3 p1 = transform.position + fFlat * (startOff + range);
+        p0.y = transform.position.y;
+        p1.y = transform.position.y;
+
+        int count = Physics.OverlapCapsuleNonAlloc(
+            p0,
+            p1,
+            radius,
+            forwardHitBuffer,
+            forwardDetectMask,
+            QueryTriggerInteraction.Collide);
+
+        float bestFenceSqr = float.MaxValue;
+        FenceSegment bestFence = null;
+        float bestTowerSqr = float.MaxValue;
+        ArrowTower bestTower = null;
+        float bestPlayerSqr = float.MaxValue;
+        PlayerHealth bestPlayer = null;
+        float attackRangeSqr = AttackRangeSqr;
+
+        for (int i = 0; i < count; i++)
+        {
+            Collider col = forwardHitBuffer[i];
+            if (col == null)
+            {
+                continue;
+            }
+
+            BasicZombie zombie = col.GetComponentInParent<BasicZombie>();
+            if (zombie != null)
+            {
+                if (zombie == this)
+                {
+                    continue;
+                }
+            }
+
+            Vector3 colCenter = col.bounds.center;
+            colCenter.y = 0f;
+            float sqr = HorizontalDistanceSqr(pos, colCenter);
+
+            FenceSegment fence = col.GetComponentInParent<FenceSegment>();
+            if (fence != null)
+            {
+                if (!fence.IsDestroyed && sqr < bestFenceSqr)
+                {
+                    bestFenceSqr = sqr;
+                    bestFence = fence;
+                }
+
+                continue;
+            }
+
+            ArrowTower tower = col.GetComponentInParent<ArrowTower>();
+            if (tower != null)
+            {
+                if (sqr < bestTowerSqr)
+                {
+                    bestTowerSqr = sqr;
+                    bestTower = tower;
+                }
+
+                continue;
+            }
+
+            PlayerHealth ph = col.GetComponentInParent<PlayerHealth>();
+            if (ph != null)
+            {
+                if (!ph.IsDead && sqr <= attackRangeSqr + 0.01f && sqr < bestPlayerSqr)
+                {
+                    bestPlayerSqr = sqr;
+                    bestPlayer = ph;
+                }
+            }
+        }
+
+        if (bestFence != null)
+        {
+            currentTargetKind = TargetKind.Fence;
+            currentTargetFence = bestFence;
+            currentTargetTransform = bestFence.transform;
+            return;
+        }
+
+        if (bestTower != null)
+        {
+            currentTargetKind = TargetKind.Tower;
+            currentTargetTower = bestTower;
+            currentTargetTransform = bestTower.transform;
+            return;
+        }
+
+        if (bestPlayer != null)
+        {
+            currentTargetKind = TargetKind.Player;
+            currentTargetPlayer = bestPlayer;
+            currentTargetTransform = bestPlayer.transform;
+            return;
+        }
+
+        if (cachedBaseCoreTransform != null)
+        {
+            currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
+            currentTargetKind = TargetKind.BaseCore;
+            currentTargetTransform = cachedBaseCoreTransform;
+            return;
+        }
+
+        currentTargetKind = TargetKind.None;
+    }
+
+    void ClearTargetSelection()
+    {
+        currentTargetKind = TargetKind.None;
+        currentTargetFence = null;
+        currentTargetTower = null;
+        currentTargetPlayer = null;
+        currentTargetBaseCore = null;
+        currentTargetTransform = null;
+    }
+
+    private static float HorizontalDistanceSqr(Vector3 a, Vector3 b)
+    {
+        a.y = 0f;
+        b.y = 0f;
+        return (b - a).sqrMagnitude;
+    }
+
+    private Vector3 GetPlanarForward()
+    {
+        Vector3 f = transform.forward;
+        f.y = 0f;
+        if (f.sqrMagnitude < 0.0001f)
+        {
+            f = Vector3.forward;
+        }
+        else
+        {
+            f.Normalize();
+        }
+
+        return f;
     }
 
     private void HandleMovement()
     {
-        if (currentTargetFence == null || currentTargetFence.IsDestroyed)
+        if (currentTargetTransform == null)
+        {
             return;
+        }
+
+        if (currentTargetKind == TargetKind.Fence && (currentTargetFence == null || currentTargetFence.IsDestroyed))
+        {
+            return;
+        }
+
+        if (currentTargetKind == TargetKind.Tower && currentTargetTower == null)
+        {
+            return;
+        }
+
+        if (currentTargetKind == TargetKind.Player && (currentTargetPlayer == null || currentTargetPlayer.IsDead))
+        {
+            return;
+        }
+
+        if (currentTargetKind == TargetKind.BaseCore)
+        {
+            if (cachedBaseCoreTransform == null)
+            {
+                return;
+            }
+
+            if (!cachedBaseCoreTransform)
+            {
+                return;
+            }
+
+            if (currentTargetBaseCore != null && currentTargetBaseCore.IsDestroyed)
+            {
+                return;
+            }
+        }
 
         Vector3 currentPos = transform.position;
-        Vector3 targetPos = currentTargetFence.transform.position;
+        Vector3 targetPos = currentTargetTransform.position;
         targetPos.y = currentPos.y;
 
         Vector3 toTarget = targetPos - currentPos;
         float distanceToTarget = toTarget.magnitude;
         if (distanceToTarget <= StoppingDistance)
+        {
             return;
+        }
 
         Vector3 moveDirection = toTarget / distanceToTarget;
         Vector3 desiredPos = targetPos - moveDirection * StoppingDistance;
         transform.position = Vector3.MoveTowards(currentPos, desiredPos, moveSpeed * Time.deltaTime);
 
         if (moveDirection.sqrMagnitude > 0.0001f)
+        {
             transform.rotation = Quaternion.LookRotation(moveDirection, Vector3.up);
+        }
     }
 
     private void HandleAttack()
     {
-        if (currentTargetFence == null || currentTargetFence.IsDestroyed)
+        if (currentTargetTransform == null)
+        {
             return;
+        }
+
+        if (currentTargetKind == TargetKind.Fence)
+        {
+            if (currentTargetFence == null || currentTargetFence.IsDestroyed)
+            {
+                return;
+            }
+        }
+        else if (currentTargetKind == TargetKind.Tower)
+        {
+            if (currentTargetTower == null)
+            {
+                return;
+            }
+        }
+        else if (currentTargetKind == TargetKind.Player)
+        {
+            if (currentTargetPlayer == null || currentTargetPlayer.IsDead)
+            {
+                return;
+            }
+        }
+        else if (currentTargetKind == TargetKind.BaseCore)
+        {
+            if (cachedBaseCoreTransform == null)
+            {
+                return;
+            }
+
+            if (currentTargetBaseCore == null && currentTargetTransform != null)
+            {
+                currentTargetBaseCore = currentTargetTransform.GetComponentInParent<BaseCore>();
+            }
+
+            if (currentTargetBaseCore == null || currentTargetBaseCore.IsDestroyed)
+            {
+                return;
+            }
+        }
 
         Vector3 myPos = transform.position;
         myPos.y = 0f;
 
-        Vector3 fencePos = currentTargetFence.transform.position;
-        fencePos.y = 0f;
+        Vector3 targetPos = currentTargetTransform.position;
+        targetPos.y = 0f;
 
-        if (Vector3.Distance(myPos, fencePos) > attackRange)
+        if (Vector3.Distance(myPos, targetPos) > attackRange)
+        {
             return;
+        }
 
         attackTimer -= Time.deltaTime;
         if (attackTimer > 0f)
+        {
             return;
+        }
 
-        currentTargetFence.TakeDamage(attackDamage);
+        if (currentTargetKind == TargetKind.Fence && currentTargetFence != null)
+        {
+            currentTargetFence.TakeDamage(attackDamage);
+        }
+        else if (currentTargetKind == TargetKind.Player && currentTargetPlayer != null)
+        {
+            int damage = Mathf.Max(1, Mathf.CeilToInt(attackDamage));
+            currentTargetPlayer.TakeDamage(damage);
+        }
+        else if (currentTargetKind == TargetKind.BaseCore && currentTargetBaseCore != null)
+        {
+            currentTargetBaseCore.TakeDamage(attackDamage);
+        }
+
         attackTimer = Mathf.Max(0.05f, attackInterval);
         DoAttackLunge();
     }
@@ -166,19 +589,29 @@ public class BasicZombie : MonoBehaviour
     private void DoAttackLunge()
     {
         if (isLunging)
+        {
             return;
+        }
 
         lungeStartPosition = transform.position;
 
         Vector3 toTarget = Vector3.forward;
-        if (currentTargetFence != null)
+        if (currentTargetTransform != null)
         {
-            toTarget = currentTargetFence.transform.position - transform.position;
+            toTarget = currentTargetTransform.position - transform.position;
             toTarget.y = 0f;
         }
 
         if (toTarget.sqrMagnitude < 0.0001f)
+        {
             toTarget = transform.forward;
+            toTarget.y = 0f;
+        }
+
+        if (toTarget.sqrMagnitude < 0.0001f)
+        {
+            toTarget = Vector3.forward;
+        }
 
         Vector3 lungeDirection = toTarget.normalized;
         lungePeakPosition = lungeStartPosition + lungeDirection * Mathf.Max(0f, lungeDistance);
@@ -214,25 +647,104 @@ public class BasicZombie : MonoBehaviour
     public void TakeDamage(float amount)
     {
         if (amount <= 0f || IsDead)
+        {
             return;
+        }
 
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
         Debug.Log($"[BasicZombie] Took {amount} damage. HP: {currentHp}/{maxHp}", this);
 
         if (currentHp <= 0f)
+        {
             Die();
+        }
     }
 
     private void Die()
     {
         if (hasDied)
+        {
             return;
+        }
 
         hasDied = true;
         isLunging = false;
-        currentTargetFence = null;
+        ClearTargetSelection();
+        cachedBaseCoreTransform = null;
 
         Debug.Log("[BasicZombie] Zombie died and will be destroyed.", this);
         Destroy(gameObject);
     }
+
+#if UNITY_EDITOR
+    private void OnDrawGizmosSelected()
+    {
+        DrawDetectGizmo();
+    }
+
+    private void OnDrawGizmos()
+    {
+        if (drawDetectGizmoAlways)
+        {
+            DrawDetectGizmo();
+        }
+    }
+
+    private void DrawDetectGizmo()
+    {
+        if (!isActiveAndEnabled)
+        {
+            return;
+        }
+
+        Vector3 origin = transform.position;
+        Vector3 forward = GetPlanarForward();
+        float startOff = forwardDetectStartOffset;
+        float range = Mathf.Max(0.01f, forwardDetectRange);
+        float radius = Mathf.Max(0.01f, forwardDetectRadius);
+        Vector3 p0 = origin + forward * startOff;
+        Vector3 p1 = origin + forward * (startOff + range);
+        p0.y = origin.y;
+        p1.y = origin.y;
+
+        Gizmos.color = detectGizmoColor;
+        Gizmos.DrawWireSphere(p0, radius);
+        Gizmos.DrawWireSphere(p1, radius);
+
+        Vector3 right = Vector3.Cross(Vector3.up, forward).normalized;
+        Vector3 up = Vector3.up;
+        if (right.sqrMagnitude < 0.0001f)
+        {
+            right = transform.right;
+        }
+
+        Gizmos.DrawLine(p0 + right * radius, p1 + right * radius);
+        Gizmos.DrawLine(p0 - right * radius, p1 - right * radius);
+        Gizmos.DrawLine(p0 + up * radius, p1 + up * radius);
+        Gizmos.DrawLine(p0 - up * radius, p1 - up * radius);
+
+        Gizmos.DrawLine(origin, p0);
+        Gizmos.DrawLine(p0, p1);
+
+        Gizmos.color = attackRangeGizmoColor;
+        DrawHorizontalCircle(origin, Mathf.Max(0.01f, attackRange), 32);
+    }
+
+    private static void DrawHorizontalCircle(Vector3 center, float radius, int segments)
+    {
+        if (segments < 3)
+        {
+            segments = 3;
+        }
+
+        Vector3 prev = center + new Vector3(radius, 0f, 0f);
+        for (int i = 1; i <= segments; i++)
+        {
+            float t = i / (float)segments * Mathf.PI * 2f;
+            Vector3 next = center + new Vector3(Mathf.Cos(t) * radius, 0f, Mathf.Sin(t) * radius);
+            Gizmos.DrawLine(prev, next);
+            prev = next;
+        }
+    }
+#endif
 }

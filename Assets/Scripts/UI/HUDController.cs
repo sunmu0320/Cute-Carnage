@@ -178,6 +178,7 @@ public class HUDController : MonoBehaviour
             if (dayTimerText != null)
                 SetTextOrIgnore(dayTimerText, FormatRemainingTime(remainingSeconds));
         }
+
     }
 
     private static string GetFallbackDayText() => "DAY 1";

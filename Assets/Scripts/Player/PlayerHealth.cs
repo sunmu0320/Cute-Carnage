@@ -42,7 +42,12 @@ public class PlayerHealth : MonoBehaviour
     {
         maxHealth = Mathf.Max(1, maxHealth);
 
-        if (resetToMaxHealthOnAwake)
+        bool skipSceneDefaultReset = GameManager.Instance != null && GameManager.Instance.CurrentRunState != null;
+        if (skipSceneDefaultReset && GameManager.Instance.CurrentRunState.playerState != null)
+        {
+            currentHealth = Mathf.Clamp(Mathf.RoundToInt(GameManager.Instance.CurrentRunState.playerState.currentHp), 0, maxHealth);
+        }
+        else if (!skipSceneDefaultReset && resetToMaxHealthOnAwake)
         {
             currentHealth = maxHealth;
         }
@@ -92,6 +97,21 @@ public class PlayerHealth : MonoBehaviour
         }
 
         NotifyHealthChanged();
+    }
+
+    public PlayerRuntimeState CaptureRuntimeState()
+    {
+        return new PlayerRuntimeState { currentHp = CurrentHealth };
+    }
+
+    public void ApplyRuntimeState(PlayerRuntimeState state)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        SetHealth(Mathf.RoundToInt(state.currentHp));
     }
 
     private void SetHealth(int newHealth)

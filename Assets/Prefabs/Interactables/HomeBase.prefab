@@ -27,15 +27,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 155017261999241895}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.007542053, y: 0.5020623, z: -0.00437862, w: -0.8647875}
-  m_LocalPosition: {x: 6.03, y: -1.68, z: 12.95}
+  m_LocalRotation: {x: -0, y: 0.55034447, z: -0, w: -0.83493775}
+  m_LocalPosition: {x: 6.26, y: -1.6442411, z: 14.57}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1950897198210153196}
   - {fileID: 5092516128672243371}
   m_Father: {fileID: 3693512338602067621}
-  m_LocalEulerAnglesHint: {x: -0.495, y: 299.721, z: 0.868}
+  m_LocalEulerAnglesHint: {x: 0, y: 293.219, z: 0}
 --- !u!65 &2450865942462525171
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -87,6 +87,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 5092516128672243371}
   slotMarker: {fileID: 1950897198210153196}
 --- !u!1 &165060762765471963
@@ -146,13 +147,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 195271766603770561}
   serializedVersion: 2
-  m_LocalRotation: {x: -8.149071e-10, y: -0.8068383, z: -0.0000000013969835, w: 0.59077245}
-  m_LocalPosition: {x: 1.48, y: 0, z: 0.57}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1241350023989001716}
-  m_LocalEulerAnglesHint: {x: 0, y: -107.576, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!33 &8318455800784611703
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -269,7 +270,7 @@ Transform:
   m_GameObject: {fileID: 411446285458430369}
   serializedVersion: 2
   m_LocalRotation: {x: -0.006306825, y: 0.69063145, z: -0.006023186, w: 0.7231543}
-  m_LocalPosition: {x: 1.05, y: -2.14, z: -14.01}
+  m_LocalPosition: {x: 1.69, y: -2.15, z: -14.39}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -328,6 +329,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 5104217485316856232}
   slotMarker: {fileID: 5573085851855297804}
 --- !u!1 &420078221386636527
@@ -630,7 +632,7 @@ Transform:
   m_GameObject: {fileID: 1065046767748540529}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.49, y: -1, z: 6.4}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -870,6 +872,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 7318368050899788814}
   slotMarker: {fileID: 199349905493523102}
 --- !u!1 &1179206888056123171
@@ -961,7 +964,7 @@ Transform:
   m_GameObject: {fileID: 1279987426000807060}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -2.85, y: -1, z: -1.2}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1204,6 +1207,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 8200973950638603958}
   slotMarker: {fileID: 4144344179821161287}
 --- !u!1 &1743255150848990399
@@ -1295,7 +1299,7 @@ Transform:
   m_GameObject: {fileID: 2158860865498313725}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -3.36, y: -1, z: -0.17}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1385,15 +1389,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2196740322385892139}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0041676397, y: 0.87838686, z: -0.007660653, w: 0.4778707}
-  m_LocalPosition: {x: -9.18, y: -2.09, z: -11.18}
+  m_LocalRotation: {x: -0.003764194, y: 0.9020178, z: -0.007866744, w: 0.43161082}
+  m_LocalPosition: {x: -9.275886, y: -2.100064, z: -11.513601}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 9219449478783873120}
   - {fileID: 3160413730788923658}
   m_Father: {fileID: 3693512338602067621}
-  m_LocalEulerAnglesHint: {x: 0.543, y: 122.901, z: -0.839}
+  m_LocalEulerAnglesHint: {x: 0.627, y: 128.854, z: -0.778}
 --- !u!65 &3035797683612258380
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -1445,6 +1449,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3160413730788923658}
   slotMarker: {fileID: 9219449478783873120}
 --- !u!1 &2263315434504576757
@@ -1475,7 +1480,7 @@ Transform:
   m_GameObject: {fileID: 2263315434504576757}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.36, y: -1, z: 7.37}
+  m_LocalPosition: {x: 2.48, y: -1, z: 13.52}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1519,6 +1524,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 2164751389294258364}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 1065046767748540529}
   slotMarker: {fileID: 0}
 --- !u!114 &420587057591478258
@@ -1621,6 +1628,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3877824875535662231}
   slotMarker: {fileID: 419965261009202685}
 --- !u!1 &2341277696192421544
@@ -1879,6 +1887,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 619151687938796415}
   slotMarker: {fileID: 5090946412106176787}
 --- !u!1 &3039660788780050266
@@ -2030,7 +2039,7 @@ Transform:
   m_GameObject: {fileID: 3089362527170450134}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 6.51, y: -1, z: -8.09}
+  m_LocalPosition: {x: 8.27, y: -1, z: -9.64}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2074,6 +2083,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 6036604297611465777}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 6686222243274126090}
   slotMarker: {fileID: 0}
 --- !u!114 &2552291556459758165
@@ -2225,13 +2236,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3395463858012834077}
   serializedVersion: 2
-  m_LocalRotation: {x: 2.3283064e-10, y: -0.6126493, z: 4.656613e-10, w: 0.79035497}
-  m_LocalPosition: {x: 1.71, y: -0, z: -0.18}
+  m_LocalRotation: {x: 0, y: 0.7071068, z: 0, w: 0.7071068}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 3221726084875471989}
-  m_LocalEulerAnglesHint: {x: 0, y: -75.563, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 90, z: 0}
 --- !u!33 &3716762962556813302
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -2317,7 +2328,7 @@ Transform:
   m_GameObject: {fileID: 3514632875372861987}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 9.13, y: -1, z: 5.86}
+  m_LocalPosition: {x: 11.95, y: -1, z: 8.87}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2361,6 +2372,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 3927594629239266230}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 4182821921277988026}
   slotMarker: {fileID: 0}
 --- !u!114 &1586225835136043829
@@ -2434,15 +2447,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3848668766153912425}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.00723863, y: 0.5577006, z: -0.004863857, w: -0.82999647}
-  m_LocalPosition: {x: 11, y: -1.73, z: 10.47}
+  m_LocalRotation: {x: 0.007611586, y: 0.48807094, z: -0.0042565973, w: -0.8727604}
+  m_LocalPosition: {x: 11.57853, y: -1.7099979, z: 11.940107}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6895976892021566680}
   - {fileID: 5256403412459293249}
   m_Father: {fileID: 3693512338602067621}
-  m_LocalEulerAnglesHint: {x: -0.378, y: 292.2, z: 0.925}
+  m_LocalEulerAnglesHint: {x: -0.523, y: 301.566, z: 0.851}
 --- !u!65 &8662670428046046796
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -2494,6 +2507,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 5256403412459293249}
   slotMarker: {fileID: 6895976892021566680}
 --- !u!1 &3926765083446236662
@@ -2554,7 +2568,7 @@ Transform:
   m_GameObject: {fileID: 4057806742553403972}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 3.69, y: -1, z: 2.08}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2644,7 +2658,7 @@ Transform:
   m_GameObject: {fileID: 4182821921277988026}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.58, y: -1, z: 3.72}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2887,7 +2901,7 @@ Transform:
   m_GameObject: {fileID: 4883636517974788586}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.16, y: -1, z: -11.69}
+  m_LocalPosition: {x: -0.28, y: -1, z: -12.16}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2931,6 +2945,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 7960935191887523805}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 4933907469702512860}
   slotMarker: {fileID: 0}
 --- !u!114 &3647207518473871924
@@ -2973,7 +2989,7 @@ Transform:
   m_GameObject: {fileID: 4933907469702512860}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.29, y: -1, z: -0.91}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3064,7 +3080,7 @@ Transform:
   m_GameObject: {fileID: 5022103960369424270}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -7.7, y: -1, z: -6.93}
+  m_LocalPosition: {x: -9.3, y: -1, z: -9.02}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3108,6 +3124,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 6407375959634015548}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 1279987426000807060}
   slotMarker: {fileID: 0}
 --- !u!114 &797987230320377727
@@ -3150,15 +3168,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5188217821595577229}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.006815126, y: 0.6239239, z: -0.005441409, w: -0.7814365}
-  m_LocalPosition: {x: 0.76, y: -1.64, z: 15.11}
+  m_LocalRotation: {x: 0.006662603, y: 0.64521915, z: -0.0056271316, w: -0.7639478}
+  m_LocalPosition: {x: 0.72006863, y: -1.630043, z: 15.537512}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6335198681245950719}
   - {fileID: 7247078850314242471}
   m_Father: {fileID: 3693512338602067621}
-  m_LocalEulerAnglesHint: {x: -0.221, y: 282.788, z: 0.975}
+  m_LocalEulerAnglesHint: {x: -0.167, y: 279.63098, z: 0.985}
 --- !u!65 &5932029941467072073
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -3210,6 +3228,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 7247078850314242471}
   slotMarker: {fileID: 6335198681245950719}
 --- !u!1 &5193171354751566576
@@ -3239,7 +3258,7 @@ Transform:
   m_GameObject: {fileID: 5193171354751566576}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0.7006426, z: -0, w: 0.7135124}
-  m_LocalPosition: {x: 0.44, y: -0, z: 0.55}
+  m_LocalPosition: {x: 0, y: -0, z: 0}
   m_LocalScale: {x: 5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -3608,6 +3627,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 124393193422632123}
   slotMarker: {fileID: 2752316067833478697}
 --- !u!1 &5757330510499136822
@@ -3697,6 +3717,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3692352820866572285}
   slotMarker: {fileID: 8648428048322345849}
 --- !u!1 &6040894545824591692
@@ -3725,13 +3746,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6040894545824591692}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0.7006426, z: -0, w: 0.7135124}
+  m_LocalRotation: {x: 0, y: -0.7071068, z: 0, w: 0.7071068}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 5, y: 1, z: 0.5}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 8600014965467896675}
-  m_LocalEulerAnglesHint: {x: 0, y: -88.957, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: -90, z: 0}
 --- !u!33 &7870221847531550134
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -3997,7 +4018,7 @@ Transform:
   m_GameObject: {fileID: 6403483245142980285}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -5.37, y: -1, z: 10.04}
+  m_LocalPosition: {x: -7.72, y: -1, z: 11.31}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4041,6 +4062,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 5977240290877262432}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 7703854054479553002}
   slotMarker: {fileID: 0}
 --- !u!114 &7995733254765351441
@@ -4143,6 +4166,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 1996264889236818880}
   slotMarker: {fileID: 4176886445482366973}
 --- !u!1 &6686222243274126090
@@ -4172,7 +4196,7 @@ Transform:
   m_GameObject: {fileID: 6686222243274126090}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.63, y: -1, z: -1.23}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4322,6 +4346,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 6736914468948523784}
   slotMarker: {fileID: 4243644766198948493}
 --- !u!1 &7081895353305704489
@@ -4535,7 +4560,7 @@ Transform:
   m_GameObject: {fileID: 7554969532624433380}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10.19, y: -1, z: -2.48}
+  m_LocalPosition: {x: 13.81, y: -1, z: -0.46}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -4579,6 +4604,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 5361982261576377989}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 4057806742553403972}
   slotMarker: {fileID: 0}
 --- !u!114 &1825070761422722298
@@ -4621,7 +4648,7 @@ Transform:
   m_GameObject: {fileID: 7703854054479553002}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.44, y: -1, z: 2.48}
+  m_LocalPosition: {x: 0, y: -1, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -4771,6 +4798,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 1758212661639148992}
   slotMarker: {fileID: 6952331150370932194}
 --- !u!1 &7942396622336524480
@@ -4860,6 +4888,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 8204252172587040410}
   slotMarker: {fileID: 1470825690765945262}
 --- !u!1 &8241294307240425993
@@ -4949,6 +4978,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3077985690324009367}
   slotMarker: {fileID: 3959237372155940937}
 --- !u!1 &8306757110698782347
@@ -5040,15 +5070,15 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8378259051961219240}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.005186202, y: 0.8039291, z: -0.007011286, w: 0.59466124}
-  m_LocalPosition: {x: -4.27, y: -2.12, z: -13.12}
+  m_LocalRotation: {x: -0.005315387, y: 0.7927582, z: -0.006913862, w: 0.6094739}
+  m_LocalPosition: {x: -4.3159494, y: -2.1201394, z: -13.277997}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1250878399779254316}
   - {fileID: 5722846725892853092}
   m_Father: {fileID: 3693512338602067621}
-  m_LocalEulerAnglesHint: {x: 0.293, y: 107.017, z: -0.956}
+  m_LocalEulerAnglesHint: {x: 0.257, y: 104.892, z: -0.966}
 --- !u!65 &3508824549147966416
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -5100,6 +5130,7 @@ MonoBehaviour:
   fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
   woodBuildCost: 1
   scrapBuildCost: 0
+  resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 5722846725892853092}
   slotMarker: {fileID: 1250878399779254316}
 --- !u!1 &8911543248970018854
@@ -5220,7 +5251,7 @@ Transform:
   m_GameObject: {fileID: 8936753323502149543}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -9.85, y: -1, z: 0.12}
+  m_LocalPosition: {x: -12.84, y: -1, z: 1.42}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -5264,6 +5295,8 @@ MonoBehaviour:
   hasTower: 0
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 1793365234345283895}
+  woodBuildCost: 1
+  scrapBuildCost: 1
   slotVisualRoot: {fileID: 2158860865498313725}
   slotMarker: {fileID: 0}
 --- !u!114 &6338767579944549031

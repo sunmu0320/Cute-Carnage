@@ -34,24 +34,30 @@ public class GameManager : MonoBehaviour
     private const int DefaultFenceLevel = 1;
     private const string DefaultFenceUpgradeId = "fence_lv1";
     private const bool DefaultFenceUnlocked = true;
-    private const bool DefaultTowerSlotUnlocked = true;
-    private const bool DefaultTowerHasTower = false;
-    private const string DefaultTowerTypeId = "";
-    private const int DefaultTowerLevel = 1;
-    private const string DefaultTowerUpgradeId = "tower_lv1";
-    private const float DefaultTowerMaxHp = 100f;
-    private const float DefaultTowerDamage = 0f;
-    private const float DefaultTowerAttackRate = 0f;
-    private const float DefaultTowerAttackRange = 0f;
     private static readonly string[] BaseCoreNameCandidates = { "BaseCore", "Base Core", "Core", "HomeBase", "Base" };
 
     private DayTimeManager boundDayTimeManager;
     private BaseManager baseManager;
+    private ResourceManager cachedResourceManager;
     private float nightTimerRemaining;
     private GamePhase currentPhase = GamePhase.Unknown;
-    public BaseRuntimeState CurrentBaseState { get; private set; }
-    private bool hasInitializedBaseRuntimeState;
+    private RunRuntimeState currentRunState;
+    private bool hasInitializedRunState;
     private int runtimeInstanceId;
+
+    public RunRuntimeState CurrentRunState => currentRunState;
+    public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private void LogTransition(string message)
+    {
+        Debug.Log($"[GameManager] {message}", this);
+    }
+#else
+    private void LogTransition(string message)
+    {
+    }
+#endif
 
     private void Awake()
     {
@@ -100,9 +106,16 @@ public class GameManager : MonoBehaviour
     private void UpdateNightStageTimer()
     {
         nightTimerRemaining -= Time.deltaTime;
-        bool shouldReturnToDay = nightTimerRemaining <= 0f || Input.GetKeyDown(returnToDayKey);
-        if (shouldReturnToDay)
+        bool timerExpired = nightTimerRemaining <= 0f;
+        bool debugReturnToDay = Input.GetKeyDown(returnToDayKey);
+        if (timerExpired || debugReturnToDay)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (debugReturnToDay)
+            {
+                LogTransition($"Debug Night->Day: '{returnToDayKey}' pressed. Calling TransitionToDay() (same path as timer end).");
+            }
+#endif
             TransitionToDay();
         }
     }
@@ -114,7 +127,7 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("[GameManager] Transitioning Day -> Night.");
+        LogTransition("Transitioning Day -> Night.");
         BeforeLeaveDayScene();
         LoadNightSceneInternal();
     }
@@ -126,7 +139,11 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("[GameManager] Transitioning Night -> Day.");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        LogTransition("TransitionToDay(): official Night -> Day path (BeforeLeaveNightScene + LoadDaySceneInternal).");
+#else
+        LogTransition("Transitioning Night -> Day.");
+#endif
         BeforeLeaveNightScene();
         LoadDaySceneInternal();
     }
@@ -143,21 +160,24 @@ public class GameManager : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
-        Debug.Log(
-            $"[GameManager] sceneLoaded -> '{scene.name}'. activeInstanceId={runtimeInstanceId}, hasCurrentBaseState={CurrentBaseState != null}, fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}.",
-            this);
+        baseManager = null;
+        cachedResourceManager = null;
+
+        LogTransition(
+            $"sceneLoaded -> '{scene.name}'. activeInstanceId={runtimeInstanceId}, hasRunState={currentRunState != null}, " +
+            $"fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}, towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}.");
 
         if (scene.name == daySceneName)
         {
             currentPhase = GamePhase.Day;
-            Debug.Log("[GameManager] Entered Day scene.");
+            LogTransition("Entered Day scene.");
             BindDayManager();
             AfterEnterDayScene();
         }
         else if (scene.name == nightSceneName)
         {
             currentPhase = GamePhase.Night;
-            Debug.Log("[GameManager] Entered Night scene.");
+            LogTransition("Entered Night scene.");
             UnbindDayManager();
             nightTimerRemaining = nightSurvivalSeconds;
             AfterEnterNightScene();
@@ -215,48 +235,159 @@ public class GameManager : MonoBehaviour
 
     private void BeforeLeaveDayScene()
     {
-        // Capture runtime slot placement state before leaving Day scene.
-        BaseManager manager = GetOrFindBaseManager();
-        if (manager == null)
-        {
-            return;
-        }
-
-        BaseRuntimeState captured = manager.CaptureState();
-        if (captured != null)
-        {
-            Debug.Log($"[GameManager] Captured Day runtime state. fenceSlots={captured.fenceSlots?.Count ?? 0}", this);
-            SetBaseRuntimeState(captured);
-        }
+        CaptureRunStateFromScene("Day");
     }
 
     private void BeforeLeaveNightScene()
     {
-        // Placeholder: export runtime/base state before leaving Night scene.
+        CaptureRunStateFromScene("Night");
+    }
+
+    private void CaptureRunStateFromScene(string phaseLabel)
+    {
+        BaseRuntimeState previousBase = currentRunState?.baseState;
+        BaseManager manager = GetOrFindBaseManager();
+        BaseRuntimeState baseState;
+        if (manager != null)
+        {
+            baseState = manager.CaptureState();
+            if (previousBase != null)
+            {
+                MergeBaseCoreFromPreviousIfEmpty(previousBase, baseState);
+                MergeTowerSlotsFromPreviousIfStronger(previousBase, baseState);
+            }
+        }
+        else
+        {
+            baseState = previousBase ?? new BaseRuntimeState();
+            LogTransition($"Capture {phaseLabel}: BaseManager not found; reusing previous base state or empty (no scene slot capture).");
+        }
+
+        cachedResourceManager = null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        ResourceManager.TryLogDuplicateResourceManagersInActiveScene();
+#endif
+
+        ResourceManager resourceManager = GetOrFindResourceManager();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (resourceManager != null)
+        {
+            LogTransition($"Capturing resources from instance={resourceManager.GetInstanceID()} before snapshot {resourceManager.GetDebugSummary()}");
+        }
+        else
+        {
+            LogTransition("Capturing resources: no ResourceManager resolved.");
+        }
+#endif
+
+        ResourceRuntimeState resourceState = resourceManager != null
+            ? resourceManager.CaptureRuntimeState()
+            : (currentRunState?.resourceState ?? new ResourceRuntimeState());
+
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        PlayerRuntimeState playerState = PlayerRuntimeState.FromScene(playerHealth, hungerSystem, currentRunState?.playerState);
+        if (playerState == null)
+        {
+            playerState = currentRunState?.playerState ?? new PlayerRuntimeState();
+        }
+
+        LogTransition(
+            $"Captured {phaseLabel} runtime state. fenceSlots={baseState.fenceSlots?.Count ?? 0} towerSlots={baseState.towerSlots?.Count ?? 0} " +
+            $"wood={resourceState.wood} scrap={resourceState.scrap} food={resourceState.food} hp={playerState.currentHp} hunger={playerState.currentHunger}");
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        LogTowerSlotsLeavingScene(phaseLabel, baseState);
+#endif
+        SetRunRuntimeState(new RunRuntimeState(baseState, resourceState, playerState));
     }
 
     private void AfterEnterDayScene()
     {
-        // Placeholder: import/reconstruct runtime/base state after entering Day scene.
         BasePersistentIdValidator.ValidateActiveScene(logContext: this);
-        Debug.Log($"[GameManager] AfterEnterDayScene. CurrentBaseState exists={CurrentBaseState != null}", this);
+        LogTransition(
+            $"AfterEnterDayScene. CurrentRunState exists={currentRunState != null}, CurrentBaseState exists={CurrentBaseState != null}, " +
+            $"towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}");
         TryInitializeDefaultBaseRuntimeState();
+        ApplyRunRuntimeStateToScene("Day");
     }
 
     private void AfterEnterNightScene()
     {
-        // Placeholder: import/reconstruct runtime/base state after entering Night scene.
         BasePersistentIdValidator.ValidateActiveScene(logContext: this);
-        Debug.Log(
-            $"[GameManager] AfterEnterNightScene. CurrentBaseState exists={CurrentBaseState != null}, activeInstanceId={runtimeInstanceId}, fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}.",
-            this);
+        LogTransition(
+            $"AfterEnterNightScene. CurrentRunState exists={currentRunState != null}, activeInstanceId={runtimeInstanceId}, " +
+            $"fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}, towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}.");
+        ApplyRunRuntimeStateToScene("Night");
+    }
 
-        BaseManager manager = GetOrFindBaseManager();
-        if (manager != null)
+    private void ApplyRunRuntimeStateToScene(string phaseLabel)
+    {
+        if (currentRunState == null)
         {
-            Debug.Log($"[GameManager] Applying runtime state on Night enter. fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}", this);
-            manager.ApplyState(CurrentBaseState);
+            return;
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        LogTowerSlotsEnteringScene(phaseLabel, currentRunState.baseState);
+#endif
+
+        ResourceManager resourceManager = GetOrFindResourceManager();
+        if (resourceManager != null && currentRunState.resourceState != null)
+        {
+            LogTransition(
+                $"Applying resources on {phaseLabel} enter. targetInstanceId={resourceManager.GetInstanceID()} beforeApply {resourceManager.GetDebugSummary()} " +
+                $"appliedWood={currentRunState.resourceState.wood} appliedScrap={currentRunState.resourceState.scrap} appliedFood={currentRunState.resourceState.food}");
+            resourceManager.ApplyRuntimeState(currentRunState.resourceState);
+        }
+
+        BaseManager baseMgr = GetOrFindBaseManager();
+        if (baseMgr != null && currentRunState.baseState != null)
+        {
+            LogTransition(
+                $"Applying runtime state on {phaseLabel} enter. fenceSlots={currentRunState.baseState.fenceSlots?.Count ?? 0} " +
+                $"towerSlots={currentRunState.baseState.towerSlots?.Count ?? 0}");
+            baseMgr.ApplyState(currentRunState.baseState);
+        }
+
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (playerHealth != null && currentRunState.playerState != null)
+        {
+            playerHealth.ApplyRuntimeState(currentRunState.playerState);
+        }
+
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (hungerSystem != null && currentRunState.playerState != null)
+        {
+            hungerSystem.ApplyRuntimeState(currentRunState.playerState);
+        }
+    }
+
+    public void SetRunRuntimeState(RunRuntimeState run)
+    {
+        if (run == null)
+        {
+            Debug.LogWarning("[GameManager] SetRunRuntimeState called with null. Ignoring.");
+            return;
+        }
+
+        if (run.baseState == null)
+        {
+            run.baseState = new BaseRuntimeState();
+        }
+
+        if (run.resourceState == null)
+        {
+            run.resourceState = new ResourceRuntimeState();
+        }
+
+        if (run.playerState == null)
+        {
+            run.playerState = new PlayerRuntimeState();
+        }
+
+        currentRunState = run;
+        hasInitializedRunState = true;
+        LogTransition("Active RunRuntimeState assigned.");
     }
 
     public void SetBaseRuntimeState(BaseRuntimeState state)
@@ -267,9 +398,24 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        CurrentBaseState = state;
-        hasInitializedBaseRuntimeState = true;
-        Debug.Log("[GameManager] Active BaseRuntimeState assigned.");
+        if (currentRunState == null)
+        {
+            currentRunState = new RunRuntimeState();
+        }
+
+        currentRunState.baseState = state;
+        if (currentRunState.resourceState == null)
+        {
+            currentRunState.resourceState = new ResourceRuntimeState();
+        }
+
+        if (currentRunState.playerState == null)
+        {
+            currentRunState.playerState = new PlayerRuntimeState();
+        }
+
+        hasInitializedRunState = true;
+        LogTransition("Active BaseRuntimeState assigned (base slice only).");
     }
 
     public BaseRuntimeState GetBaseRuntimeState()
@@ -281,32 +427,44 @@ public class GameManager : MonoBehaviour
     {
         if (currentPhase != GamePhase.Day)
         {
-            Debug.Log("[GameManager] Default runtime state creation skipped: only allowed during Day bootstrap.", this);
+            LogTransition("Default runtime state creation skipped: reason=wrong_phase (only allowed during Day bootstrap).");
             return;
         }
 
-        if (hasInitializedBaseRuntimeState && CurrentBaseState != null)
+        if (hasInitializedRunState && currentRunState != null)
         {
-            Debug.Log("[GameManager] Default runtime state creation skipped: existing state already present.", this);
+            LogTransition("Default runtime state creation skipped: reason=existing_state_already_present.");
             return;
         }
 
-        Debug.Log("[GameManager] Creating default BaseRuntimeState (no existing state detected).", this);
+        LogTransition("Default runtime state creation: creating new state (no existing state detected).");
 
-        BaseRuntimeState state = new BaseRuntimeState
+        BaseRuntimeState baseState = new BaseRuntimeState
         {
             baseLevel = DefaultBaseLevel,
             baseUpgradeId = DefaultBaseUpgradeId
         };
 
-        state.baseCore = BuildDefaultBaseCoreState();
-        state.fences = BuildDefaultFenceStates();
-        state.towerSlots = BuildDefaultTowerSlotStates();
+        baseState.baseCore = BuildDefaultBaseCoreState();
+        baseState.fences = BuildDefaultFenceStates();
+        baseState.towerSlots = BuildDefaultTowerSlotStates();
 
-        SetBaseRuntimeState(state);
-        Debug.Log(
-            $"[GameManager] Created default BaseRuntimeState. Fences: {state.fences.Count}, TowerSlots: {state.towerSlots.Count}, BaseCoreId: '{state.baseCore.id}'.",
-            this);
+        ResourceManager resourceManager = GetOrFindResourceManager();
+        ResourceRuntimeState resourceState = resourceManager != null
+            ? resourceManager.CaptureRuntimeState()
+            : new ResourceRuntimeState();
+
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        PlayerRuntimeState playerState = PlayerRuntimeState.FromScene(playerHealth, hungerSystem, null);
+        if (playerState == null)
+        {
+            playerState = new PlayerRuntimeState();
+        }
+
+        SetRunRuntimeState(new RunRuntimeState(baseState, resourceState, playerState));
+        LogTransition(
+            $"Created default RunRuntimeState. Fences: {baseState.fences.Count}, TowerSlots: {baseState.towerSlots.Count}, BaseCoreId: '{baseState.baseCore.id}'.");
     }
 
     private BaseCoreRuntimeState BuildDefaultBaseCoreState()
@@ -407,17 +565,9 @@ public class GameManager : MonoBehaviour
             slots.Add(new TowerSlotRuntimeState
             {
                 id = id,
-                isUnlocked = DefaultTowerSlotUnlocked,
-                hasTower = DefaultTowerHasTower,
-                towerTypeId = DefaultTowerTypeId,
-                level = DefaultTowerLevel,
-                upgradeId = DefaultTowerUpgradeId,
-                currentHp = DefaultTowerMaxHp,
-                maxHp = DefaultTowerMaxHp,
-                damage = DefaultTowerDamage,
-                attackRate = DefaultTowerAttackRate,
-                attackRange = DefaultTowerAttackRange,
-                isDestroyed = false
+                hasTower = false,
+                towerId = string.Empty,
+                level = 1
             });
         }
 
@@ -512,6 +662,163 @@ public class GameManager : MonoBehaviour
         return null;
     }
 
+    private static void MergeBaseCoreFromPreviousIfEmpty(BaseRuntimeState previous, BaseRuntimeState captured)
+    {
+        if (previous == null || captured == null || previous.baseCore == null || captured.baseCore == null)
+        {
+            return;
+        }
+
+        if (!string.IsNullOrWhiteSpace(captured.baseCore.id))
+        {
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(previous.baseCore.id))
+        {
+            return;
+        }
+
+        captured.baseCore.id = previous.baseCore.id;
+        captured.baseCore.currentHp = previous.baseCore.currentHp;
+        captured.baseCore.maxHp = previous.baseCore.maxHp;
+        captured.baseCore.defense = previous.baseCore.defense;
+        captured.baseCore.isDestroyed = previous.baseCore.isDestroyed;
+    }
+
+    private static void MergeTowerSlotsFromPreviousIfStronger(BaseRuntimeState previous, BaseRuntimeState captured)
+    {
+        if (previous?.towerSlots == null || captured?.towerSlots == null)
+        {
+            return;
+        }
+
+        Dictionary<string, int> indexById = new Dictionary<string, int>();
+        for (int i = 0; i < captured.towerSlots.Count; i++)
+        {
+            TowerSlotRuntimeState s = captured.towerSlots[i];
+            if (s == null || string.IsNullOrWhiteSpace(s.id))
+            {
+                continue;
+            }
+
+            if (!indexById.ContainsKey(s.id))
+            {
+                indexById.Add(s.id, i);
+            }
+        }
+
+        for (int p = 0; p < previous.towerSlots.Count; p++)
+        {
+            TowerSlotRuntimeState prev = previous.towerSlots[p];
+            if (prev == null || !prev.hasTower || string.IsNullOrWhiteSpace(prev.id))
+            {
+                continue;
+            }
+
+            if (!indexById.TryGetValue(prev.id, out int idx))
+            {
+                captured.towerSlots.Add(
+                    new TowerSlotRuntimeState
+                    {
+                        id = prev.id,
+                        hasTower = true,
+                        towerId = string.IsNullOrWhiteSpace(prev.towerId) ? TowerSlot.ArrowTowerTowerId : prev.towerId,
+                        level = prev.level > 0 ? prev.level : 1
+                    });
+                indexById[prev.id] = captured.towerSlots.Count - 1;
+                continue;
+            }
+
+            TowerSlotRuntimeState cur = captured.towerSlots[idx];
+            if (cur != null && !cur.hasTower)
+            {
+                cur.hasTower = true;
+                cur.towerId = string.IsNullOrWhiteSpace(prev.towerId) ? TowerSlot.ArrowTowerTowerId : prev.towerId;
+                cur.level = prev.level > 0 ? prev.level : 1;
+            }
+        }
+    }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private static void LogTowerSlotsLeavingScene(string phaseLabel, BaseRuntimeState baseState)
+    {
+        int fenceCount = baseState?.fenceSlots?.Count ?? 0;
+        int towerCount = baseState?.towerSlots?.Count ?? 0;
+        if (baseState?.towerSlots == null || baseState.towerSlots.Count == 0)
+        {
+            Debug.Log($"[GameManager] Leaving {phaseLabel}: captured fenceSlots={fenceCount} towerSlots={towerCount} (no tower slot entries).");
+            return;
+        }
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append($"[GameManager] Leaving {phaseLabel}: captured fenceSlots={fenceCount} towerSlots={towerCount}. Occupied towers: ");
+        bool any = false;
+        for (int i = 0; i < baseState.towerSlots.Count; i++)
+        {
+            TowerSlotRuntimeState t = baseState.towerSlots[i];
+            if (t == null || !t.hasTower)
+            {
+                continue;
+            }
+
+            if (any)
+            {
+                sb.Append("; ");
+            }
+
+            any = true;
+            sb.Append($"id='{t.id}' towerId='{t.towerId}' level={t.level}");
+        }
+
+        if (!any)
+        {
+            sb.Append("(none with hasTower)");
+        }
+
+        Debug.Log(sb.ToString());
+    }
+
+    private static void LogTowerSlotsEnteringScene(string phaseLabel, BaseRuntimeState baseState)
+    {
+        bool hasSlice = baseState != null;
+        int towerCount = baseState?.towerSlots?.Count ?? 0;
+        if (!hasSlice || towerCount == 0)
+        {
+            Debug.Log(
+                $"[GameManager] Enter {phaseLabel}: baseState slice exists={hasSlice} incomingTowerSlots={towerCount} incomingHasTowerIds=(none)");
+            return;
+        }
+
+        System.Text.StringBuilder sb = new System.Text.StringBuilder();
+        sb.Append($"[GameManager] Enter {phaseLabel}: baseState slice exists=True incomingTowerSlots={towerCount}. Incoming hasTower slot IDs: ");
+        bool any = false;
+        for (int i = 0; i < baseState.towerSlots.Count; i++)
+        {
+            TowerSlotRuntimeState t = baseState.towerSlots[i];
+            if (t == null || !t.hasTower)
+            {
+                continue;
+            }
+
+            if (any)
+            {
+                sb.Append(", ");
+            }
+
+            any = true;
+            sb.Append($"'{t.id}' (towerId='{t.towerId}' level={t.level})");
+        }
+
+        if (!any)
+        {
+            sb.Append("(none)");
+        }
+
+        Debug.Log(sb.ToString());
+    }
+#endif
+
     private BaseManager GetOrFindBaseManager()
     {
         if (baseManager != null)
@@ -521,5 +828,16 @@ public class GameManager : MonoBehaviour
 
         baseManager = FindFirstObjectByType<BaseManager>();
         return baseManager;
+    }
+
+    private ResourceManager GetOrFindResourceManager()
+    {
+        if (cachedResourceManager != null)
+        {
+            return cachedResourceManager;
+        }
+
+        cachedResourceManager = ResourceManager.ResolveForRunStateTransfer();
+        return cachedResourceManager;
     }
 }

@@ -12,6 +12,13 @@ public class FenceSlot : MonoBehaviour, IInteractable
     [SerializeField] private int woodBuildCost = 1;
     [SerializeField] private int scrapBuildCost = 0;
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    [SerializeField, Tooltip("Minimum seconds between resource cost debug logs (prompt refresh can be every frame).")]
+    private float resourceCostDebugLogCooldownSeconds = 0.6f;
+
+    private float lastResourceCostDebugLogUnscaledTime = float.NegativeInfinity;
+#endif
+
     [Header("Anchors")]
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Transform slotMarker;
@@ -73,8 +80,22 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
         int requiredWood = Mathf.Max(0, woodBuildCost);
         int requiredScrap = Mathf.Max(0, scrapBuildCost);
-        return resourceManager.HasResource(ResourceType.Wood, requiredWood) &&
-               resourceManager.HasResource(ResourceType.Scrap, requiredScrap);
+        bool canAfford = resourceManager.HasResource(ResourceType.Wood, requiredWood) &&
+                         resourceManager.HasResource(ResourceType.Scrap, requiredScrap);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        float t = Time.unscaledTime;
+        if (t - lastResourceCostDebugLogUnscaledTime >= resourceCostDebugLogCooldownSeconds)
+        {
+            lastResourceCostDebugLogUnscaledTime = t;
+            Debug.Log(
+                $"[FenceSlot] '{name}' cost check. ResourceManager instanceId={resourceManager.GetInstanceID()} {resourceManager.GetDebugSummary()} " +
+                $"requiredWood={requiredWood} requiredScrap={requiredScrap} canAfford={canAfford}",
+                this);
+        }
+#endif
+
+        return canAfford;
     }
 
     public void SetInstalledFence(GameObject fenceObject)
@@ -195,7 +216,14 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
         if (!HasRequiredBuildResources(resourceManager))
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Debug.Log(
+                $"[FenceSlot] '{name}' cannot place fence: not enough resources. ResourceManager instanceId={resourceManager.GetInstanceID()} " +
+                $"{resourceManager.GetDebugSummary()} requiredWood={Mathf.Max(0, woodBuildCost)} requiredScrap={Mathf.Max(0, scrapBuildCost)}.",
+                this);
+#else
             Debug.Log($"[FenceSlot] '{name}' cannot place fence: not enough resources (Wood {Mathf.Max(0, woodBuildCost)}, Scrap {Mathf.Max(0, scrapBuildCost)}).", this);
+#endif
             return;
         }
 
@@ -212,11 +240,39 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     public FenceSlotRuntimeState CreateRuntimeState()
     {
-        return new FenceSlotRuntimeState
+        FenceSlotRuntimeState state = new FenceSlotRuntimeState
         {
             id = PersistentSlotId,
-            hasFence = HasFence
+            hasFence = HasFence,
+            currentHp = 0f,
+            isDestroyed = false
         };
+
+        if (HasFence && installedFence != null)
+        {
+            FenceSegment segment = GetFenceSegmentOnInstalledFence();
+            if (segment != null)
+            {
+                state.currentHp = segment.CurrentHp;
+                state.isDestroyed = segment.IsDestroyed;
+            }
+            else
+            {
+                Debug.LogWarning(
+                    $"[FenceSlot] '{name}' slot id='{PersistentSlotId}' reports HasFence but installed fence has no {nameof(FenceSegment)}. Storing hasFence=false.",
+                    this);
+                state.hasFence = false;
+                state.currentHp = 0f;
+            }
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log(
+            $"[FenceSlot] Capture runtime slot id='{state.id}' hasFence={state.hasFence} currentHp={state.currentHp:0.##} isDestroyed={state.isDestroyed}",
+            this);
+#endif
+
+        return state;
     }
 
     public void ApplyRuntimeState(FenceSlotRuntimeState state)
@@ -231,10 +287,55 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return;
         }
 
-        if (state.hasFence && !HasFence)
+        if (!state.hasFence)
         {
-            TryPlaceFence();
+            return;
         }
+
+        if (!HasFence)
+        {
+            if (!TryPlaceFence())
+            {
+                Debug.LogWarning(
+                    $"[FenceSlot] ApplyRuntimeState slot id='{PersistentSlotId}' could not spawn fence (TryPlaceFence failed).",
+                    this);
+                return;
+            }
+        }
+
+        FenceSegment segment = GetFenceSegmentOnInstalledFence();
+        if (segment == null)
+        {
+            Debug.LogWarning(
+                $"[FenceSlot] ApplyRuntimeState slot id='{PersistentSlotId}' has no {nameof(FenceSegment)} on installed fence.",
+                this);
+            return;
+        }
+
+        float incomingHp = state.currentHp;
+        segment.SetCurrentHp(incomingHp, state.isDestroyed);
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log(
+            $"[FenceSlot] Apply runtime slot id='{PersistentSlotId}' hasFence={state.hasFence} incomingHp={incomingHp:0.##} isDestroyed={state.isDestroyed} finalHp={segment.CurrentHp:0.##}/{segment.MaxHp:0.##} finalDestroyed={segment.IsDestroyed}",
+            this);
+#endif
+    }
+
+    private FenceSegment GetFenceSegmentOnInstalledFence()
+    {
+        if (installedFence == null)
+        {
+            return null;
+        }
+
+        FenceSegment segment = installedFence.GetComponent<FenceSegment>();
+        if (segment == null)
+        {
+            segment = installedFence.GetComponentInChildren<FenceSegment>(true);
+        }
+
+        return segment;
     }
 
     private bool TryPlaceFence()

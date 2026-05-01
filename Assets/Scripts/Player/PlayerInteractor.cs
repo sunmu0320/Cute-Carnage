@@ -1,5 +1,6 @@
 using System.Collections;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public enum PlayerActionState
 {
@@ -72,14 +73,44 @@ public class PlayerInteractor : MonoBehaviour
             playerAnimator = GetComponentInChildren<Animator>();
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
-        if (resourceManager == null)
-            resourceManager = FindObjectOfType<ResourceManager>();
+        BindResourceManagerFromActiveScene();
         if (worldPromptUI == null)
             worldPromptUI = FindObjectOfType<WorldPromptUI>();
 
         if (overlapBufferSize < 4)
             overlapBufferSize = 4;
         overlapBuffer = new Collider[overlapBufferSize];
+
+        SceneManager.sceneLoaded += OnSceneLoadedForResources;
+    }
+
+    void OnDestroy()
+    {
+        SceneManager.sceneLoaded -= OnSceneLoadedForResources;
+    }
+
+    void OnEnable()
+    {
+        BindResourceManagerFromActiveScene();
+    }
+
+    void Start()
+    {
+        BindResourceManagerFromActiveScene();
+    }
+
+    void OnSceneLoadedForResources(Scene scene, LoadSceneMode mode)
+    {
+        BindResourceManagerFromActiveScene();
+    }
+
+    void BindResourceManagerFromActiveScene()
+    {
+        ResourceManager found = ResourceManager.ResolveForRunStateTransfer();
+        if (found != null)
+        {
+            resourceManager = found;
+        }
     }
 
     void Update()
