@@ -2,7 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class BaseCore : MonoBehaviour
+public class BaseCore : MonoBehaviour, IStructureHpSource
 {
     [Header("Health")]
     [SerializeField] private float maxHp = 200f;
@@ -27,6 +27,7 @@ public class BaseCore : MonoBehaviour
     public float MaxHp => maxHp;
     public float CurrentHp => currentHp;
     public bool IsDestroyed => currentHp <= 0f;
+    public Transform HpAnchorTransform => worldHpAnchor != null ? worldHpAnchor : transform;
 
     private void Awake()
     {

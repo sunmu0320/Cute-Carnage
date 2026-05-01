@@ -1,7 +1,11 @@
 using UnityEngine;
 
-public class ArrowTower : MonoBehaviour
+public class ArrowTower : MonoBehaviour, IStructureHpSource
 {
+    [Header("Health")]
+    [SerializeField] private float maxHp = 80f;
+    [SerializeField] private float currentHp = 80f;
+
     [Header("Attack")]
     [SerializeField] private float attackRange = 6f;
     [SerializeField] private float attackInterval = 1f;
@@ -16,12 +20,45 @@ public class ArrowTower : MonoBehaviour
     [SerializeField] private GameObject hitVfxPrefab;
     [SerializeField] private LayerMask targetLayerMask;
 
+    [Header("Destroyed State Visuals")]
+    [SerializeField] private GameObject activeVisualRoot;
+    [SerializeField] private GameObject destroyedVisualRoot;
+    [SerializeField] private Collider[] towerColliders;
+
     private readonly Collider[] hitBuffer = new Collider[64];
     private float attackTimer;
     private Transform currentTarget;
+    private Collider[] cachedColliders;
+    private bool isDestroyed;
+
+    public float CurrentHp => currentHp;
+    public float MaxHp => maxHp;
+    public bool IsDestroyed => isDestroyed;
+    public Transform HpAnchorTransform => transform;
+
+    private void Awake()
+    {
+        ClampHealthSettings(resetCurrentToMaxIfNeeded: true);
+        isDestroyed = currentHp <= 0f;
+        ResolveTowerColliders();
+        ApplyDestroyedState();
+    }
+
+    private void OnValidate()
+    {
+        ClampHealthSettings(resetCurrentToMaxIfNeeded: false);
+        isDestroyed = currentHp <= 0f;
+        ResolveTowerColliders();
+        ApplyDestroyedState();
+    }
 
     private void Update()
     {
+        if (IsDestroyed)
+        {
+            return;
+        }
+
         // ArrowTower controls target selection, yaw-only visual aiming, and firing cadence.
         if (!IsTargetValid(currentTarget))
         {
@@ -40,6 +77,88 @@ public class ArrowTower : MonoBehaviour
 
         RotateYawTowardTarget();
         TryFireAtTarget();
+    }
+
+    public void TakeDamage(float damageAmount)
+    {
+        if (damageAmount <= 0f || IsDestroyed)
+        {
+            return;
+        }
+
+        currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, maxHp);
+        Debug.Log($"[ArrowTower] Tower damaged by {damageAmount:0.##}. HP: {currentHp:0.##}/{maxHp:0.##}", this);
+
+        if (IsDestroyed)
+        {
+            SetDestroyed();
+        }
+    }
+
+    private void SetDestroyed()
+    {
+        if (isDestroyed)
+        {
+            return;
+        }
+
+        isDestroyed = true;
+        currentHp = 0f;
+        currentTarget = null;
+        attackTimer = 0f;
+        ApplyDestroyedState();
+        Debug.Log($"[ArrowTower] Destroyed: {name}", this);
+    }
+
+    private void ResolveTowerColliders()
+    {
+        if (towerColliders != null && towerColliders.Length > 0)
+        {
+            cachedColliders = towerColliders;
+            return;
+        }
+
+        cachedColliders = GetComponentsInChildren<Collider>(true);
+    }
+
+    private void ApplyDestroyedState()
+    {
+        if (activeVisualRoot != null)
+        {
+            activeVisualRoot.SetActive(!isDestroyed);
+        }
+
+        if (destroyedVisualRoot != null)
+        {
+            destroyedVisualRoot.SetActive(isDestroyed);
+        }
+
+        if (cachedColliders == null || cachedColliders.Length == 0)
+        {
+            ResolveTowerColliders();
+        }
+
+        for (int i = 0; i < cachedColliders.Length; i++)
+        {
+            if (cachedColliders[i] != null)
+            {
+                cachedColliders[i].enabled = !isDestroyed;
+            }
+        }
+    }
+
+    private void ClampHealthSettings(bool resetCurrentToMaxIfNeeded)
+    {
+        maxHp = Mathf.Max(1f, maxHp);
+        if (resetCurrentToMaxIfNeeded)
+        {
+            currentHp = maxHp;
+        }
+        else
+        {
+            currentHp = Mathf.Clamp(currentHp, 0f, maxHp);
+        }
+
     }
 
     private Transform FindTarget()

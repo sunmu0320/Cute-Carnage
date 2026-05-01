@@ -22,6 +22,7 @@ public class BasicZombie : MonoBehaviour
     [SerializeField] private float forwardDetectStartOffset = 0.2f;
     [SerializeField] private LayerMask forwardDetectMask = ~0;
     [SerializeField] private string[] baseCoreNameCandidates = { "BaseCore", "Base Core", "Core", "HomeBase", "Base" };
+    [SerializeField] private bool enableFrontTargetDebugLogs = false;
 
     [Header("Debug Gizmos")]
     [SerializeField] private bool drawDetectGizmoAlways = false;
@@ -65,6 +66,7 @@ public class BasicZombie : MonoBehaviour
 
     private float currentHp;
     private bool hasDied;
+    private string lastFrontTargetLogKey;
 
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
@@ -250,7 +252,7 @@ public class BasicZombie : MonoBehaviour
             case TargetKind.Fence:
                 return currentTargetFence == null || currentTargetFence.IsDestroyed;
             case TargetKind.Tower:
-                return currentTargetTower == null;
+                return currentTargetTower == null || currentTargetTower.IsDestroyed;
             case TargetKind.Player:
                 return currentTargetPlayer == null || currentTargetPlayer.IsDead;
             case TargetKind.BaseCore:
@@ -312,12 +314,13 @@ public class BasicZombie : MonoBehaviour
             forwardDetectMask,
             QueryTriggerInteraction.Collide);
 
-        float bestFenceSqr = float.MaxValue;
+        TargetKind bestKind = TargetKind.None;
+        float bestTargetSqr = float.MaxValue;
         FenceSegment bestFence = null;
-        float bestTowerSqr = float.MaxValue;
         ArrowTower bestTower = null;
-        float bestPlayerSqr = float.MaxValue;
         PlayerHealth bestPlayer = null;
+        BaseCore bestBaseCore = null;
+        Transform bestTransform = null;
         float attackRangeSqr = AttackRangeSqr;
 
         for (int i = 0; i < count; i++)
@@ -344,10 +347,15 @@ public class BasicZombie : MonoBehaviour
             FenceSegment fence = col.GetComponentInParent<FenceSegment>();
             if (fence != null)
             {
-                if (!fence.IsDestroyed && sqr < bestFenceSqr)
+                if (!fence.IsDestroyed && sqr < bestTargetSqr)
                 {
-                    bestFenceSqr = sqr;
+                    bestKind = TargetKind.Fence;
+                    bestTargetSqr = sqr;
                     bestFence = fence;
+                    bestTower = null;
+                    bestPlayer = null;
+                    bestBaseCore = null;
+                    bestTransform = fence.transform;
                 }
 
                 continue;
@@ -356,10 +364,15 @@ public class BasicZombie : MonoBehaviour
             ArrowTower tower = col.GetComponentInParent<ArrowTower>();
             if (tower != null)
             {
-                if (sqr < bestTowerSqr)
+                if (!tower.IsDestroyed && sqr < bestTargetSqr)
                 {
-                    bestTowerSqr = sqr;
+                    bestKind = TargetKind.Tower;
+                    bestTargetSqr = sqr;
+                    bestFence = null;
                     bestTower = tower;
+                    bestPlayer = null;
+                    bestBaseCore = null;
+                    bestTransform = tower.transform;
                 }
 
                 continue;
@@ -368,35 +381,69 @@ public class BasicZombie : MonoBehaviour
             PlayerHealth ph = col.GetComponentInParent<PlayerHealth>();
             if (ph != null)
             {
-                if (!ph.IsDead && sqr <= attackRangeSqr + 0.01f && sqr < bestPlayerSqr)
+                if (!ph.IsDead && sqr < bestTargetSqr)
                 {
-                    bestPlayerSqr = sqr;
+                    bestKind = TargetKind.Player;
+                    bestTargetSqr = sqr;
+                    bestFence = null;
+                    bestTower = null;
                     bestPlayer = ph;
+                    bestBaseCore = null;
+                    bestTransform = ph.transform;
+                }
+
+                continue;
+            }
+
+            BaseCore core = col.GetComponentInParent<BaseCore>();
+            if (core != null)
+            {
+                if (!core.IsDestroyed && sqr <= attackRangeSqr + 0.01f && sqr < bestTargetSqr)
+                {
+                    bestKind = TargetKind.BaseCore;
+                    bestTargetSqr = sqr;
+                    bestFence = null;
+                    bestTower = null;
+                    bestPlayer = null;
+                    bestBaseCore = core;
+                    bestTransform = core.transform;
                 }
             }
         }
 
-        if (bestFence != null)
+        if (bestKind == TargetKind.Fence && bestFence != null)
         {
             currentTargetKind = TargetKind.Fence;
             currentTargetFence = bestFence;
             currentTargetTransform = bestFence.transform;
+            LogFrontTargetChange($"front:{currentTargetKind}:{bestFence.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestFence.name}");
             return;
         }
 
-        if (bestTower != null)
+        if (bestKind == TargetKind.Tower && bestTower != null)
         {
             currentTargetKind = TargetKind.Tower;
             currentTargetTower = bestTower;
             currentTargetTransform = bestTower.transform;
+            LogFrontTargetChange($"front:{currentTargetKind}:{bestTower.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestTower.name}");
             return;
         }
 
-        if (bestPlayer != null)
+        if (bestKind == TargetKind.Player && bestPlayer != null)
         {
             currentTargetKind = TargetKind.Player;
             currentTargetPlayer = bestPlayer;
             currentTargetTransform = bestPlayer.transform;
+            LogFrontTargetChange($"front:{currentTargetKind}:{bestPlayer.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestPlayer.name}");
+            return;
+        }
+
+        if (bestKind == TargetKind.BaseCore && bestBaseCore != null)
+        {
+            currentTargetKind = TargetKind.BaseCore;
+            currentTargetBaseCore = bestBaseCore;
+            currentTargetTransform = bestTransform != null ? bestTransform : bestBaseCore.transform;
+            LogFrontTargetChange($"front:{currentTargetKind}:{bestBaseCore.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestBaseCore.name}");
             return;
         }
 
@@ -405,10 +452,28 @@ public class BasicZombie : MonoBehaviour
             currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
             currentTargetKind = TargetKind.BaseCore;
             currentTargetTransform = cachedBaseCoreTransform;
+            LogFrontTargetChange("fallback:basecore", "No front target, moving to BaseCore");
             return;
         }
 
         currentTargetKind = TargetKind.None;
+        LogFrontTargetChange("fallback:none", "No front target, moving to BaseCore");
+    }
+
+    private void LogFrontTargetChange(string key, string message)
+    {
+        if (!enableFrontTargetDebugLogs)
+        {
+            return;
+        }
+
+        if (lastFrontTargetLogKey == key)
+        {
+            return;
+        }
+
+        lastFrontTargetLogKey = key;
+        Debug.Log($"[BasicZombie] {message}", this);
     }
 
     void ClearTargetSelection()
@@ -456,7 +521,7 @@ public class BasicZombie : MonoBehaviour
             return;
         }
 
-        if (currentTargetKind == TargetKind.Tower && currentTargetTower == null)
+        if (currentTargetKind == TargetKind.Tower && (currentTargetTower == null || currentTargetTower.IsDestroyed))
         {
             return;
         }
@@ -521,7 +586,7 @@ public class BasicZombie : MonoBehaviour
         }
         else if (currentTargetKind == TargetKind.Tower)
         {
-            if (currentTargetTower == null)
+            if (currentTargetTower == null || currentTargetTower.IsDestroyed)
             {
                 return;
             }
@@ -571,6 +636,10 @@ public class BasicZombie : MonoBehaviour
         if (currentTargetKind == TargetKind.Fence && currentTargetFence != null)
         {
             currentTargetFence.TakeDamage(attackDamage);
+        }
+        else if (currentTargetKind == TargetKind.Tower && currentTargetTower != null)
+        {
+            currentTargetTower.TakeDamage(attackDamage);
         }
         else if (currentTargetKind == TargetKind.Player && currentTargetPlayer != null)
         {

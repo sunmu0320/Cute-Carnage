@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3051115879127195886}
   - component: {fileID: 6123456789012345678}
+  - component: {fileID: 734567890123456789}
   m_Layer: 0
   m_Name: ArrowTower
   m_TagString: Untagged
@@ -46,6 +47,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42149c48f6fcf9c459fcfaa24736c904, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArrowTower
+  maxHp: 80
+  currentHp: 80
   attackRange: 13.76
   attackInterval: 1
   damage: 5
@@ -58,6 +61,27 @@ MonoBehaviour:
   targetLayerMask:
     serializedVersion: 2
     m_Bits: 128
+--- !u!65 &734567890123456789
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2005347959993295351}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 2.9482903, y: 2.562026, z: 2.4798}
+  m_Center: {x: -0.104775906, y: 0.71898705, z: 0.032807708}
 --- !u!1 &2684643306452188717
 GameObject:
   m_ObjectHideFlags: 0

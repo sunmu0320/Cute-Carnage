@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 9012032746038995785}
   - component: {fileID: 4890323041639008873}
   m_Layer: 0
-  m_Name: DayTimerBar
+  m_Name: TowerHpBar_0
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
