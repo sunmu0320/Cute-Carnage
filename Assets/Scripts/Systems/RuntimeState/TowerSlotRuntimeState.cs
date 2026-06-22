@@ -4,6 +4,8 @@ public class TowerSlotRuntimeState
     public bool hasTower;
     public string towerId;
     public int level;
+    public float currentHp;
+    public bool isDestroyed;
 
     public TowerSlotRuntimeState()
     {
@@ -11,5 +13,7 @@ public class TowerSlotRuntimeState
         hasTower = false;
         towerId = string.Empty;
         level = 1;
+        currentHp = 0f;
+        isDestroyed = false;
     }
 }

@@ -30,7 +30,29 @@ public class TowerSlot : MonoBehaviour, IInteractable
     [SerializeField]
     private Transform slotMarker;
 
+    [SerializeField]
+    private float towerReferenceSearchRadius = 2f;
+
+    [Header("Tower HP Bar")]
+    [SerializeField]
+    private WorldGatherBar towerHpBarTemplate;
+
+    [SerializeField]
+    private Transform towerHpBarParent;
+
+    [SerializeField]
+    private Vector3 towerHpBarLocalOffset = new Vector3(0f, 2.8f, 0f);
+
+    [SerializeField]
+    private bool keepTowerHpBarAlwaysVisible = true;
+
+    [SerializeField]
+    private bool hideTowerHpBarWhenDestroyed = false;
+
     private PersistentId persistentId;
+    private WorldGatherBar spawnedTowerHpBar;
+    private bool hasLoggedMissingHpBarTemplate;
+    private bool hasLoggedMissingHpBarParent;
 
     public bool HasTower => hasTower;
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
@@ -39,6 +61,8 @@ public class TowerSlot : MonoBehaviour, IInteractable
     private void Awake()
     {
         CachePersistentId();
+        EnsureCurrentTowerReference();
+        EnsureTowerHpBarBinding();
         RefreshSlotVisualState();
     }
 
@@ -46,6 +70,62 @@ public class TowerSlot : MonoBehaviour, IInteractable
     {
         CachePersistentId();
         RefreshSlotVisualState();
+        UpdateHpBarPosition();
+    }
+
+    private void Update()
+    {
+        SyncTowerHpToBar();
+    }
+
+    private void UpdateHpBarPosition()
+    {
+        if (spawnedTowerHpBar != null)
+        {
+            spawnedTowerHpBar.transform.localPosition = towerHpBarLocalOffset;
+        }
+    }
+
+    private void SyncTowerHpToBar()
+    {
+        if (spawnedTowerHpBar == null)
+        {
+            return;
+        }
+
+        if (!hasTower || currentTower == null)
+        {
+            spawnedTowerHpBar.HideInstant();
+            return;
+        }
+
+        if (TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            if (hideTowerHpBarWhenDestroyed && tower.IsDestroyed)
+            {
+                spawnedTowerHpBar.HideInstant();
+                return;
+            }
+
+            float ratio = tower.MaxHp > 0.01f ? tower.CurrentHp / tower.MaxHp : 0f;
+            
+            bool isDamaged = tower.CurrentHp < tower.MaxHp - 0.01f;
+            bool shouldShow = keepTowerHpBarAlwaysVisible || isDamaged;
+
+            if (shouldShow)
+            {
+                spawnedTowerHpBar.Show();
+                spawnedTowerHpBar.SetProgress(ratio);
+            }
+            else
+            {
+                spawnedTowerHpBar.HideInstant();
+            }
+        }
+        else
+        {
+            spawnedTowerHpBar.HideInstant();
+        }
     }
 
     private void CachePersistentId()
@@ -178,6 +258,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
         Transform origin = spawnPoint != null ? spawnPoint : transform;
         currentTower = Instantiate(prefab, origin.position, origin.rotation);
         hasTower = true;
+        EnsureTowerHpBarBinding();
         RefreshSlotVisualState();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[TowerSlot] PlaceTowerInternal slot id='{PersistentId}' towerId='{towerId}' placed '{currentTower.name}'.", this);
@@ -186,13 +267,24 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public TowerSlotRuntimeState CreateRuntimeState()
     {
+        EnsureCurrentTowerReference();
         bool occupied = hasTower || currentTower != null;
+        float capturedHp = 0f;
+        bool capturedDestroyed = false;
+        if (occupied && TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            capturedHp = tower.CurrentHp;
+            capturedDestroyed = tower.IsDestroyed;
+        }
+
         return new TowerSlotRuntimeState
         {
             id = PersistentId,
             hasTower = occupied,
             towerId = occupied ? ArrowTowerTowerId : string.Empty,
-            level = 1
+            level = 1,
+            currentHp = capturedHp,
+            isDestroyed = capturedDestroyed
         };
     }
 
@@ -213,8 +305,10 @@ public class TowerSlot : MonoBehaviour, IInteractable
             return;
         }
 
+        EnsureCurrentTowerReference();
         if (hasTower)
         {
+            ApplyTowerDurabilityState(state);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log(
                 $"[TowerSlot] ApplyRuntimeState slot id='{PersistentId}' incoming hasTower={state.hasTower} towerId='{state.towerId}' " +
@@ -226,6 +320,8 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
         bool hadTowerBeforePlace = hasTower;
         PlaceTowerInternal(state.towerId);
+        EnsureCurrentTowerReference();
+        ApplyTowerDurabilityState(state);
         bool restored = !hadTowerBeforePlace && hasTower;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log(
@@ -269,6 +365,130 @@ public class TowerSlot : MonoBehaviour, IInteractable
         if (slotMarker != null)
         {
             slotMarker.gameObject.SetActive(!hasTower);
+        }
+    }
+
+    private bool TryGetCurrentTowerComponent(out ArrowTower tower)
+    {
+        tower = null;
+        if (currentTower == null)
+        {
+            return false;
+        }
+
+        tower = currentTower.GetComponentInChildren<ArrowTower>(true);
+        return tower != null;
+    }
+
+    private void ApplyTowerDurabilityState(TowerSlotRuntimeState state)
+    {
+        if (state == null || !state.hasTower)
+        {
+            return;
+        }
+
+        if (!TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            return;
+        }
+
+        tower.ApplyRuntimeDurability(state.currentHp, state.isDestroyed);
+        EnsureTowerHpBarBinding();
+    }
+
+    private void EnsureCurrentTowerReference()
+    {
+        if (currentTower != null)
+        {
+            hasTower = true;
+            return;
+        }
+
+        if (!hasTower)
+        {
+            return;
+        }
+
+        Transform origin = spawnPoint != null ? spawnPoint : transform;
+        ArrowTower[] sceneTowers = FindObjectsByType<ArrowTower>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        float maxDistanceSqr = Mathf.Max(0.01f, towerReferenceSearchRadius) * Mathf.Max(0.01f, towerReferenceSearchRadius);
+        float bestDistanceSqr = float.MaxValue;
+        ArrowTower nearest = null;
+
+        for (int i = 0; i < sceneTowers.Length; i++)
+        {
+            ArrowTower candidate = sceneTowers[i];
+            if (candidate == null)
+            {
+                continue;
+            }
+
+            float distSqr = (candidate.transform.position - origin.position).sqrMagnitude;
+            if (distSqr > maxDistanceSqr || distSqr >= bestDistanceSqr)
+            {
+                continue;
+            }
+
+            bestDistanceSqr = distSqr;
+            nearest = candidate;
+        }
+
+        if (nearest != null)
+        {
+            currentTower = nearest.gameObject;
+            EnsureTowerHpBarBinding();
+        }
+        else
+        {
+            hasTower = false;
+        }
+    }
+
+    private void EnsureTowerHpBarBinding()
+    {
+        if (!TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            return;
+        }
+
+        if (towerHpBarTemplate == null)
+        {
+            if (!hasLoggedMissingHpBarTemplate)
+            {
+                hasLoggedMissingHpBarTemplate = true;
+                Debug.LogWarning($"[TowerSlot] slot id='{PersistentId}' missing Tower HP bar template. Assign 'towerHpBarTemplate'.", this);
+            }
+            return;
+        }
+
+        if (spawnedTowerHpBar == null)
+        {
+            Transform parent = towerHpBarParent != null ? towerHpBarParent : towerHpBarTemplate.transform.parent;
+            if (parent == null)
+            {
+                Canvas fallbackCanvas = FindFirstObjectByType<Canvas>(FindObjectsInactive.Exclude);
+                if (fallbackCanvas != null)
+                {
+                    parent = fallbackCanvas.transform;
+                }
+            }
+
+            if (parent == null)
+            {
+                if (!hasLoggedMissingHpBarParent)
+                {
+                    hasLoggedMissingHpBarParent = true;
+                    Debug.LogWarning(
+                        $"[TowerSlot] slot id='{PersistentId}' has no HP bar parent/canvas. Assign 'towerHpBarParent' or place template under a Canvas.",
+                        this);
+                }
+                return;
+            }
+
+            spawnedTowerHpBar = Instantiate(towerHpBarTemplate, parent);
+            spawnedTowerHpBar.name = $"{towerHpBarTemplate.name}_{PersistentId}_TowerHp";
+            spawnedTowerHpBar.transform.localPosition = towerHpBarLocalOffset;
+            spawnedTowerHpBar.gameObject.SetActive(true);
         }
     }
 }

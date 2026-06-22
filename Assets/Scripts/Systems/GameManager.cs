@@ -44,9 +44,11 @@ public class GameManager : MonoBehaviour
     private RunRuntimeState currentRunState;
     private bool hasInitializedRunState;
     private int runtimeInstanceId;
+    private int currentDay = 1;
 
     public RunRuntimeState CurrentRunState => currentRunState;
     public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
+    public int CurrentDay => currentDay;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void LogTransition(string message)
@@ -139,10 +141,19 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        currentDay++;
+        if (currentDay > 7)
+        {
+            Debug.Log("<color=green>[GameManager] PROTOTYPE CLEAR: Day 7 Survived! All nights cleared.</color>");
+            // For prototype, we stay in Night scene or stop logic. 
+            // In a real game, you might load a Win scene.
+            return;
+        }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        LogTransition("TransitionToDay(): official Night -> Day path (BeforeLeaveNightScene + LoadDaySceneInternal).");
+        LogTransition($"TransitionToDay(): Day {currentDay}. official Night -> Day path (BeforeLeaveNightScene + LoadDaySceneInternal).");
 #else
-        LogTransition("Transitioning Night -> Day.");
+        LogTransition($"Transitioning Night -> Day {currentDay}.");
 #endif
         BeforeLeaveNightScene();
         LoadDaySceneInternal();
@@ -292,6 +303,8 @@ public class GameManager : MonoBehaviour
             playerState = currentRunState?.playerState ?? new PlayerRuntimeState();
         }
 
+        Debug.Log($"[PlayerRuntimeState] Saved Player HP={playerState.currentHp} Hunger={playerState.currentHunger} before {phaseLabel} transition.");
+
         LogTransition(
             $"Captured {phaseLabel} runtime state. fenceSlots={baseState.fenceSlots?.Count ?? 0} towerSlots={baseState.towerSlots?.Count ?? 0} " +
             $"wood={resourceState.wood} scrap={resourceState.scrap} food={resourceState.food} hp={playerState.currentHp} hunger={playerState.currentHunger}");
@@ -305,10 +318,16 @@ public class GameManager : MonoBehaviour
     {
         BasePersistentIdValidator.ValidateActiveScene(logContext: this);
         LogTransition(
-            $"AfterEnterDayScene. CurrentRunState exists={currentRunState != null}, CurrentBaseState exists={CurrentBaseState != null}, " +
+            $"AfterEnterDayScene (Day {currentDay}). CurrentRunState exists={currentRunState != null}, CurrentBaseState exists={CurrentBaseState != null}, " +
             $"towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}");
         TryInitializeDefaultBaseRuntimeState();
         ApplyRunRuntimeStateToScene("Day");
+
+        if (boundDayTimeManager != null)
+        {
+            LogTransition("Triggering DayTimeManager.StartDay() to ensure loop continues.");
+            boundDayTimeManager.StartDay();
+        }
     }
 
     private void AfterEnterNightScene()
@@ -359,6 +378,18 @@ public class GameManager : MonoBehaviour
         if (hungerSystem != null && currentRunState.playerState != null)
         {
             hungerSystem.ApplyRuntimeState(currentRunState.playerState);
+        }
+
+        HUDController hud = FindFirstObjectByType<HUDController>();
+        if (hud != null)
+        {
+            hud.RefreshHudFromPlayerStats();
+        }
+
+        if (currentRunState.playerState != null)
+{
+            string context = phaseLabel == "Day" ? $"Day {currentDay}" : "Night scene";
+            Debug.Log($"[PlayerRuntimeState] Restored Player HP={currentRunState.playerState.currentHp} Hunger={currentRunState.playerState.currentHunger} on {context} start.");
         }
     }
 
@@ -567,7 +598,9 @@ public class GameManager : MonoBehaviour
                 id = id,
                 hasTower = false,
                 towerId = string.Empty,
-                level = 1
+                level = 1,
+                currentHp = 0f,
+                isDestroyed = false
             });
         }
 
@@ -724,7 +757,9 @@ public class GameManager : MonoBehaviour
                         id = prev.id,
                         hasTower = true,
                         towerId = string.IsNullOrWhiteSpace(prev.towerId) ? TowerSlot.ArrowTowerTowerId : prev.towerId,
-                        level = prev.level > 0 ? prev.level : 1
+                        level = prev.level > 0 ? prev.level : 1,
+                        currentHp = Mathf.Max(0f, prev.currentHp),
+                        isDestroyed = prev.isDestroyed
                     });
                 indexById[prev.id] = captured.towerSlots.Count - 1;
                 continue;
@@ -736,6 +771,8 @@ public class GameManager : MonoBehaviour
                 cur.hasTower = true;
                 cur.towerId = string.IsNullOrWhiteSpace(prev.towerId) ? TowerSlot.ArrowTowerTowerId : prev.towerId;
                 cur.level = prev.level > 0 ? prev.level : 1;
+                cur.currentHp = Mathf.Max(0f, prev.currentHp);
+                cur.isDestroyed = prev.isDestroyed;
             }
         }
     }
@@ -768,7 +805,8 @@ public class GameManager : MonoBehaviour
             }
 
             any = true;
-            sb.Append($"id='{t.id}' towerId='{t.towerId}' level={t.level}");
+            sb.Append(
+                $"id='{t.id}' towerId='{t.towerId}' level={t.level} hp={t.currentHp:0.##} destroyed={t.isDestroyed}");
         }
 
         if (!any)
@@ -807,7 +845,8 @@ public class GameManager : MonoBehaviour
             }
 
             any = true;
-            sb.Append($"'{t.id}' (towerId='{t.towerId}' level={t.level})");
+            sb.Append(
+                $"'{t.id}' (towerId='{t.towerId}' level={t.level} hp={t.currentHp:0.##} destroyed={t.isDestroyed})");
         }
 
         if (!any)

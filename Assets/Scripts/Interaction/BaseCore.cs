@@ -22,6 +22,7 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
     private GameObject worldHpBarInstance;
     private Image worldHpFillImage;
     private TextMeshProUGUI worldHpText;
+    private UnityEngine.UI.Text legacyHpText;
     private WorldGatherBar worldGatherBar;
 
     public float MaxHp => maxHp;
@@ -57,7 +58,11 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
             return;
         }
 
+        float oldHp = currentHp;
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
+        
+        Debug.Log($"[BaseCore] Damaged: {amount}. HP: {oldHp:0.##} -> {currentHp:0.##}/{maxHp:0.##}", this);
+        
         RefreshWorldHpBar();
 
         if (currentHp > 0f || hasLoggedDestroyed)
@@ -104,6 +109,8 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
         if (worldGatherBar != null)
         {
             worldGatherBar.enabled = faceCamera;
+            // Ensure it doesn't stay hidden by its Awake logic
+            worldGatherBar.Show();
         }
 
         CacheWorldHpComponents();
@@ -161,17 +168,43 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
         }
 
         Image[] allImages = worldHpBarInstance.GetComponentsInChildren<Image>(true);
+        Image firstFilled = null;
+        Image bestByName = null;
+
         for (int i = 0; i < allImages.Length; i++)
         {
             Image image = allImages[i];
-            if (image != null && image.type == Image.Type.Filled)
+            if (image == null) continue;
+
+            // Prioritize images named "Fill" or containing "Fill"
+            string lowerName = image.name.ToLower();
+            if (lowerName.Contains("fill"))
             {
-                worldHpFillImage = image;
-                break;
+                if (image.type == Image.Type.Filled)
+                {
+                    bestByName = image;
+                    break; // Found perfect match
+                }
+                
+                if (bestByName == null) bestByName = image;
+            }
+
+            if (firstFilled == null && image.type == Image.Type.Filled)
+            {
+                firstFilled = image;
             }
         }
 
+        worldHpFillImage = bestByName != null ? bestByName : firstFilled;
+
+        if (worldHpFillImage == null && allImages.Length > 0)
+        {
+            // Fallback to the last image if it's not the background (assuming background is first)
+            worldHpFillImage = allImages[allImages.Length - 1];
+        }
+
         worldHpText = worldHpBarInstance.GetComponentInChildren<TextMeshProUGUI>(true);
+        legacyHpText = worldHpBarInstance.GetComponentInChildren<UnityEngine.UI.Text>(true);
     }
 
     private void RefreshWorldHpBar()
@@ -184,22 +217,39 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
         float safeMaxHp = Mathf.Max(1f, maxHp);
         float fill = Mathf.Clamp01(currentHp / safeMaxHp);
 
-        if (worldHpFillImage != null)
+        // 1. Update Fill (Priority: WorldGatherBar > Manual Fill)
+        if (worldGatherBar != null)
+        {
+            worldGatherBar.SetProgress(fill);
+        }
+        else if (worldHpFillImage != null)
         {
             worldHpFillImage.fillAmount = fill;
         }
 
+        // 2. Update Text (Support both TMP and Legacy)
+        string hpString = $"Base HP {Mathf.RoundToInt(currentHp)} / {Mathf.RoundToInt(safeMaxHp)}";
+        
         if (worldHpText != null)
         {
             worldHpText.gameObject.SetActive(showWorldHpText);
-            if (showWorldHpText)
-            {
-                worldHpText.text = $"Base HP {Mathf.RoundToInt(currentHp)} / {Mathf.RoundToInt(safeMaxHp)}";
-            }
+            if (showWorldHpText) worldHpText.text = hpString;
+        }
+        
+        if (legacyHpText != null)
+        {
+            legacyHpText.gameObject.SetActive(showWorldHpText);
+            if (showWorldHpText) legacyHpText.text = hpString;
         }
 
+        // 3. Visibility and Debugging
         bool visible = !hideWorldHpWhenFull || currentHp < safeMaxHp;
         worldHpBarInstance.SetActive(visible);
+        
+        if (currentHp < safeMaxHp)
+        {
+            Debug.Log($"[BaseCore] HP Bar Refreshed: {fill * 100f:0.#}% (HP: {currentHp:0.#}/{safeMaxHp:0.#})", this);
+        }
     }
 
     private void LateUpdate()

@@ -117,7 +117,7 @@ public class SimpleZombieSpawner : MonoBehaviour
             return;
         }
 
-        if (BasicZombie.AliveZombieCount > 0)
+        if (Zombie.AliveZombieCount > 0)
         {
             return;
         }

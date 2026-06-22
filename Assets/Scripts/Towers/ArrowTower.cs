@@ -36,6 +36,19 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     public bool IsDestroyed => isDestroyed;
     public Transform HpAnchorTransform => transform;
 
+    public void ApplyRuntimeDurability(float runtimeCurrentHp, bool runtimeDestroyed)
+    {
+        float clampedHp = Mathf.Clamp(runtimeCurrentHp, 0f, maxHp);
+        isDestroyed = runtimeDestroyed || clampedHp <= 0f;
+        currentHp = isDestroyed ? 0f : clampedHp;
+        if (isDestroyed)
+        {
+            ClearAttackState();
+        }
+
+        ApplyDestroyedState();
+    }
+
     private void Awake()
     {
         ClampHealthSettings(resetCurrentToMaxIfNeeded: true);
@@ -54,8 +67,12 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private void Update()
     {
-        if (IsDestroyed)
+        if (isDestroyed || currentHp <= 0f)
         {
+            if (!isDestroyed)
+            {
+                SetDestroyed();
+            }
             return;
         }
 
@@ -81,7 +98,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     public void TakeDamage(float damageAmount)
     {
-        if (damageAmount <= 0f || IsDestroyed)
+        if (damageAmount <= 0f || isDestroyed)
         {
             return;
         }
@@ -89,7 +106,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, maxHp);
         Debug.Log($"[ArrowTower] Tower damaged by {damageAmount:0.##}. HP: {currentHp:0.##}/{maxHp:0.##}", this);
 
-        if (IsDestroyed)
+        if (currentHp <= 0f)
         {
             SetDestroyed();
         }
@@ -104,10 +121,15 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
         isDestroyed = true;
         currentHp = 0f;
-        currentTarget = null;
-        attackTimer = 0f;
+        ClearAttackState();
         ApplyDestroyedState();
         Debug.Log($"[ArrowTower] Destroyed: {name}", this);
+    }
+
+    private void ClearAttackState()
+    {
+        currentTarget = null;
+        attackTimer = 0f;
     }
 
     private void ResolveTowerColliders()
@@ -163,6 +185,11 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private Transform FindTarget()
     {
+        if (isDestroyed || currentHp <= 0f)
+        {
+            return null;
+        }
+
         Collider[] hits = Physics.OverlapSphere(
             transform.position,
             Mathf.Max(0.01f, attackRange),
@@ -180,7 +207,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
                 continue;
             }
 
-            BasicZombie zombie = hit.GetComponentInParent<BasicZombie>();
+            Zombie zombie = hit.GetComponentInParent<Zombie>();
             if (zombie == null || zombie.IsDead || !zombie.gameObject.activeInHierarchy)
             {
                 continue;
@@ -210,12 +237,17 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private bool IsTargetValid(Transform target)
     {
+        if (isDestroyed || currentHp <= 0f)
+        {
+            return false;
+        }
+
         if (target == null || !target.gameObject.activeInHierarchy)
         {
             return false;
         }
 
-        BasicZombie zombie = target.GetComponentInParent<BasicZombie>();
+        Zombie zombie = target.GetComponentInParent<Zombie>();
         if (zombie == null || zombie.IsDead)
         {
             return false;
@@ -273,6 +305,12 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private void TryFireAtTarget()
     {
+        if (isDestroyed || currentHp <= 0f)
+        {
+            ClearAttackState();
+            return;
+        }
+
         attackTimer += Time.deltaTime;
 
         if (attackTimer < Mathf.Max(0.05f, attackInterval))
@@ -300,11 +338,11 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         bool hasHit = TryResolveHitAtFireTime(
             firePoint.position,
             fireDirection,
-            out BasicZombie hitZombie,
+            out Zombie hitZombie,
             out Vector3 hitPoint);
 
         Vector3 projectileEndPoint = missEndPoint;
-        BasicZombie deferredTarget = null;
+        Zombie deferredTarget = null;
         float deferredDamage = 0f;
         GameObject deferredHitVfxPrefab = null;
         Vector3 deferredHitPoint = projectileEndPoint;
@@ -355,7 +393,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     private bool TryResolveHitAtFireTime(
         Vector3 shotOrigin,
         Vector3 shotDirection,
-        out BasicZombie resolvedZombie,
+        out Zombie resolvedZombie,
         out Vector3 resolvedHitPoint)
     {
         resolvedZombie = null;
@@ -389,7 +427,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
                 continue;
             }
 
-            BasicZombie zombie = hit.GetComponentInParent<BasicZombie>();
+            Zombie zombie = hit.GetComponentInParent<Zombie>();
             if (zombie == null || zombie.IsDead || !zombie.gameObject.activeInHierarchy)
             {
                 continue;

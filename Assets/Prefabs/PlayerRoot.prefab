@@ -161,6 +161,7 @@ MonoBehaviour:
   playerHealth: {fileID: 7661280659911657259}
   healthDamagePerSecondWhenStarving: 5
   isActive: 1
+  currentHunger: 100
 --- !u!114 &4376188755347530591
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -201,7 +202,7 @@ CapsuleCollider:
   m_Radius: 0.45851415
   m_Height: 1.9737513
   m_Direction: 1
-  m_Center: {x: -0.034101725, y: 0.98687565, z: 0}
+  m_Center: {x: 0, y: 0.98687565, z: 0}
 --- !u!54 &8507077320904943301
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -224,11 +225,11 @@ Rigidbody:
     m_Bits: 0
   m_ImplicitCom: 1
   m_ImplicitTensor: 1
-  m_UseGravity: 0
-  m_IsKinematic: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
   m_Interpolate: 0
-  m_Constraints: 0
-  m_CollisionDetection: 0
+  m_Constraints: 80
+  m_CollisionDetection: 1
 --- !u!114 &2295573965754464758
 MonoBehaviour:
   m_ObjectHideFlags: 0

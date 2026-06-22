@@ -52,37 +52,13 @@ public class HUDController : MonoBehaviour
         }
     }
 
-#if UNITY_EDITOR
-    private void OnEnable()
+private void OnEnable()
+{
+    if (Application.isPlaying)
     {
-        // In play mode, we want the UI to update as soon as it becomes enabled.
-        // (OnValidate already covers editor-only placeholder visuals.)
-        if (Application.isPlaying)
-        {
-            if (playerHealth != null)
-            {
-                playerHealth.onHealthChanged.AddListener(UpdateHP);
-                UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
-            }
-
-            RefreshFromSources();
-        }
+        RefreshHudFromPlayerStats();
     }
-#else
-    private void OnEnable()
-    {
-        if (Application.isPlaying)
-        {
-            if (playerHealth != null)
-            {
-                playerHealth.onHealthChanged.AddListener(UpdateHP);
-                UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
-            }
-
-            RefreshFromSources();
-        }
-    }
-#endif
+}
 
     private void OnDisable()
     {
@@ -112,8 +88,28 @@ public class HUDController : MonoBehaviour
         RefreshFromSources();
     }
 
-    public void UpdateHP(int current, int max)
+    public void RefreshHudFromPlayerStats()
     {
+        // Resolve references if they are missing.
+        if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (hungerSystem == null) hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (resourceManager == null) resourceManager = ResourceManager.FindInActiveLoadedScene();
+
+        if (playerHealth != null)
+        {
+            // Re-bind to ensure the HUD stays in sync, preventing double binding.
+            playerHealth.onHealthChanged.RemoveListener(UpdateHP);
+            playerHealth.onHealthChanged.AddListener(UpdateHP);
+
+            // Immediately reflect current values.
+            UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
+        }
+
+        RefreshFromSources();
+    }
+
+    public void UpdateHP(int current, int max)
+{
         if (hpText == null)
             return;
 
@@ -132,9 +128,14 @@ public class HUDController : MonoBehaviour
 
     private void RefreshFromSources()
     {
+        // Auto-resolve missing references if they aren't assigned.
+        if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (hungerSystem == null) hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (resourceManager == null) resourceManager = ResourceManager.FindInActiveLoadedScene();
+
         // Resources
         if (resourceManager != null && (foodText != null || scrapText != null || woodText != null))
-        {
+{
             if (foodText != null)
                 SetTextOrIgnore(foodText, $"Food : {resourceManager.GetAmount(ResourceType.Food)}");
             if (scrapText != null)
@@ -162,11 +163,23 @@ public class HUDController : MonoBehaviour
         }
 
         // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
-        SetTextOrIgnore(dayText, GetFallbackDayText());
-
-        // Day timer bar (optional). If dayTimeManager isn't assigned, leave any existing inspector UI intact.
-        if (dayTimeManager != null)
+        if (GameManager.Instance != null)
         {
+            SetTextOrIgnore(dayText, $"DAY {GameManager.Instance.CurrentDay}");
+        }
+        else
+        {
+            SetTextOrIgnore(dayText, GetFallbackDayText());
+        }
+
+        // Day timer bar (optional). If dayTimeManager isn't assigned, try to find it.
+        if (dayTimeManager == null)
+        {
+            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
+        }
+
+        if (dayTimeManager != null)
+{
             float remainingSeconds = dayTimeManager.RemainingTimeSeconds;
             // NormalizedTime is day-progress (0 -> 1). We want remaining fraction (1 -> 0).
             float remainingNormalized = 1f - dayTimeManager.NormalizedTime;

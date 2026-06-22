@@ -1,10 +1,13 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class BasicZombie : MonoBehaviour
+public class Zombie : MonoBehaviour
 {
-    /// <summary>Prototype: all BasicZombie instances in the play session (OnEnable/OnDestroy).</summary>
+    /// <summary>Prototype: all Zombie instances in the play session (OnEnable/OnDestroy).</summary>
     public static int AliveZombieCount { get; private set; }
+
+    [Header("Data (optional)")]
+    [SerializeField] private ZombieData zombieData;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 2f;
@@ -68,6 +71,11 @@ public class BasicZombie : MonoBehaviour
     private bool hasDied;
     private string lastFrontTargetLogKey;
 
+    // Cached from ZombieData
+    private ZombieType zombieType;
+    private ZombieTargetPreference targetPreference;
+    private RuntimeAnimatorController animatorController;
+
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
     public bool IsDead => currentHp <= 0f;
@@ -87,9 +95,31 @@ public class BasicZombie : MonoBehaviour
 
     private void Awake()
     {
+        ApplyZombieData();
         maxHp = Mathf.Max(0.1f, maxHp);
         currentHp = Mathf.Clamp(maxHp, 0f, maxHp);
         hasDied = false;
+    }
+
+    private void ApplyZombieData()
+    {
+        if (zombieData == null)
+        {
+            return; // Use serialized fallbacks
+        }
+
+        maxHp = zombieData.maxHp;
+        moveSpeed = zombieData.moveSpeed;
+        attackDamage = zombieData.attackDamage;
+        attackRange = zombieData.attackRange;
+        attackInterval = zombieData.attackInterval;
+        targetRefreshInterval = zombieData.targetRefreshInterval;
+        forwardDetectRange = zombieData.forwardDetectRange;
+        forwardDetectRadius = zombieData.forwardDetectRadius;
+
+        zombieType = zombieData.zombieType;
+        targetPreference = zombieData.targetPreference;
+        animatorController = zombieData.animatorController;
     }
 
     private void Start()
@@ -274,6 +304,10 @@ public class BasicZombie : MonoBehaviour
                 if (currentTargetBaseCore == null)
                 {
                     currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
+                    if (currentTargetBaseCore == null)
+                    {
+                        currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInChildren<BaseCore>();
+                    }
                 }
 
                 return currentTargetBaseCore != null && currentTargetBaseCore.IsDestroyed;
@@ -331,7 +365,7 @@ public class BasicZombie : MonoBehaviour
                 continue;
             }
 
-            BasicZombie zombie = col.GetComponentInParent<BasicZombie>();
+            Zombie zombie = col.GetComponentInParent<Zombie>();
             if (zombie != null)
             {
                 if (zombie == this)
@@ -450,6 +484,11 @@ public class BasicZombie : MonoBehaviour
         if (cachedBaseCoreTransform != null)
         {
             currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
+            if (currentTargetBaseCore == null)
+            {
+                currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInChildren<BaseCore>();
+            }
+            
             currentTargetKind = TargetKind.BaseCore;
             currentTargetTransform = cachedBaseCoreTransform;
             LogFrontTargetChange("fallback:basecore", "No front target, moving to BaseCore");
@@ -473,7 +512,7 @@ public class BasicZombie : MonoBehaviour
         }
 
         lastFrontTargetLogKey = key;
-        Debug.Log($"[BasicZombie] {message}", this);
+        Debug.Log($"[Zombie] {message}", this);
     }
 
     void ClearTargetSelection()
@@ -554,13 +593,19 @@ public class BasicZombie : MonoBehaviour
         targetPos.y = currentPos.y;
 
         Vector3 toTarget = targetPos - currentPos;
-        float distanceToTarget = toTarget.magnitude;
+        float distanceToTarget = GetPlanarDistanceToTargetSurface(currentTargetTransform, currentPos);
         if (distanceToTarget <= StoppingDistance)
         {
             return;
         }
 
-        Vector3 moveDirection = toTarget / distanceToTarget;
+        float centerDistance = toTarget.magnitude;
+        if (centerDistance <= 0.001f)
+        {
+            return;
+        }
+
+        Vector3 moveDirection = toTarget / centerDistance;
         Vector3 desiredPos = targetPos - moveDirection * StoppingDistance;
         transform.position = Vector3.MoveTowards(currentPos, desiredPos, moveSpeed * Time.deltaTime);
 
@@ -608,6 +653,10 @@ public class BasicZombie : MonoBehaviour
             if (currentTargetBaseCore == null && currentTargetTransform != null)
             {
                 currentTargetBaseCore = currentTargetTransform.GetComponentInParent<BaseCore>();
+                if (currentTargetBaseCore == null)
+                {
+                    currentTargetBaseCore = currentTargetTransform.GetComponentInChildren<BaseCore>();
+                }
             }
 
             if (currentTargetBaseCore == null || currentTargetBaseCore.IsDestroyed)
@@ -619,10 +668,7 @@ public class BasicZombie : MonoBehaviour
         Vector3 myPos = transform.position;
         myPos.y = 0f;
 
-        Vector3 targetPos = currentTargetTransform.position;
-        targetPos.y = 0f;
-
-        if (Vector3.Distance(myPos, targetPos) > attackRange)
+        if (GetPlanarDistanceToTargetSurface(currentTargetTransform, myPos) > attackRange)
         {
             return;
         }
@@ -655,6 +701,26 @@ public class BasicZombie : MonoBehaviour
         DoAttackLunge();
     }
 
+    private static float GetPlanarDistanceToTargetSurface(Transform target, Vector3 fromPosition)
+    {
+        if (target == null)
+        {
+            return float.MaxValue;
+        }
+
+        Collider targetCollider = target.GetComponentInChildren<Collider>();
+        if (targetCollider == null)
+        {
+            Vector3 fallbackTargetPos = target.position;
+            fallbackTargetPos.y = fromPosition.y;
+            return Vector3.Distance(fromPosition, fallbackTargetPos);
+        }
+
+        Vector3 closestPoint = targetCollider.ClosestPoint(fromPosition);
+        closestPoint.y = fromPosition.y;
+        return Vector3.Distance(fromPosition, closestPoint);
+    }
+
     private void DoAttackLunge()
     {
         if (isLunging)
@@ -683,7 +749,20 @@ public class BasicZombie : MonoBehaviour
         }
 
         Vector3 lungeDirection = toTarget.normalized;
-        lungePeakPosition = lungeStartPosition + lungeDirection * Mathf.Max(0f, lungeDistance);
+        float safeLungeDistance = Mathf.Max(0f, lungeDistance);
+        if (currentTargetTransform != null)
+        {
+            // Keep lunge from pushing into the target collider surface.
+            float surfaceDistance = GetPlanarDistanceToTargetSurface(currentTargetTransform, lungeStartPosition);
+            safeLungeDistance = Mathf.Min(safeLungeDistance, Mathf.Max(0f, surfaceDistance - 0.02f));
+        }
+
+        if (safeLungeDistance <= 0f)
+        {
+            return;
+        }
+
+        lungePeakPosition = lungeStartPosition + lungeDirection * safeLungeDistance;
 
         isLunging = true;
         lungeTimer = 0f;
@@ -721,7 +800,7 @@ public class BasicZombie : MonoBehaviour
         }
 
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
-        Debug.Log($"[BasicZombie] Took {amount} damage. HP: {currentHp}/{maxHp}", this);
+        Debug.Log($"[Zombie] Took {amount} damage. HP: {currentHp}/{maxHp}", this);
 
         if (currentHp <= 0f)
         {
@@ -741,7 +820,7 @@ public class BasicZombie : MonoBehaviour
         ClearTargetSelection();
         cachedBaseCoreTransform = null;
 
-        Debug.Log("[BasicZombie] Zombie died and will be destroyed.", this);
+        Debug.Log("[Zombie] Zombie died and will be destroyed.", this);
         Destroy(gameObject);
     }
 

@@ -13,7 +13,7 @@ public class SimpleProjectile : MonoBehaviour
     private float maxTravelDistance;
     private bool isInitialized;
     private bool hasResolvedArrival;
-    private BasicZombie deferredTarget;
+    private Zombie deferredTarget;
     private float deferredDamage;
     private GameObject deferredHitVfxPrefab;
     private Vector3 deferredHitPoint;
@@ -38,7 +38,7 @@ public class SimpleProjectile : MonoBehaviour
         Vector3 direction,
         float travelDistance,
         Vector3 destination,
-        BasicZombie resolvedTarget,
+        Zombie resolvedTarget,
         float damageAmount,
         GameObject hitVfxPrefab,
         Vector3 hitPoint)

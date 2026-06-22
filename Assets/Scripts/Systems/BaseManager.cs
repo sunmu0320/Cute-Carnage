@@ -47,7 +47,8 @@ public class BaseManager : MonoBehaviour
             state.towerSlots.Add(slotState);
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log(
-                $"[BaseManager] Capture tower slot id='{slotState.id}' hasTower={slotState.hasTower} towerId='{slotState.towerId}' level={slotState.level}",
+                $"[BaseManager] Capture tower slot id='{slotState.id}' hasTower={slotState.hasTower} towerId='{slotState.towerId}' level={slotState.level} " +
+                $"currentHp={slotState.currentHp:0.##} isDestroyed={slotState.isDestroyed}",
                 this);
 #endif
         }
@@ -166,7 +167,8 @@ public class BaseManager : MonoBehaviour
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log(
                 $"[BaseManager] Apply tower incomingCount={incomingCount} matchedSoFar={matchedCount} slot id='{id}' " +
-                $"incomingHasTower={slotState.hasTower} restoredTowerId='{slotState.towerId}' skippedDuplicate={skippedDuplicate}",
+                $"incomingHasTower={slotState.hasTower} restoredTowerId='{slotState.towerId}' incomingHp={slotState.currentHp:0.##} " +
+                $"incomingDestroyed={slotState.isDestroyed} skippedDuplicate={skippedDuplicate}",
                 this);
 #endif
         }

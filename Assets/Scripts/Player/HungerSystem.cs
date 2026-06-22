@@ -34,7 +34,8 @@ public class HungerSystem : MonoBehaviour
     [SerializeField]
     private bool isActive = true;
 
-    private float currentHunger;
+    [SerializeField]
+    private float currentHunger = 100f;
     private float starvationDamageAccumulator;
 
     public float MaxHunger => Mathf.Max(0.0001f, maxHunger);

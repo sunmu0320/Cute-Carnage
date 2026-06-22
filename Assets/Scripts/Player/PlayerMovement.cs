@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerMovement : MonoBehaviour
 {
     public enum RotationMode
@@ -34,12 +35,25 @@ public class PlayerMovement : MonoBehaviour
     [Tooltip("Hold this key while moving to request run blend on keyboard.")]
     public KeyCode runKey = KeyCode.LeftShift;
 
-    float currentMoveBlend;
-    float moveBlendVelocity;
-    bool isMovementLocked;
+    private Rigidbody rb;
+    private float currentMoveBlend;
+    private float moveBlendVelocity;
+    private bool isMovementLocked;
+
+    // Cached physics input variables for FixedUpdate
+    private Vector3 movementInput;
+    private float movementSpeed;
+    private bool hasMovementInput;
 
     void Awake()
     {
+        rb = GetComponent<Rigidbody>();
+        
+        // Ensure Rigidbody is set up correctly for physics movement
+        rb.isKinematic = false;
+        rb.useGravity = true;
+        rb.constraints = RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
     }
@@ -50,17 +64,16 @@ public class PlayerMovement : MonoBehaviour
         if (isMovementLocked)
         {
             UpdateAnimation(Vector2.zero, false, false, false);
+            movementInput = Vector3.zero;
+            hasMovementInput = false;
             return;
         }
 
         // Read input axes.
-        // - "Horizontal" is typically mapped to A/D or Left/Right arrows.
-        // - "Vertical" is typically mapped to W/S or Up/Down arrows.
         float inputX = Input.GetAxis("Horizontal");
         float inputY = Input.GetAxis("Vertical");
 
         // Convert the 2D input into a 3D direction on the XZ plane.
-        // (We keep Y at 0 so the player doesn't move up/down.)
         Vector2 input = new Vector2(inputX, inputY);
 
         // Normalize so diagonal movement isn't faster than straight movement.
@@ -68,26 +81,35 @@ public class PlayerMovement : MonoBehaviour
             input.Normalize();
 
         Vector3 moveDir = new Vector3(input.x, 0f, input.y);
-        bool isMoving = moveDir.sqrMagnitude >= 0.0001f;
+        hasMovementInput = moveDir.sqrMagnitude >= 0.0001f;
 
         bool keyboardMovePressed =
             Input.GetKey(KeyCode.W) || Input.GetKey(KeyCode.A) || Input.GetKey(KeyCode.S) || Input.GetKey(KeyCode.D) ||
             Input.GetKey(KeyCode.UpArrow) || Input.GetKey(KeyCode.DownArrow) || Input.GetKey(KeyCode.LeftArrow) || Input.GetKey(KeyCode.RightArrow);
         bool runPressed = Input.GetKey(runKey);
 
-        UpdateAnimation(input, isMoving, keyboardMovePressed, runPressed);
+        UpdateAnimation(input, hasMovementInput, keyboardMovePressed, runPressed);
 
-        // Keep root rotation constrained to yaw only (no forward/backward tilt or roll).
-        Vector3 euler = transform.eulerAngles;
-        transform.rotation = Quaternion.Euler(0f, euler.y, 0f);
+        if (hasMovementInput)
+        {
+            movementInput = moveDir;
+            movementSpeed = runPressed ? moveSpeed * sprintMultiplier : moveSpeed;
+            Rotate(moveDir);
+        }
+        else
+        {
+            movementInput = Vector3.zero;
+        }
+    }
 
-        // If there's no input, do nothing.
-        if (!isMoving)
-            return;
-
-        float currentSpeed = runPressed ? moveSpeed * sprintMultiplier : moveSpeed;
-        Move(moveDir, currentSpeed);
-        Rotate(moveDir);
+    void FixedUpdate()
+    {
+        if (hasMovementInput && !isMovementLocked)
+        {
+            // Move using physics sweeps so walls block movement
+            Vector3 targetPosition = rb.position + movementInput * movementSpeed * Time.fixedDeltaTime;
+            rb.MovePosition(targetPosition);
+        }
     }
 
     public void SetMovementLocked(bool locked)
@@ -125,28 +147,28 @@ public class PlayerMovement : MonoBehaviour
             animator.SetFloat(moveBlendParameter, currentMoveBlend);
     }
 
-    void Move(Vector3 moveDir, float currentSpeed)
-    {
-        // Move using transform position (no Rigidbody / no CharacterController).
-        transform.position += moveDir * currentSpeed * Time.deltaTime;
-    }
-
     void Rotate(Vector3 moveDir)
     {
+        if (moveDir.sqrMagnitude < 0.0001f)
+            return;
+
         // Rotate the player root toward movement using yaw only.
-        // X/Z are intentionally locked so model orientation offset stays on CharacterVisual.
         Quaternion targetRotation = Quaternion.LookRotation(moveDir, Vector3.up);
         Quaternion yawOnlyTarget = Quaternion.Euler(0f, targetRotation.eulerAngles.y, 0f);
 
         if (rotationMode == RotationMode.Instant)
         {
             transform.rotation = yawOnlyTarget;
+            rb.rotation = yawOnlyTarget;
         }
         else
         {
-            // Smoothly interpolate current rotation toward the target yaw.
+            // Smoothly interpolate current transform rotation toward the target yaw.
+            // Using transform.rotation ensures we update every rendering frame smoothly without stutter.
             float t = Mathf.Clamp01(rotationSpeed * Time.deltaTime);
-            transform.rotation = Quaternion.Slerp(transform.rotation, yawOnlyTarget, t);
+            Quaternion newRotation = Quaternion.Slerp(transform.rotation, yawOnlyTarget, t);
+            transform.rotation = newRotation;
+            rb.rotation = newRotation; // Sync to Rigidbody immediately so physics and rendering are in step
         }
     }
 }

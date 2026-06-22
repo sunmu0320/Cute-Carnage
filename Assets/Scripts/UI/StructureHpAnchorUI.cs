@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.Serialization;
 
 public class StructureHpAnchorUI : MonoBehaviour
 {
@@ -14,6 +15,8 @@ public class StructureHpAnchorUI : MonoBehaviour
     [SerializeField] private bool showWhenDamaged = true;
     [SerializeField] private bool showWhenPlayerNearby = true;
     [SerializeField] private bool hideWhenDestroyed = true;
+    [FormerlySerializedAs("alwaysShowOnScreen")]
+    [SerializeField] private bool alwaysShowWhenOnScreen = false;
 
     [Header("Screen Position")]
     [SerializeField] private Vector2 screenOffset = new Vector2(0f, 56f);
@@ -81,7 +84,8 @@ public class StructureHpAnchorUI : MonoBehaviour
         bool isDamaged = hpSource.CurrentHp < safeMaxHp - 0.01f;
         bool isNearby = IsPlayerNearby(worldTarget.position);
 
-        bool shouldShow = isOnScreen && ((showWhenDamaged && isDamaged) || (showWhenPlayerNearby && isNearby));
+        bool shouldShow = isOnScreen &&
+            (alwaysShowWhenOnScreen || (showWhenDamaged && isDamaged) || (showWhenPlayerNearby && isNearby));
         SetVisible(shouldShow);
         if (!shouldShow)
         {
@@ -156,6 +160,23 @@ public class StructureHpAnchorUI : MonoBehaviour
     private void ResolveHpSource()
     {
         hpSource = hpSourceComponent as IStructureHpSource;
+    }
+
+    public void BindHpSource(MonoBehaviour sourceComponent, Transform sourceTransform = null)
+    {
+        hpSourceComponent = sourceComponent;
+        if (sourceTransform != null)
+        {
+            targetTransform = sourceTransform;
+        }
+
+        ResolveHpSource();
+    }
+
+    public void ConfigureVisibilityMode(bool alwaysShow, bool hideOnDestroyed)
+    {
+        alwaysShowWhenOnScreen = alwaysShow;
+        hideWhenDestroyed = hideOnDestroyed;
     }
 
     private bool IsPlayerNearby(Vector3 worldPos)

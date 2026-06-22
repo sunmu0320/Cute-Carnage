@@ -5,6 +5,11 @@ using UnityEngine.SceneManagement;
 
 public class ResourceManager : MonoBehaviour
 {
+    [Header("Starting Resources")]
+    [SerializeField] private int startingWood;
+    [SerializeField] private int startingScrap;
+    [SerializeField] private int startingFood;
+
     private readonly Dictionary<ResourceType, int> resources = new Dictionary<ResourceType, int>();
 
     /// <summary>
@@ -317,9 +322,16 @@ public class ResourceManager : MonoBehaviour
             return;
         }
 
+        resources[ResourceType.Wood] = startingWood;
+        resources[ResourceType.Scrap] = startingScrap;
+        resources[ResourceType.Food] = startingFood;
+
         foreach (ResourceType type in Enum.GetValues(typeof(ResourceType)))
         {
-            resources[type] = 0;
+            if (!resources.ContainsKey(type))
+            {
+                resources[type] = 0;
+            }
         }
     }
 

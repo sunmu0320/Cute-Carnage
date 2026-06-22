@@ -22,8 +22,8 @@ public class PlayerAutoCombat : MonoBehaviour
     [SerializeField] private float feedbackDuration = 0.08f;
     [SerializeField] private bool logAttacksWhenNoFeedbackRoot = true;
 
-    private BasicZombie currentTarget;
-    private float targetRefreshTimer;
+    private Zombie currentTarget;
+private float targetRefreshTimer;
     private float nextAttackTime;
 
     private Vector3 feedbackStartLocalPosition;
@@ -103,9 +103,9 @@ public class PlayerAutoCombat : MonoBehaviour
         }
     }
 
-    private BasicZombie FindNearestZombieInRange(float attackRange)
+    private Zombie FindNearestZombieInRange(float attackRange)
     {
-        BasicZombie[] zombies = FindObjectsByType<BasicZombie>(FindObjectsSortMode.None);
+        Zombie[] zombies = FindObjectsByType<Zombie>(FindObjectsSortMode.None);
         if (zombies == null || zombies.Length == 0)
         {
             return null;
@@ -116,11 +116,11 @@ public class PlayerAutoCombat : MonoBehaviour
 
         float attackRangeSqr = attackRange * attackRange;
         float nearestDistanceSqr = float.MaxValue;
-        BasicZombie nearestZombie = null;
+        Zombie nearestZombie = null;
 
         for (int i = 0; i < zombies.Length; i++)
         {
-            BasicZombie zombie = zombies[i];
+            Zombie zombie = zombies[i];
             if (!IsValidTarget(zombie))
             {
                 continue;
@@ -199,13 +199,13 @@ public class PlayerAutoCombat : MonoBehaviour
             spawnPosition,
             fireDirection,
             maxDistance,
-            out BasicZombie hitZombie,
+            out Zombie hitZombie,
             out Vector3 resolvedHitPoint);
 
         Vector3 projectileEndPoint = missEndPoint;
-        BasicZombie deferredTarget = null;
+        Zombie deferredTarget = null;
         float deferredDamage = 0f;
-        GameObject deferredHitVfxPrefab = null;
+GameObject deferredHitVfxPrefab = null;
         Vector3 deferredHitPoint = projectileEndPoint;
         if (hasHit && hitZombie != null && !hitZombie.IsDead)
         {
@@ -254,7 +254,7 @@ public class PlayerAutoCombat : MonoBehaviour
         Vector3 shotOrigin,
         Vector3 shotDirection,
         float maxDistance,
-        out BasicZombie resolvedZombie,
+        out Zombie resolvedZombie,
         out Vector3 resolvedHitPoint)
     {
         resolvedZombie = null;
@@ -287,7 +287,7 @@ public class PlayerAutoCombat : MonoBehaviour
                 continue;
             }
 
-            BasicZombie zombie = hit.GetComponentInParent<BasicZombie>();
+            Zombie zombie = hit.GetComponentInParent<Zombie>();
             if (!IsValidTarget(zombie))
             {
                 continue;
@@ -326,7 +326,7 @@ public class PlayerAutoCombat : MonoBehaviour
         return resolvedZombie != null;
     }
 
-    private Vector3 GetZombieAimPoint(BasicZombie zombie)
+    private Vector3 GetZombieAimPoint(Zombie zombie)
     {
         if (zombie == null)
         {
@@ -357,14 +357,14 @@ public class PlayerAutoCombat : MonoBehaviour
         return Time.time >= nextAttackTime;
     }
 
-    private bool IsValidTarget(BasicZombie zombie)
+    private bool IsValidTarget(Zombie zombie)
     {
         return zombie != null && !zombie.IsDead;
     }
 
-    private bool IsWithinRange(BasicZombie zombie, float attackRange)
+    private bool IsWithinRange(Zombie zombie, float attackRange)
     {
-        if (!IsValidTarget(zombie))
+if (!IsValidTarget(zombie))
         {
             return false;
         }

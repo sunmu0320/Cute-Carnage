@@ -1,8 +1,8 @@
 [System.Serializable]
 public class PlayerRuntimeState
 {
-    public float currentHp;
-    public float currentHunger;
+    public float currentHp = 100f;
+    public float currentHunger = 100f;
 
     /// <summary>
     /// Reads live components when present. Uses <paramref name="previous"/> for fields when a component is missing.
