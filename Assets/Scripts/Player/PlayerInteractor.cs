@@ -278,6 +278,16 @@ public class PlayerInteractor : MonoBehaviour
                 yield break;
             }
 
+            Vector3 pPos = transform.position;
+            Vector3 nPos = resourceNode.transform.position;
+            pPos.y = 0f;
+            nPos.y = 0f;
+            if (Vector3.Distance(pPos, nPos) > resourceNode.GatherDistance + 0.5f)
+            {
+                EndGatherState();
+                yield break;
+            }
+
             elapsed += Time.deltaTime;
             float progress = gatherDurationSeconds > 0f ? elapsed / gatherDurationSeconds : 1f;
             if (activeGatherBar != null)
@@ -440,6 +450,20 @@ public class PlayerInteractor : MonoBehaviour
         ResourceNode resourceNode = currentInteractable as ResourceNode;
         if (resourceNode != null)
         {
+            Vector3 playerPos = transform.position;
+            Vector3 nodePos = resourceNode.transform.position;
+            playerPos.y = 0f;
+            nodePos.y = 0f;
+            float horizontalDistance = Vector3.Distance(playerPos, nodePos);
+            if (horizontalDistance > resourceNode.GatherDistance)
+            {
+                if (logRepairState)
+                {
+                    Debug.Log($"[PlayerInteractor] Too far to gather {resourceNode.gameObject.name}. Distance: {horizontalDistance:F2}, GatherDistance: {resourceNode.GatherDistance:F2}");
+                }
+                return;
+            }
+
             if (!isGathering)
                 StartCoroutine(GatherResourceOverTime(resourceNode));
             return;
@@ -450,6 +474,11 @@ public class PlayerInteractor : MonoBehaviour
 
     IInteractable ResolveInteractable(Collider candidateCollider)
     {
+        // Prioritize ResourceNode in parent hierarchy or on the collider itself.
+        ResourceNode parentNode = candidateCollider.GetComponentInParent<ResourceNode>();
+        if (parentNode != null)
+            return parentNode;
+
         // First, try the same object as the collider.
         IInteractable interactable = candidateCollider.GetComponent<IInteractable>();
         if (interactable != null)

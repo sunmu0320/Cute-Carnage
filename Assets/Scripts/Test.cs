@@ -13,7 +13,7 @@ public class Test : MonoBehaviour
     {
         if (Input.GetKeyDown(KeyCode.Space))
         {
-            Debug.Log("Mollang");
+            Debug.Log("Thank you");
         }
     }
 }

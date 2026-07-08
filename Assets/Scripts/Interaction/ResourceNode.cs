@@ -15,8 +15,12 @@ public class ResourceNode : BaseInteractable
     [SerializeField, Tooltip("Optional anchor where the world gather bar appears.")]
     Transform gatherBarAnchor;
 
+    [SerializeField, Tooltip("Max distance the player can be to gather this node.")]
+    float gatherDistance = 1.0f;
+
     public GatherAnimationType GatherAnimationType => gatherAnimationType;
     public Transform GatherBarAnchor => gatherBarAnchor;
+    public float GatherDistance => gatherDistance;
 
     public override InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
     {

@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 2106527773158932398}
   - component: {fileID: 6128839015036404189}
   - component: {fileID: 8803367624025310290}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: InteractionRange
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -52,8 +52,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 5.480797
-  m_Center: {x: 0.059762478, y: 3.8749046, z: 0}
+  m_Radius: 4
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &8803367624025310290
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -66,9 +66,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec053da42efbc304b8525fd4abefb18a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExamplePromptInteractable
-  promptUI: {fileID: 4379293469591470137}
   promptMessage: E - Gather
-  playerTag: Player
 --- !u!1 &2020984881430336383
 GameObject:
   m_ObjectHideFlags: 0
@@ -96,7 +94,7 @@ Transform:
   m_GameObject: {fileID: 2020984881430336383}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 5.61, z: 2.51}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -116,7 +114,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldPromptUI
   worldCanvas: {fileID: 662614604240463061}
-  promptText: {fileID: 2729509861246858088}
+  actionText: {fileID: 2729509861246858088}
+  woodCostSection: {fileID: 0}
+  woodCostText: {fileID: 0}
+  scrapCostSection: {fileID: 0}
+  scrapCostText: {fileID: 0}
+  canAffordColor: {r: 1, g: 1, b: 1, a: 1}
+  cannotAffordColor: {r: 1, g: 0, b: 0, a: 1}
+  longTextCostOffset: {x: 0, y: -22}
+  longTextThreshold: 26
+  wrappedHeightRatioThreshold: 1.15
 --- !u!114 &7820512906137177093
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -272,7 +279,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7612011785806574018}
-  - component: {fileID: 6690841262601384214}
   - component: {fileID: 6914338880193685932}
   m_Layer: 6
   m_Name: Tree2_WUI
@@ -300,27 +306,6 @@ Transform:
   - {fileID: 8769907549097347823}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &6690841262601384214
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4080773195737527922}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &6914338880193685932
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -336,10 +321,12 @@ MonoBehaviour:
   interactName: Tree
   canUse: 1
   oneTimeUse: 1
+  uiAnchor: {fileID: 0}
   resourceType: 0
   amount: 1
   gatherAnimationType: 1
   gatherBarAnchor: {fileID: 8769907549097347823}
+  gatherDistance: 2.4
 --- !u!1 &4485842281364657450
 GameObject:
   m_ObjectHideFlags: 0
@@ -541,15 +528,16 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 5414483471286395906, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
-    - {fileID: 4455181019768882628, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
       insertIndex: -1
       addedObject: {fileID: 4498691441210717044}
+    - targetCorrespondingSourceObject: {fileID: 7206905288285684547, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8033277601459014586}
   m_SourcePrefab: {fileID: 100100000, guid: d3828761412d76b41bff0dafd53fe98a, type: 3}
 --- !u!4 &3288019815433951734 stripped
 Transform:
@@ -573,3 +561,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleShake
+--- !u!136 &8033277601459014586
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4993224011359217372}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.720348
+  m_Height: 4.7196
+  m_Direction: 1
+  m_Center: {x: 0, y: 1.3623059, z: 0.06014502}
