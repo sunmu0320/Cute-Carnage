@@ -56,7 +56,7 @@ MonoBehaviour:
   amount: 1
   gatherAnimationType: 1
   gatherBarAnchor: {fileID: 4789843100074432136}
-  gatherDistance: 3.3
+  gatherDistance: 3.5
 --- !u!1 &1356571653478867288
 GameObject:
   m_ObjectHideFlags: 0
@@ -242,7 +242,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &7521958425331989301
 Transform:
   m_ObjectHideFlags: 0
