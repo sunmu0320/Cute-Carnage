@@ -90,8 +90,7 @@ public class InteractionPromptUI : MonoBehaviour
         currentAnchor = target.GetUIAnchor();
         isVisible = true;
 
-        gameObject.SetActive(true);
-        SetCanvasVisible(true);
+        SetPromptVisible(true);
         ApplyData(data);
         UpdateScreenSpacePosition();
     }
@@ -122,8 +121,7 @@ public class InteractionPromptUI : MonoBehaviour
         if (scrapCostSection != null)
             scrapCostSection.SetActive(false);
 
-        SetCanvasVisible(false);
-        gameObject.SetActive(false);
+        SetPromptVisible(false);
     }
 
     private void ApplyData(InteractablePromptData data)
@@ -194,25 +192,25 @@ public class InteractionPromptUI : MonoBehaviour
         Camera targetCamera = GetTargetCamera();
         if (targetCamera == null)
         {
-            SetCanvasVisible(false);
+            SetPromptVisible(false);
             return;
         }
 
         Vector3 screenPoint = targetCamera.WorldToScreenPoint(currentAnchor.position);
         if (screenPoint.z <= 0f)
         {
-            SetCanvasVisible(false);
+            SetPromptVisible(false);
             return;
         }
 
         Camera eventCamera = worldCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : targetCamera;
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(worldCanvasRect, screenPoint, eventCamera, out Vector2 localPoint))
         {
-            SetCanvasVisible(false);
+            SetPromptVisible(false);
             return;
         }
 
-        SetCanvasVisible(true);
+        SetPromptVisible(true);
         promptRoot.anchoredPosition = localPoint;
 
         if (logScreenSpacePositioning)
@@ -333,10 +331,10 @@ public class InteractionPromptUI : MonoBehaviour
             actionText.rectTransform.localScale = Vector3.one;
     }
 
-    private void SetCanvasVisible(bool visible)
+    private void SetPromptVisible(bool visible)
     {
-        if (worldCanvas != null)
-            worldCanvas.enabled = visible;
+        if (promptRoot != null)
+            promptRoot.gameObject.SetActive(visible);
     }
 
     private Camera GetTargetCamera()
