@@ -46,8 +46,12 @@ public class PlayerInteractor : MonoBehaviour
     [Header("Gather Timing")]
     [SerializeField, Tooltip("Time in seconds required to finish gathering a resource node.")]
     float gatherDurationSeconds = 3f;
-    [SerializeField, Tooltip("World-space gather bar prefab shown above a resource while gathering.")]
+    [SerializeField, Tooltip("Temporary gather bar UI prefab shown while gathering a resource.")]
     WorldGatherBar worldGatherBarPrefab;
+    [SerializeField, Tooltip("Screen Space Overlay canvas RectTransform used to convert gather bar screen positions.")]
+    RectTransform gatherOverlayCanvasRect;
+    [SerializeField, Tooltip("Container under the overlay canvas where the temporary gather progress bar is instantiated.")]
+    RectTransform gatherProgressUIRoot;
 
     [Header("Debug")]
     [SerializeField, Tooltip("Log repair state transitions and blocked E presses to the Console.")]
@@ -320,11 +324,18 @@ public class PlayerInteractor : MonoBehaviour
         if (worldGatherBarPrefab == null || resourceNode == null)
             return;
 
+        if (gatherOverlayCanvasRect == null || gatherProgressUIRoot == null)
+        {
+            Debug.LogWarning("[PlayerInteractor] Gather bar UI references are missing. Assign overlay canvas and GatherProgressUIRoot.", this);
+            return;
+        }
+
         Transform anchor = resourceNode.GatherBarAnchor != null ? resourceNode.GatherBarAnchor : resourceNode.transform;
-        activeGatherBar = Instantiate(worldGatherBarPrefab, anchor.position, anchor.rotation, anchor);
+        activeGatherBar = Instantiate(worldGatherBarPrefab, gatherProgressUIRoot);
         if (activeGatherBar == null)
             return;
 
+        activeGatherBar.Initialize(gatherOverlayCanvasRect, anchor);
         activeGatherBar.SetProgress(0f);
         activeGatherBar.Show();
     }
