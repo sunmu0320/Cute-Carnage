@@ -69,7 +69,7 @@ public class FenceSegment : MonoBehaviour, IInteractable, IRepairable
     [SerializeField, Tooltip("Reuse DayTimerBar prefab as a world-space HP fill bar.")]
     private GameObject dayTimerBarPrefab;
 
-    [SerializeField, Tooltip("Lower sorting so WorldPromptUI can draw above the bar.")]
+    [SerializeField, Tooltip("Lower sorting so InteractionPromptUI can draw above the bar.")]
     private int hpBarCanvasSortingOrder = -10;
 
     [SerializeField, Tooltip("Hide the bar when HP is full.")]

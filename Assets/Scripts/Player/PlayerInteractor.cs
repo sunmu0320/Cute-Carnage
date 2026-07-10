@@ -1,6 +1,7 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public enum PlayerActionState
 {
@@ -29,8 +30,9 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField, Tooltip("Shared resource inventory used by interactables (fences, nodes, towers, chests).")]
     ResourceManager resourceManager;
 
-    [SerializeField, Tooltip("Optional world prompt UI that follows the current target.")]
-    WorldPromptUI worldPromptUI;
+    [FormerlySerializedAs("worldPromptUI")]
+    [SerializeField, Tooltip("Optional shared interaction prompt UI that follows the current target.")]
+    InteractionPromptUI interactionPromptUI;
 
     [SerializeField, Tooltip("Max colliders scanned each frame by NonAlloc overlap.")]
     int overlapBufferSize = 32;
@@ -74,8 +76,8 @@ public class PlayerInteractor : MonoBehaviour
         if (playerMovement == null)
             playerMovement = GetComponent<PlayerMovement>();
         BindResourceManagerFromActiveScene();
-        if (worldPromptUI == null)
-            worldPromptUI = FindObjectOfType<WorldPromptUI>();
+        if (interactionPromptUI == null)
+            interactionPromptUI = FindObjectOfType<InteractionPromptUI>();
 
         if (overlapBufferSize < 4)
             overlapBufferSize = 4;
@@ -415,7 +417,7 @@ public class PlayerInteractor : MonoBehaviour
 
     void RefreshPrompt()
     {
-        if (worldPromptUI == null)
+        if (interactionPromptUI == null)
             return;
 
         bool shouldHide = currentInteractable == null;
@@ -428,9 +430,9 @@ public class PlayerInteractor : MonoBehaviour
         }
 
         if (shouldHide)
-            worldPromptUI.Hide();
+            interactionPromptUI.Hide();
         else
-            worldPromptUI.Show(currentInteractable, promptData);
+            interactionPromptUI.Show(currentInteractable, promptData);
     }
 
     void HandleInteractInput()

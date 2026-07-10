@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3567666802805628805}
   m_Layer: 0
-  m_Name: UIAnchor_Prompt
+  m_Name: UIAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -126,7 +126,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3497427807047997538}
   m_Layer: 0
-  m_Name: UIAnchor_GatherBar
+  m_Name: GatherBarAnchor
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

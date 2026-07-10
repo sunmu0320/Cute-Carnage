@@ -2,10 +2,14 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class WorldPromptUI : MonoBehaviour
+public class InteractionPromptUI : MonoBehaviour
 {
+    private const string GatherPromptText = "Press E to Gather";
+    private const string GatherPromptDisplayText = "[E]";
+
     [Header("World Prompt References")]
     [SerializeField] private Canvas worldCanvas;
+    [SerializeField] private RectTransform promptRoot;
     [SerializeField] private TextMeshProUGUI actionText;
 
     [Header("Optional Cost Sections (icon + count containers)")]
@@ -25,12 +29,17 @@ public class WorldPromptUI : MonoBehaviour
     [SerializeField, Tooltip("Text height ratio (vs single-line) to treat as wrapped and shift cost rows down.")]
     private float wrappedHeightRatioThreshold = 1.15f;
 
+    [Header("Debug")]
+    [SerializeField, Tooltip("Logs screen-space prompt positioning details.")]
+    private bool logScreenSpacePositioning;
+
     private Transform currentAnchor;
     private IInteractable currentTarget;
     private bool isVisible;
     private RectTransform woodCostRect;
     private RectTransform scrapCostRect;
     private RectTransform actionTextRect;
+    private RectTransform worldCanvasRect;
     private Vector2 woodCostBasePos;
     private Vector2 scrapCostBasePos;
     private float singleLineActionTextHeight = -1f;
@@ -56,7 +65,7 @@ public class WorldPromptUI : MonoBehaviour
         if (!isVisible || currentAnchor == null)
             return;
 
-        transform.position = currentAnchor.position;
+        UpdateScreenSpacePosition();
     }
 
     public void Show(IInteractable target, InteractablePromptData data)
@@ -69,30 +78,29 @@ public class WorldPromptUI : MonoBehaviour
 
         if (!isVisible)
         {
-            Debug.Log("[WorldPromptUI] UI shown.");
+            Debug.Log("[InteractionPromptUI] UI shown.");
         }
 
         if (currentTarget != target)
         {
-            Debug.Log("[WorldPromptUI] UI target changed.");
+            Debug.Log("[InteractionPromptUI] UI target changed.");
         }
 
         currentTarget = target;
         currentAnchor = target.GetUIAnchor();
         isVisible = true;
 
-        if (worldCanvas != null)
-            worldCanvas.enabled = true;
-
         gameObject.SetActive(true);
+        SetCanvasVisible(true);
         ApplyData(data);
+        UpdateScreenSpacePosition();
     }
 
     public void Hide()
     {
         if (isVisible)
         {
-            Debug.Log("[WorldPromptUI] UI hidden.");
+            Debug.Log("[InteractionPromptUI] UI hidden.");
         }
 
         isVisible = false;
@@ -114,16 +122,14 @@ public class WorldPromptUI : MonoBehaviour
         if (scrapCostSection != null)
             scrapCostSection.SetActive(false);
 
-        if (worldCanvas != null)
-            worldCanvas.enabled = false;
-
+        SetCanvasVisible(false);
         gameObject.SetActive(false);
     }
 
     private void ApplyData(InteractablePromptData data)
     {
         if (actionText != null)
-            actionText.text = string.IsNullOrWhiteSpace(data.actionText) ? string.Empty : data.actionText;
+            actionText.text = GetDisplayActionText(data.actionText);
 
         bool showWood = data.woodCost > 0;
         if (woodCostSection != null)
@@ -146,11 +152,16 @@ public class WorldPromptUI : MonoBehaviour
             scrapCostText.color = dataColor;
 
         ApplyCostLayoutOffset(data.actionText, showWood || showScrap);
-        Debug.Log("[WorldPromptUI] UI data updated.");
+        Debug.Log("[InteractionPromptUI] UI data updated.");
     }
 
     private void CacheCostSectionLayout()
     {
+        if (worldCanvas != null)
+        {
+            worldCanvasRect = worldCanvas.GetComponent<RectTransform>();
+        }
+
         if (woodCostSection != null)
         {
             woodCostRect = woodCostSection.GetComponent<RectTransform>();
@@ -172,6 +183,48 @@ public class WorldPromptUI : MonoBehaviour
             {
                 singleLineActionTextHeight = Mathf.Max(1f, actionTextRect.rect.height);
             }
+        }
+    }
+
+    private void UpdateScreenSpacePosition()
+    {
+        if (worldCanvas == null || worldCanvasRect == null || promptRoot == null || currentAnchor == null)
+            return;
+
+        Camera targetCamera = GetTargetCamera();
+        if (targetCamera == null)
+        {
+            SetCanvasVisible(false);
+            return;
+        }
+
+        Vector3 screenPoint = targetCamera.WorldToScreenPoint(currentAnchor.position);
+        if (screenPoint.z <= 0f)
+        {
+            SetCanvasVisible(false);
+            return;
+        }
+
+        Camera eventCamera = worldCanvas.renderMode == RenderMode.ScreenSpaceOverlay ? null : targetCamera;
+        if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(worldCanvasRect, screenPoint, eventCamera, out Vector2 localPoint))
+        {
+            SetCanvasVisible(false);
+            return;
+        }
+
+        SetCanvasVisible(true);
+        promptRoot.anchoredPosition = localPoint;
+
+        if (logScreenSpacePositioning)
+        {
+            string targetName = (currentTarget as Component) != null ? ((Component)currentTarget).name : currentTarget.GetType().Name;
+            string anchorName = currentAnchor != null ? currentAnchor.name : "<null>";
+            string movedRectName = promptRoot != null ? promptRoot.name : "<null>";
+            Debug.Log(
+                $"[InteractionPromptUI] Positioned prompt. Target='{targetName}', Anchor='{anchorName}', " +
+                $"AnchorWorld={currentAnchor.position}, ScreenPoint={screenPoint}, MovedRect='{movedRectName}', " +
+                $"FinalAnchoredPosition={promptRoot.anchoredPosition}.",
+                this);
         }
     }
 
@@ -237,14 +290,68 @@ public class WorldPromptUI : MonoBehaviour
 
         if (actionText == null)
             actionText = GetComponentInChildren<TextMeshProUGUI>(includeInactive: true);
+
+        if (promptRoot == null && actionText != null)
+        {
+            RectTransform actionRect = actionText.rectTransform;
+            if (actionRect != null
+                && actionRect.parent is RectTransform parentRect
+                && parentRect != worldCanvasRect)
+                promptRoot = parentRect;
+            else
+                promptRoot = actionRect;
+        }
+
+        ConfigureCanvasForScreenSpace();
     }
 
     private void WarnIfMultiplePromptSystems()
     {
-        WorldPromptUI[] promptUis = FindObjectsOfType<WorldPromptUI>(includeInactive: true);
+        InteractionPromptUI[] promptUis = FindObjectsOfType<InteractionPromptUI>(includeInactive: true);
         if (promptUis.Length > 1)
         {
-            Debug.LogWarning("[WorldPromptUI] Multiple WorldPromptUI objects detected. Only one prompt system should be active.");
+            Debug.LogWarning("[InteractionPromptUI] Multiple InteractionPromptUI objects detected. Only one prompt system should be active.");
         }
+    }
+
+    private void ConfigureCanvasForScreenSpace()
+    {
+        if (worldCanvas == null)
+            return;
+
+        worldCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+        worldCanvas.worldCamera = null;
+
+        RectTransform canvasRect = worldCanvas.GetComponent<RectTransform>();
+        if (canvasRect != null)
+            canvasRect.localScale = Vector3.one;
+
+        if (promptRoot != null)
+            promptRoot.localScale = Vector3.one;
+
+        if (actionText != null)
+            actionText.rectTransform.localScale = Vector3.one;
+    }
+
+    private void SetCanvasVisible(bool visible)
+    {
+        if (worldCanvas != null)
+            worldCanvas.enabled = visible;
+    }
+
+    private Camera GetTargetCamera()
+    {
+        if (worldCanvas != null && worldCanvas.renderMode == RenderMode.ScreenSpaceCamera && worldCanvas.worldCamera != null)
+            return worldCanvas.worldCamera;
+
+        return Camera.main;
+    }
+
+    private static string GetDisplayActionText(string actionTextValue)
+    {
+        if (string.IsNullOrWhiteSpace(actionTextValue))
+            return string.Empty;
+
+        return actionTextValue == GatherPromptText ? GatherPromptDisplayText : actionTextValue;
     }
 }
