@@ -4,9 +4,6 @@ using UnityEngine.UI;
 
 public class InteractionPromptUI : MonoBehaviour
 {
-    private const string GatherPromptText = "Press E to Gather";
-    private const string GatherPromptDisplayText = "[E]";
-
     [Header("World Prompt References")]
     [SerializeField] private Canvas worldCanvas;
     [SerializeField] private RectTransform promptRoot;
@@ -43,10 +40,12 @@ public class InteractionPromptUI : MonoBehaviour
     private Vector2 woodCostBasePos;
     private Vector2 scrapCostBasePos;
     private float singleLineActionTextHeight = -1f;
+    private string inspectorPromptText;
 
     private void Awake()
     {
         AutoAssignReferencesIfMissing();
+        inspectorPromptText = actionText != null ? actionText.text : string.Empty;
         CacheCostSectionLayout();
         WarnIfMultiplePromptSystems();
         // Prompt should start hidden every time.
@@ -127,7 +126,7 @@ public class InteractionPromptUI : MonoBehaviour
     private void ApplyData(InteractablePromptData data)
     {
         if (actionText != null)
-            actionText.text = GetDisplayActionText(data.actionText);
+            actionText.text = inspectorPromptText;
 
         bool showWood = data.woodCost > 0;
         if (woodCostSection != null)
@@ -149,7 +148,7 @@ public class InteractionPromptUI : MonoBehaviour
         if (scrapCostText != null)
             scrapCostText.color = dataColor;
 
-        ApplyCostLayoutOffset(data.actionText, showWood || showScrap);
+        ApplyCostLayoutOffset(inspectorPromptText, showWood || showScrap);
         Debug.Log("[InteractionPromptUI] UI data updated.");
     }
 
@@ -345,11 +344,4 @@ public class InteractionPromptUI : MonoBehaviour
         return Camera.main;
     }
 
-    private static string GetDisplayActionText(string actionTextValue)
-    {
-        if (string.IsNullOrWhiteSpace(actionTextValue))
-            return string.Empty;
-
-        return actionTextValue == GatherPromptText ? GatherPromptDisplayText : actionTextValue;
-    }
 }
