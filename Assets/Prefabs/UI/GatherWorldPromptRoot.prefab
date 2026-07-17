@@ -184,7 +184,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldPromptUI
   worldCanvas: {fileID: 8449226048168422551}
-  promptText: {fileID: 2853290576192730}
+  promptRoot: {fileID: 7588005966246191992}
+  actionText: {fileID: 2853290576192730}
+  woodCostSection: {fileID: 0}
+  woodCostText: {fileID: 0}
+  scrapCostSection: {fileID: 0}
+  scrapCostText: {fileID: 0}
+  canAffordColor: {r: 1, g: 1, b: 1, a: 1}
+  cannotAffordColor: {r: 1, g: 0, b: 0, a: 1}
+  longTextCostOffset: {x: 0, y: -22}
+  longTextThreshold: 26
+  wrappedHeightRatioThreshold: 1.15
+  logScreenSpacePositioning: 0
 --- !u!114 &1477843567342458508
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -226,7 +237,7 @@ RectTransform:
   m_GameObject: {fileID: 6416725760875795269}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.015, y: 0.015, z: 0.015}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 99001020617016319}
@@ -246,7 +257,7 @@ Canvas:
   m_GameObject: {fileID: 6416725760875795269}
   m_Enabled: 0
   serializedVersion: 3
-  m_RenderMode: 2
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -282,7 +293,7 @@ MonoBehaviour:
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
   m_DynamicPixelsPerUnit: 1
-  m_PresetInfoIsWorld: 1
+  m_PresetInfoIsWorld: 0
 --- !u!114 &5486029473983302120
 MonoBehaviour:
   m_ObjectHideFlags: 0

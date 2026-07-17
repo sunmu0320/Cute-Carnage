@@ -27,6 +27,11 @@ public class TowerSlot : MonoBehaviour, IInteractable
     [SerializeField]
     private int scrapBuildCost = 1;
 
+    [Header("Repair")]
+    [SerializeField] private float repairAmountPerStep = 20f;
+    [SerializeField] private int woodRepairCost = 1;
+    [SerializeField] private int scrapRepairCost = 0;
+
     [SerializeField]
     private GameObject slotVisualRoot;
 
@@ -42,9 +47,6 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     [SerializeField]
     private Transform towerHpBarParent;
-
-    [SerializeField]
-    private Vector3 towerHpBarLocalOffset = new Vector3(0f, 2.8f, 0f);
 
     [SerializeField]
     private bool keepTowerHpBarAlwaysVisible = true;
@@ -68,6 +70,9 @@ public class TowerSlot : MonoBehaviour, IInteractable
     }
     public int WoodBuildCost => Mathf.Max(0, woodBuildCost);
     public int ScrapBuildCost => Mathf.Max(0, scrapBuildCost);
+    public float RepairAmountPerStep => Mathf.Max(0f, repairAmountPerStep);
+    public int WoodRepairCost => Mathf.Max(0, woodRepairCost);
+    public int ScrapRepairCost => Mathf.Max(0, scrapRepairCost);
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
     public string PersistentId => PersistentSlotId;
 
@@ -83,7 +88,6 @@ public class TowerSlot : MonoBehaviour, IInteractable
     {
         CachePersistentId();
         RefreshSlotVisualState();
-        UpdateHpBarPosition();
     }
 
     private void Update()
@@ -91,11 +95,11 @@ public class TowerSlot : MonoBehaviour, IInteractable
         SyncTowerHpToBar();
     }
 
-    private void UpdateHpBarPosition()
+    private void OnDestroy()
     {
         if (spawnedTowerHpBar != null)
         {
-            spawnedTowerHpBar.transform.localPosition = towerHpBarLocalOffset;
+            Destroy(spawnedTowerHpBar.gameObject);
         }
     }
 
@@ -246,6 +250,80 @@ public class TowerSlot : MonoBehaviour, IInteractable
         PlaceTowerInternal(ArrowTowerTowerId);
         Debug.Log(
             $"[TowerSlot] Build success slot id='{PersistentId}'. Spent wood={reqWood} scrap={reqScrap}. After {resourceManager.GetDebugSummary()}",
+            this);
+        return true;
+    }
+
+    public bool TryRepairTower(PlayerInteractor interactor)
+    {
+        if (!hasTower || interactor == null)
+        {
+            return false;
+        }
+
+        if (!TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            Debug.LogWarning($"[TowerSlot] Repair failed: tower reference is missing. Slot='{name}'.", this);
+            return false;
+        }
+
+        if (tower.CurrentHp >= tower.MaxHp)
+        {
+            return false;
+        }
+
+        ResourceManager resourceManager = interactor.ResourceManager;
+        if (resourceManager == null)
+        {
+            Debug.LogWarning($"[TowerSlot] Repair failed: ResourceManager is missing. Slot='{name}'.", this);
+            return false;
+        }
+
+        int requiredWood = WoodRepairCost;
+        int requiredScrap = ScrapRepairCost;
+        bool canAfford =
+            resourceManager.HasResource(ResourceType.Wood, requiredWood) &&
+            resourceManager.HasResource(ResourceType.Scrap, requiredScrap);
+
+        if (!canAfford)
+        {
+            Debug.Log(
+                $"[TowerSlot] Repair failed: insufficient resources. Need wood={requiredWood}, scrap={requiredScrap}. " +
+                $"Current {resourceManager.GetDebugSummary()}",
+                this);
+            return false;
+        }
+
+        if (requiredWood > 0 && !resourceManager.TrySpendResource(ResourceType.Wood, requiredWood))
+        {
+            return false;
+        }
+
+        if (requiredScrap > 0 && !resourceManager.TrySpendResource(ResourceType.Scrap, requiredScrap))
+        {
+            if (requiredWood > 0)
+            {
+                resourceManager.AddResource(ResourceType.Wood, requiredWood);
+            }
+            return false;
+        }
+
+        if (!tower.Repair(RepairAmountPerStep))
+        {
+            if (requiredWood > 0)
+            {
+                resourceManager.AddResource(ResourceType.Wood, requiredWood);
+            }
+            if (requiredScrap > 0)
+            {
+                resourceManager.AddResource(ResourceType.Scrap, requiredScrap);
+            }
+            return false;
+        }
+
+        Debug.Log(
+            $"[TowerSlot] Repair success. Slot='{PersistentId}', HP={tower.CurrentHp:0.##}/{tower.MaxHp:0.##}, " +
+            $"spent wood={requiredWood}, scrap={requiredScrap}.",
             this);
         return true;
     }
@@ -503,8 +581,19 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
             spawnedTowerHpBar = Instantiate(towerHpBarTemplate, parent);
             spawnedTowerHpBar.name = $"{towerHpBarTemplate.name}_{PersistentId}_TowerHp";
-            spawnedTowerHpBar.transform.localPosition = towerHpBarLocalOffset;
-            spawnedTowerHpBar.gameObject.SetActive(true);
+
+            RectTransform overlayRect = parent as RectTransform;
+            if (overlayRect == null)
+            {
+                Debug.LogWarning(
+                    $"[TowerSlot] HP bar parent must be a RectTransform. Slot id='{PersistentId}'.",
+                    this);
+                Destroy(spawnedTowerHpBar.gameObject);
+                spawnedTowerHpBar = null;
+                return;
+            }
+
+            spawnedTowerHpBar.Initialize(overlayRect, tower.HpAnchorTransform);
         }
     }
 }

@@ -14,6 +14,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     [SerializeField] private float targetAimHeightOffset = 0.75f;
 
     [Header("References")]
+    [SerializeField] private Transform hpAnchor;
     [SerializeField] private Transform aimYawPivot;
     [SerializeField] private Transform firePoint;
     [SerializeField] private GameObject projectileVisualPrefab;
@@ -34,7 +35,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
     public bool IsDestroyed => isDestroyed;
-    public Transform HpAnchorTransform => transform;
+    public Transform HpAnchorTransform => hpAnchor != null ? hpAnchor : transform;
 
     public void ApplyRuntimeDurability(float runtimeCurrentHp, bool runtimeDestroyed)
     {
@@ -110,6 +111,34 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         {
             SetDestroyed();
         }
+    }
+
+    public bool Repair(float repairAmount)
+    {
+        if (repairAmount <= 0f || currentHp >= maxHp)
+        {
+            return false;
+        }
+
+        float previousHp = currentHp;
+        currentHp = Mathf.Clamp(currentHp + repairAmount, 0f, maxHp);
+
+        if (currentHp > 0f && isDestroyed)
+        {
+            isDestroyed = false;
+            ApplyDestroyedState();
+        }
+
+        float actualRepairAmount = currentHp - previousHp;
+        if (actualRepairAmount <= 0f)
+        {
+            return false;
+        }
+
+        Debug.Log(
+            $"[ArrowTower] Repaired by {actualRepairAmount:0.##}. HP: {currentHp:0.##}/{maxHp:0.##}",
+            this);
+        return true;
     }
 
     private void SetDestroyed()

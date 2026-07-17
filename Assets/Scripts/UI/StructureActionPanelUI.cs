@@ -15,6 +15,7 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI installCostText;
     [SerializeField] private Button upgradeButton;
     [SerializeField] private GameObject repairActionRoot;
+    [SerializeField] private Button repairButton;
     [SerializeField] private Button closeButton;
 
     private TowerSlot selectedTowerSlot;
@@ -34,6 +35,11 @@ public class StructureActionPanelUI : MonoBehaviour
             closeButton.onClick.AddListener(Close);
         }
 
+        if (repairButton != null)
+        {
+            repairButton.onClick.AddListener(HandleRepairClicked);
+        }
+
         Close();
     }
 
@@ -47,6 +53,11 @@ public class StructureActionPanelUI : MonoBehaviour
         if (closeButton != null)
         {
             closeButton.onClick.RemoveListener(Close);
+        }
+
+        if (repairButton != null)
+        {
+            repairButton.onClick.RemoveListener(HandleRepairClicked);
         }
     }
 
@@ -82,6 +93,19 @@ public class StructureActionPanelUI : MonoBehaviour
     private void HandleInstallClicked()
     {
         if (selectedTowerSlot != null && selectedInteractor != null && selectedTowerSlot.TryBuildTower(selectedInteractor))
+        {
+            Refresh();
+        }
+    }
+
+    private void HandleRepairClicked()
+    {
+        if (selectedTowerSlot == null || selectedInteractor == null)
+        {
+            return;
+        }
+
+        if (selectedTowerSlot.TryRepairTower(selectedInteractor))
         {
             Refresh();
         }
@@ -150,9 +174,16 @@ public class StructureActionPanelUI : MonoBehaviour
             upgradeButton.interactable = false;
         }
 
+        bool needsRepair = hasValidTower && tower.CurrentHp < tower.MaxHp - 0.01f;
+
         if (repairActionRoot != null)
         {
-            repairActionRoot.SetActive(hasValidTower && tower.CurrentHp < tower.MaxHp);
+            repairActionRoot.SetActive(needsRepair);
+        }
+
+        if (repairButton != null)
+        {
+            repairButton.interactable = needsRepair;
         }
     }
 }
