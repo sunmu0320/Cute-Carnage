@@ -49,6 +49,7 @@ public class GameManager : MonoBehaviour
     public RunRuntimeState CurrentRunState => currentRunState;
     public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
     public int CurrentDay => currentDay;
+    public bool IsDay => currentPhase == GamePhase.Day;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void LogTransition(string message)

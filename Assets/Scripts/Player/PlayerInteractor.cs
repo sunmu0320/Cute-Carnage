@@ -34,6 +34,9 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField, Tooltip("Optional shared interaction prompt UI that follows the current target.")]
     InteractionPromptUI interactionPromptUI;
 
+    [SerializeField, Tooltip("Shared structure action panel opened by structure slots.")]
+    StructureActionPanelUI structureActionPanelUI;
+
     [SerializeField, Tooltip("Max colliders scanned each frame by NonAlloc overlap.")]
     int overlapBufferSize = 32;
 
@@ -72,6 +75,16 @@ public class PlayerInteractor : MonoBehaviour
     public PlayerActionState DebugCurrentState => currentState;
     public IRepairable DebugCurrentRepairable => currentRepairable;
     public IRepairable DebugActiveRepairTarget => activeRepairTarget;
+
+    public void OpenStructureActionPanel(TowerSlot towerSlot)
+    {
+        if (structureActionPanelUI != null)
+        {
+            structureActionPanelUI.Open(towerSlot, this);
+            if (structureActionPanelUI.IsOpen && interactionPromptUI != null)
+                interactionPromptUI.Hide();
+        }
+    }
 
     void Awake()
     {
@@ -430,6 +443,12 @@ public class PlayerInteractor : MonoBehaviour
     {
         if (interactionPromptUI == null)
             return;
+
+        if (structureActionPanelUI != null && structureActionPanelUI.IsOpen)
+        {
+            interactionPromptUI.Hide();
+            return;
+        }
 
         bool shouldHide = currentInteractable == null;
         InteractablePromptData promptData = default;

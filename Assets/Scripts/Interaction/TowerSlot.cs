@@ -58,6 +58,16 @@ public class TowerSlot : MonoBehaviour, IInteractable
     private bool hasLoggedMissingHpBarParent;
 
     public bool HasTower => hasTower;
+    public ArrowTower CurrentTower
+    {
+        get
+        {
+            TryGetCurrentTowerComponent(out ArrowTower tower);
+            return tower;
+        }
+    }
+    public int WoodBuildCost => Mathf.Max(0, woodBuildCost);
+    public int ScrapBuildCost => Mathf.Max(0, scrapBuildCost);
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
     public string PersistentId => PersistentSlotId;
 
@@ -153,7 +163,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public bool CanInteract(PlayerInteractor interactor)
     {
-        return !hasTower;
+        return GameManager.Instance != null && GameManager.Instance.IsDay;
     }
 
     public InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
@@ -178,7 +188,10 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public void Interact(PlayerInteractor interactor)
     {
-        TryBuildTower(interactor);
+        if (interactor != null)
+        {
+            interactor.OpenStructureActionPanel(this);
+        }
     }
 
     public bool TryBuildTower(PlayerInteractor interactor)

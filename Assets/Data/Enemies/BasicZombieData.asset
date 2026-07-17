@@ -17,7 +17,7 @@ MonoBehaviour:
   targetPreference: 0
   maxHp: 30
   moveSpeed: 0.5
-  attackDamage: 1
+  attackDamage: 7
   attackRange: 1.4
   attackInterval: 1.5
   targetRefreshInterval: 0.2

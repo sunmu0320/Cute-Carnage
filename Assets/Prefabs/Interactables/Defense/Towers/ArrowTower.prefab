@@ -81,7 +81,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArrowTower
   maxHp: 80
-  currentHp: 80
+  currentHp: 10
   attackRange: 13.76
   attackInterval: 1
   damage: 10
