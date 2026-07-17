@@ -34,7 +34,8 @@ public class HungerSystem : MonoBehaviour
     [SerializeField]
     private bool isActive = true;
 
-    private float currentHunger;
+    [SerializeField]
+    private float currentHunger = 100f;
     private float starvationDamageAccumulator;
 
     public float MaxHunger => Mathf.Max(0.0001f, maxHunger);
@@ -46,7 +47,17 @@ public class HungerSystem : MonoBehaviour
     {
         maxHunger = Mathf.Max(0.0001f, maxHunger);
         startingHunger = Mathf.Clamp(startingHunger, 0f, maxHunger);
-        currentHunger = startingHunger;
+
+        bool skipSceneDefaultReset = GameManager.Instance != null && GameManager.Instance.CurrentRunState != null;
+        if (skipSceneDefaultReset && GameManager.Instance.CurrentRunState.playerState != null)
+        {
+            currentHunger = Mathf.Clamp(GameManager.Instance.CurrentRunState.playerState.currentHunger, 0f, MaxHunger);
+        }
+        else if (!skipSceneDefaultReset)
+        {
+            currentHunger = startingHunger;
+        }
+
         starvationDamageAccumulator = 0f;
     }
 
@@ -113,5 +124,16 @@ public class HungerSystem : MonoBehaviour
         isActive = active;
         if (!isActive)
             starvationDamageAccumulator = 0f;
+    }
+
+    public void ApplyRuntimeState(PlayerRuntimeState state)
+    {
+        if (state == null)
+        {
+            return;
+        }
+
+        currentHunger = Mathf.Clamp(state.currentHunger, 0f, MaxHunger);
+        starvationDamageAccumulator = 0f;
     }
 }

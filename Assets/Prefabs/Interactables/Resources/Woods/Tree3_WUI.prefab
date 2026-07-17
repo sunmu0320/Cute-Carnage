@@ -9,7 +9,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8674009265698025654}
-  - component: {fileID: 3904865229653916109}
   - component: {fileID: 2456648486436333752}
   m_Layer: 6
   m_Name: Tree3_WUI
@@ -35,29 +34,9 @@ Transform:
   - {fileID: 8880260935633023937}
   - {fileID: 2427999631368423286}
   - {fileID: 2142679581214024622}
+  - {fileID: 3642371610624202668}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!65 &3904865229653916109
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638280039484371785}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!114 &2456648486436333752
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -73,10 +52,12 @@ MonoBehaviour:
   interactName: Tree
   canUse: 1
   oneTimeUse: 1
+  uiAnchor: {fileID: 0}
   resourceType: 0
   amount: 1
   gatherAnimationType: 1
   gatherBarAnchor: {fileID: 2142679581214024622}
+  gatherDistance: 2.4
 --- !u!1 &2848393999768262697
 GameObject:
   m_ObjectHideFlags: 0
@@ -102,7 +83,38 @@ Transform:
   m_GameObject: {fileID: 2848393999768262697}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 8.53, z: 0}
+  m_LocalPosition: {x: 0, y: 1.63, z: 0.89}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8674009265698025654}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3303447205958938129
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3642371610624202668}
+  m_Layer: 6
+  m_Name: UIAnchor
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3642371610624202668
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3303447205958938129}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 4.87, z: 1.7}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -125,7 +137,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2427999631368423286
 Transform:
   m_ObjectHideFlags: 0
@@ -155,7 +167,16 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldPromptUI
   worldCanvas: {fileID: 2614827164044106092}
-  promptText: {fileID: 2113939070789059931}
+  actionText: {fileID: 2113939070789059931}
+  woodCostSection: {fileID: 0}
+  woodCostText: {fileID: 0}
+  scrapCostSection: {fileID: 0}
+  scrapCostText: {fileID: 0}
+  canAffordColor: {r: 1, g: 1, b: 1, a: 1}
+  cannotAffordColor: {r: 1, g: 0, b: 0, a: 1}
+  longTextCostOffset: {x: 0, y: -22}
+  longTextThreshold: 26
+  wrappedHeightRatioThreshold: 1.15
 --- !u!114 &323672263846693115
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -180,7 +201,7 @@ GameObject:
   - component: {fileID: 8880260935633023937}
   - component: {fileID: 9177303538257270425}
   - component: {fileID: 4782450938732556155}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: InteractionRange
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -221,8 +242,8 @@ SphereCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Radius: 5.480797
-  m_Center: {x: 0.059762478, y: 3.8749046, z: 0}
+  m_Radius: 4
+  m_Center: {x: 0.059762478, y: 0, z: 0}
 --- !u!114 &4782450938732556155
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -235,9 +256,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ec053da42efbc304b8525fd4abefb18a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ExamplePromptInteractable
-  promptUI: {fileID: 940198314228593701}
   promptMessage: E - Gather
-  playerTag: Player
 --- !u!1 &7589354887544859164
 GameObject:
   m_ObjectHideFlags: 0
@@ -266,7 +285,7 @@ RectTransform:
   m_GameObject: {fileID: 7589354887544859164}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 0.015, y: 0.015, z: 0.015}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children:
   - {fileID: 6350539722259884330}
@@ -286,7 +305,7 @@ Canvas:
   m_GameObject: {fileID: 7589354887544859164}
   m_Enabled: 0
   serializedVersion: 3
-  m_RenderMode: 2
+  m_RenderMode: 0
   m_Camera: {fileID: 0}
   m_PlaneDistance: 100
   m_PixelPerfect: 0
@@ -541,15 +560,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 769647742837105919, guid: 5e0c69488df5e6c44a85d3691e88a7ee, type: 3}
-    - {fileID: 2366785787378584754, guid: 5e0c69488df5e6c44a85d3691e88a7ee, type: 3}
+    m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 6239225769284327064, guid: 5e0c69488df5e6c44a85d3691e88a7ee, type: 3}
       insertIndex: -1
       addedObject: {fileID: 6675509131512580083}
+    - targetCorrespondingSourceObject: {fileID: 6239225769284327064, guid: 5e0c69488df5e6c44a85d3691e88a7ee, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3398253699738669991}
   m_SourcePrefab: {fileID: 100100000, guid: 5e0c69488df5e6c44a85d3691e88a7ee, type: 3}
 --- !u!4 &4943261031111807211 stripped
 Transform:
@@ -573,3 +593,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7a702cf4c6c8e6f479ebb9c71ebaba5d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SimpleShake
+--- !u!136 &3398253699738669991
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5325495478592082831}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.4939141
+  m_Height: 4.6770806
+  m_Direction: 1
+  m_Center: {x: -0.033180505, y: 1.3845208, z: 0.06472036}

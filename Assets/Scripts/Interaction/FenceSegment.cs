@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 [Serializable]
 public class FenceTierData
@@ -31,7 +32,7 @@ public class FenceTierData
     }
 }
 
-public class FenceSegment : MonoBehaviour, IInteractable
+public class FenceSegment : MonoBehaviour, IInteractable, IRepairable
 {
     // Tier Data
     [Header("Fence Tiers")]
@@ -48,14 +49,55 @@ public class FenceSegment : MonoBehaviour, IInteractable
     [SerializeField, Tooltip("0-based index of the active tier.")] private int currentTierIndex;
     [SerializeField] private float currentHp;
 
+    [SerializeField, Tooltip("Explicit broken state; also toggles barrier colliders. HP at 0 when true during play.")]
+    private bool isDestroyed;
+
+    /// <summary>Non-trigger colliders: disabled when <see cref="isDestroyed"/> is true.</summary>
+    private Collider[] cachedBarrierColliders;
+
     [Header("Interaction (IInteractable Example)")]
     [SerializeField, Tooltip("Optional world-space anchor for this fence prompt.")]
     private Transform uiAnchor;
 
+    [Header("World HP Bar (DayTimerBar)")]
+    [SerializeField, Tooltip("Optional anchor for the HP bar. If null, uses uiAnchor or this transform.")]
+    private Transform hpBarAnchor;
+
+    [SerializeField, Tooltip("Local position when hpBarAnchor is null (bar sits below prompt anchor).")]
+    private Vector3 hpBarLocalOffset = new Vector3(0f, -0.35f, 0f);
+
+    [SerializeField, Tooltip("Reuse DayTimerBar prefab as a world-space HP fill bar.")]
+    private GameObject dayTimerBarPrefab;
+
+    [SerializeField, Tooltip("Lower sorting so InteractionPromptUI can draw above the bar.")]
+    private int hpBarCanvasSortingOrder = -10;
+
+    [SerializeField, Tooltip("Hide the bar when HP is full.")]
+    private bool hideHpBarWhenFull = true;
+
+    private GameObject hpBarInstance;
+    private Image hpFillImage;
+
+    [Header("Continuous Repair (Repair State)")]
+    [SerializeField, Tooltip("HP restored per second while the player is in repair state.")]
+    private float repairRatePerSecond = 10f;
+
+    [SerializeField, Tooltip("Max HP restored per paid resource chunk before another spend is required.")]
+    private float repairHpPerWood = 20f;
+
+    [SerializeField, Tooltip("Resource spent when a new repair chunk starts.")]
+    private ResourceType repairResourceType = ResourceType.Wood;
+
+    [SerializeField, Tooltip("How much of the repair resource to spend per chunk.")]
+    private int repairCostPerChunk = 1;
+
+    private bool hasActiveRepairChunk;
+    private float repairedInCurrentChunk;
+
     public int CurrentTierNumber => currentTierIndex + 1;
     public float CurrentHp => currentHp;
     public float MaxHp => CurrentTier.MaxHp;
-    public bool IsDestroyed => currentHp <= 0f;
+    public bool IsDestroyed => isDestroyed;
 
     private FenceTierData CurrentTier
     {
@@ -78,16 +120,25 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
         currentTierIndex = 0;
         currentHp = tiers[0].MaxHp;
+        isDestroyed = false;
     }
 
     private void Awake()
     {
         EnsureValidState();
+        CacheBarrierColliders();
+        TrySpawnWorldHpBar();
+        RefreshWorldHpBar();
+        ApplyDestroyedSideEffects();
     }
 
     private void OnValidate()
     {
         EnsureValidState();
+        if (hpBarInstance != null)
+        {
+            RefreshWorldHpBar();
+        }
     }
 
     // Damage / Repair
@@ -103,15 +154,140 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
         float oldHp = currentHp;
         currentHp = Mathf.Max(0f, currentHp - amount);
+        if (currentHp <= 0f && !isDestroyed)
+        {
+            isDestroyed = true;
+        }
+
+        ApplyDestroyedSideEffects();
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} took {amount} damage. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}. " +
             $"Destroyed: {IsDestroyed}.");
+
+        RefreshWorldHpBar();
+    }
+
+    /// <summary>
+    /// Sets HP for runtime restore / sync. Clamps to [0, MaxHp], refreshes the HP bar, clears hold-repair chunk state.
+    /// Does not spend resources or run repair chunk logic. When HP is 0, sets destroyed state; when HP is positive, clears it.
+    /// </summary>
+    public void SetCurrentHp(float value)
+    {
+        EnsureValidState();
+        CancelRepair();
+
+        float clamped = Mathf.Clamp(value, 0f, MaxHp);
+        currentHp = clamped;
+        isDestroyed = clamped <= 0f;
+        ApplyDestroyedSideEffects();
+        RefreshWorldHpBar();
+    }
+
+    /// <summary>
+    /// Sets HP and broken state for load; if HP is above zero, destroyed is always cleared.
+    /// </summary>
+    public void SetCurrentHp(float value, bool destroyed)
+    {
+        EnsureValidState();
+        CancelRepair();
+
+        float clamped = Mathf.Clamp(value, 0f, MaxHp);
+        currentHp = clamped;
+        isDestroyed = destroyed;
+        if (currentHp > 0f)
+        {
+            isDestroyed = false;
+        }
+
+        ApplyDestroyedSideEffects();
+        RefreshWorldHpBar();
+    }
+
+    void CacheBarrierColliders()
+    {
+        if (cachedBarrierColliders != null)
+        {
+            return;
+        }
+
+        Collider[] all = GetComponentsInChildren<Collider>(true);
+        List<Collider> barrier = new List<Collider>(all != null ? all.Length : 0);
+        if (all != null)
+        {
+            for (int i = 0; i < all.Length; i++)
+            {
+                Collider c = all[i];
+                if (c != null && !c.isTrigger)
+                {
+                    barrier.Add(c);
+                }
+            }
+        }
+
+        cachedBarrierColliders = barrier.ToArray();
+    }
+
+    void ApplyDestroyedSideEffects()
+    {
+        if (cachedBarrierColliders == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < cachedBarrierColliders.Length; i++)
+        {
+            Collider c = cachedBarrierColliders[i];
+            if (c != null)
+            {
+                c.enabled = !isDestroyed;
+            }
+        }
+    }
+
+    void ClearDestroyedStateIfRepaired()
+    {
+        if (isDestroyed && currentHp > 0f)
+        {
+            isDestroyed = false;
+            ApplyDestroyedSideEffects();
+        }
     }
 
     public bool CanRepair()
     {
         EnsureValidState();
         return currentHp < MaxHp;
+    }
+
+    public bool IsDamaged
+    {
+        get
+        {
+            EnsureValidState();
+            return currentHp < MaxHp;
+        }
+    }
+
+    public bool IsFullyRepaired()
+    {
+        EnsureValidState();
+        return currentHp >= MaxHp;
+    }
+
+    public bool CanAffordNextRepairChunk(ResourceManager resourceManager)
+    {
+        if (resourceManager == null)
+        {
+            return false;
+        }
+
+        int cost = Mathf.Max(0, repairCostPerChunk);
+        if (cost <= 0)
+        {
+            return true;
+        }
+
+        return resourceManager.HasResource(repairResourceType, cost);
     }
 
     public int GetRequiredWood()
@@ -161,6 +337,99 @@ public class FenceSegment : MonoBehaviour, IInteractable
         return availableWood >= requiredWood && availableScrap >= requiredScrap;
     }
 
+    public bool TickRepair(float deltaTime, ResourceManager resourceManager)
+    {
+        try
+        {
+            EnsureValidState();
+
+            if (!IsDamaged)
+            {
+                return true;
+            }
+
+            if (resourceManager == null)
+            {
+                return false;
+            }
+
+            float dt = Mathf.Max(0f, deltaTime);
+            if (dt <= 0f)
+            {
+                return true;
+            }
+
+            if (!hasActiveRepairChunk)
+            {
+                int cost = Mathf.Max(0, repairCostPerChunk);
+                if (cost > 0 && !resourceManager.TrySpendResource(repairResourceType, cost))
+                {
+                    return false;
+                }
+
+                hasActiveRepairChunk = true;
+                repairedInCurrentChunk = 0f;
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (cost > 0)
+                {
+                    Debug.Log(
+                        $"[{nameof(FenceSegment)}] Repair chunk started {GetFenceDebugContext()}. HP {currentHp:0.#}/{MaxHp:0.#} (spent {repairResourceType} x{cost}).",
+                        this);
+                }
+#endif
+            }
+
+            float rate = Mathf.Max(0f, repairRatePerSecond);
+            float repairAmount = rate * dt;
+
+            float remainingMissingHp = MaxHp - currentHp;
+            float chunkCap = Mathf.Max(0.01f, repairHpPerWood);
+            float remainingChunkHp = chunkCap - repairedInCurrentChunk;
+
+            repairAmount = Mathf.Min(repairAmount, remainingMissingHp);
+            repairAmount = Mathf.Min(repairAmount, Mathf.Max(0f, remainingChunkHp));
+
+            currentHp += repairAmount;
+            currentHp = Mathf.Min(currentHp, MaxHp);
+            repairedInCurrentChunk += repairAmount;
+
+            ClearDestroyedStateIfRepaired();
+
+            if (repairedInCurrentChunk >= chunkCap - 0.001f)
+            {
+                hasActiveRepairChunk = false;
+                repairedInCurrentChunk = 0f;
+            }
+
+            if (!IsDamaged)
+            {
+                return true;
+            }
+
+            if (!hasActiveRepairChunk)
+            {
+                int cost = Mathf.Max(0, repairCostPerChunk);
+                if (cost > 0 && !resourceManager.HasResource(repairResourceType, cost))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            RefreshWorldHpBar();
+        }
+    }
+
+    public void CancelRepair()
+    {
+        hasActiveRepairChunk = false;
+        repairedInCurrentChunk = 0f;
+    }
+
     public bool TryRepair(ResourceManager resourceManager)
     {
         EnsureValidState();
@@ -202,10 +471,36 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
         float oldHp = currentHp;
         currentHp = Mathf.Min(MaxHp, currentHp + GetRepairAmount());
+        ClearDestroyedStateIfRepaired();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log(
+            $"[{nameof(FenceSegment)}] TryRepair {GetFenceDebugContext()}. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}. " +
+            $"Spent Wood {requiredWood}, Scrap {requiredScrap}.",
+            this);
+#else
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} repaired successfully. Spent Wood {requiredWood}, Scrap {requiredScrap}. " +
             $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}.");
+#endif
+
+        RefreshWorldHpBar();
         return true;
+    }
+
+    private string GetFenceDebugContext()
+    {
+        PersistentId persistentId = GetComponent<PersistentId>();
+        if (persistentId == null)
+        {
+            persistentId = GetComponentInParent<PersistentId>();
+        }
+
+        if (persistentId != null && !string.IsNullOrWhiteSpace(persistentId.Id))
+        {
+            return $"{name} (id={persistentId.Id})";
+        }
+
+        return name;
     }
 
     public void UpgradeToTier(int newTierNumber, bool fillHpToMax = true)
@@ -233,9 +528,107 @@ public class FenceSegment : MonoBehaviour, IInteractable
             currentHp = Mathf.Clamp(currentHp, 0f, MaxHp);
         }
 
+        if (currentHp > 0f)
+        {
+            isDestroyed = false;
+        }
+
         Debug.Log(
             $"[{nameof(FenceSegment)}] {name} upgraded Tier {oldTierNumber} -> {CurrentTierNumber} ({CurrentTier.TierName}). " +
             $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#} (fillHpToMax={fillHpToMax}).");
+
+        ApplyDestroyedSideEffects();
+        RefreshWorldHpBar();
+    }
+
+    void TrySpawnWorldHpBar()
+    {
+        if (hpBarInstance != null)
+        {
+            return;
+        }
+
+        if (dayTimerBarPrefab == null)
+        {
+            return;
+        }
+
+        Transform parent = hpBarAnchor != null ? hpBarAnchor : uiAnchor != null ? uiAnchor : transform;
+        hpBarInstance = Instantiate(dayTimerBarPrefab);
+        hpBarInstance.name = $"{dayTimerBarPrefab.name}_HP_{name}";
+
+        Transform barTransform = hpBarInstance.transform;
+        barTransform.SetParent(parent, false);
+        barTransform.localRotation = Quaternion.identity;
+
+        if (hpBarAnchor != null)
+        {
+            barTransform.localPosition = Vector3.zero;
+        }
+        else
+        {
+            barTransform.localPosition = hpBarLocalOffset;
+        }
+
+        Canvas barCanvas = hpBarInstance.GetComponent<Canvas>();
+        if (barCanvas != null)
+        {
+            barCanvas.sortingOrder = hpBarCanvasSortingOrder;
+        }
+
+        CacheHpFillImageFromPrefab();
+    }
+
+    void CacheHpFillImageFromPrefab()
+    {
+        hpFillImage = null;
+        if (hpBarInstance == null)
+        {
+            return;
+        }
+
+        foreach (Image image in hpBarInstance.GetComponentsInChildren<Image>(true))
+        {
+            if (image != null && image.type == Image.Type.Filled)
+            {
+                hpFillImage = image;
+                break;
+            }
+        }
+
+        if (hpFillImage == null)
+        {
+            Debug.LogWarning(
+                $"[{nameof(FenceSegment)}] {name}: DayTimerBar prefab has no Image with Type Filled (expected BarFill). HP bar will not update.",
+                this);
+        }
+    }
+
+    void RefreshWorldHpBar()
+    {
+        if (hpBarInstance == null)
+        {
+            return;
+        }
+
+        EnsureValidState();
+
+        float max = Mathf.Max(0.01f, MaxHp);
+        float fill = Mathf.Clamp01(currentHp / max);
+
+        if (hpFillImage != null)
+        {
+            hpFillImage.fillAmount = fill;
+        }
+
+        bool visible = true;
+
+        if (hideHpBarWhenFull)
+        {
+            visible = IsDamaged;
+        }
+
+        hpBarInstance.SetActive(visible);
     }
 
     // Interaction / UI
@@ -291,8 +684,7 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
     public void Interact(PlayerInteractor interactor)
     {
-        ResourceManager manager = interactor != null ? interactor.ResourceManager : null;
-        TryRepair(manager);
+        // HP repair during play uses IRepairable.TickRepair from PlayerInteractor while in Repairing state.
     }
 
     // Future icon-based UI usage example (when player is near this fence):
@@ -315,5 +707,9 @@ public class FenceSegment : MonoBehaviour, IInteractable
 
         currentTierIndex = Mathf.Clamp(currentTierIndex, 0, tiers.Count - 1);
         currentHp = Mathf.Clamp(currentHp, 0f, tiers[currentTierIndex].MaxHp);
+        if (currentHp > 0f)
+        {
+            isDestroyed = false;
+        }
     }
 }
