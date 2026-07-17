@@ -1292,6 +1292,22 @@ PrefabInstance:
       propertyPath: m_Name
       value: HomeBase
       objectReference: {fileID: 0}
+    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
+      propertyPath: towerHpBarParent
+      value: 
+      objectReference: {fileID: 1101447870}
+    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
+      propertyPath: towerHpBarTemplate
+      value: 
+      objectReference: {fileID: 92352056997406519, guid: 0858d2ec4fe3a034186a511c0fc7fc00, type: 3}
+    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
+      propertyPath: hideTowerHpBarWhenDestroyed
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
+      propertyPath: keepTowerHpBarAlwaysVisible
+      value: 0
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -12682,6 +12698,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: d11f9d13d7d051f4a8630c2f3a214533, type: 3}
+--- !u!224 &1101447870 stripped
+RectTransform:
+  m_CorrespondingSourceObject: {fileID: 134581846441602019, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+  m_PrefabInstance: {fileID: 5634592839173622706}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1117969210
 GameObject:
   m_ObjectHideFlags: 0
@@ -24882,22 +24903,6 @@ PrefabInstance:
       propertyPath: 'm_fontSharedMaterials.Array.data[0]'
       value: 
       objectReference: {fileID: 504870729}
-    - target: {fileID: 3537247059388212086, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 98.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3537247059388212086, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 16.18
-      objectReference: {fileID: 0}
-    - target: {fileID: 3537247059388212086, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_AnchoredPosition.x
-      value: -6.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 3537247059388212086, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -39.8
-      objectReference: {fileID: 0}
     - target: {fileID: 5587463479072035349, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
       propertyPath: hungerSystem
       value: 
@@ -24914,42 +24919,6 @@ PrefabInstance:
       propertyPath: resourceManager
       value: 
       objectReference: {fileID: 321777434}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontSize
-      value: 9
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_margin.w
-      value: 6.170288
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontStyle
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontColor.b
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontColor.g
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontColor.r
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontSizeBase
-      value: 9
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_enableAutoSizing
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6764620251814096926, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
-      propertyPath: m_fontColor32.rgba
-      value: 4278190080
-      objectReference: {fileID: 0}
     - target: {fileID: 7506374410473950278, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
       propertyPath: m_LocalScale.x
       value: 0
