@@ -21,6 +21,7 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     [Header("Anchors")]
     [SerializeField] private Transform spawnPoint;
+    [SerializeField] private Transform interactionAnchor;
     [SerializeField] private Transform slotMarker;
 
     private PersistentId persistentId;
@@ -151,12 +152,12 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     public Transform GetUIAnchor()
     {
-        return SpawnPoint;
+        return interactionAnchor != null ? interactionAnchor : SpawnPoint;
     }
 
     public Vector3 GetInteractPosition()
     {
-        return GetUIAnchor().position;
+        return SpawnPoint.position;
     }
 
     public bool CanInteract(PlayerInteractor interactor)

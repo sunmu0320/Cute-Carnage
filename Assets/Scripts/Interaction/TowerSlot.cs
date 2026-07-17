@@ -15,6 +15,9 @@ public class TowerSlot : MonoBehaviour, IInteractable
     [SerializeField]
     private Transform spawnPoint;
 
+    [SerializeField]
+    private Transform interactionAnchor;
+
     private GameObject currentTower;
 
     [Header("Build Cost")]
@@ -140,12 +143,12 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public Transform GetUIAnchor()
     {
-        return spawnPoint != null ? spawnPoint : transform;
+        return interactionAnchor != null ? interactionAnchor : spawnPoint != null ? spawnPoint : transform;
     }
 
     public Vector3 GetInteractPosition()
     {
-        return GetUIAnchor().position;
+        return spawnPoint != null ? spawnPoint.position : transform.position;
     }
 
     public bool CanInteract(PlayerInteractor interactor)

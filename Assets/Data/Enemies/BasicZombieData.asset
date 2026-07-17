@@ -16,11 +16,11 @@ MonoBehaviour:
   zombieType: 0
   targetPreference: 0
   maxHp: 30
-  moveSpeed: 2.5
-  attackDamage: 7
+  moveSpeed: 0.5
+  attackDamage: 1
   attackRange: 1.4
   attackInterval: 1.5
   targetRefreshInterval: 0.2
   forwardDetectRange: 1.6
   forwardDetectRadius: 0.6
-  animatorController: {fileID: 0}
+  animatorController: {fileID: 9100000, guid: 97bb4849f083c864c9b14709be9f0f13, type: 2}

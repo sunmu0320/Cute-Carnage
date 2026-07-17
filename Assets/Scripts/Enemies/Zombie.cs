@@ -3,11 +3,18 @@ using UnityEngine.SceneManagement;
 
 public class Zombie : MonoBehaviour
 {
+    private static readonly int SpeedHash = Animator.StringToHash("Speed");
+    private static readonly int AttackHash = Animator.StringToHash("Attack");
+    private static readonly int DieHash = Animator.StringToHash("Die");
+
     /// <summary>Prototype: all Zombie instances in the play session (OnEnable/OnDestroy).</summary>
     public static int AliveZombieCount { get; private set; }
 
     [Header("Data (optional)")]
     [SerializeField] private ZombieData zombieData;
+
+    [Header("Animation")]
+    [SerializeField] private Animator animator;
 
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 2f;
@@ -36,10 +43,7 @@ public class Zombie : MonoBehaviour
     [SerializeField] private float maxHp = 30f;
     [SerializeField] private KeyCode debugDamageKey = KeyCode.K;
     [SerializeField] private float debugDamageAmount = 10f;
-
-    [Header("Attack Feedback (Prototype Lunge)")]
-    [SerializeField] private float lungeDistance = 0.12f;
-    [SerializeField] private float lungeDuration = 0.12f;
+    [SerializeField, Min(0f)] private float deathDestroyDelay = 5f;
 
     private enum TargetKind
     {
@@ -61,11 +65,6 @@ public class Zombie : MonoBehaviour
 
     private float attackTimer;
     private float targetRefreshTimer;
-
-    private bool isLunging;
-    private float lungeTimer;
-    private Vector3 lungeStartPosition;
-    private Vector3 lungePeakPosition;
 
     private float currentHp;
     private bool hasDied;
@@ -96,6 +95,22 @@ public class Zombie : MonoBehaviour
     private void Awake()
     {
         ApplyZombieData();
+
+        if (animator == null)
+        {
+            animator = GetComponentInChildren<Animator>(true);
+        }
+
+        if (animator != null)
+        {
+            if (animator.runtimeAnimatorController == null)
+            {
+                animator.runtimeAnimatorController = animatorController;
+            }
+
+            animator.applyRootMotion = false;
+        }
+
         maxHp = Mathf.Max(0.1f, maxHp);
         currentHp = Mathf.Clamp(maxHp, 0f, maxHp);
         hasDied = false;
@@ -137,18 +152,17 @@ public class Zombie : MonoBehaviour
             return;
         }
 
+        if (animator != null)
+        {
+            animator.SetFloat(SpeedHash, 0f);
+        }
+
         if (Input.GetKeyDown(debugDamageKey))
         {
             TakeDamage(debugDamageAmount);
         }
 
         RefreshTargetIfNeeded();
-
-        if (isLunging)
-        {
-            UpdateAttackLunge();
-            return;
-        }
 
         if (currentTargetTransform == null)
         {
@@ -609,6 +623,11 @@ public class Zombie : MonoBehaviour
         Vector3 desiredPos = targetPos - moveDirection * StoppingDistance;
         transform.position = Vector3.MoveTowards(currentPos, desiredPos, moveSpeed * Time.deltaTime);
 
+        if (animator != null && transform.position != currentPos)
+        {
+            animator.SetFloat(SpeedHash, 1f);
+        }
+
         if (moveDirection.sqrMagnitude > 0.0001f)
         {
             transform.rotation = Quaternion.LookRotation(moveDirection, Vector3.up);
@@ -679,6 +698,11 @@ public class Zombie : MonoBehaviour
             return;
         }
 
+        if (animator != null)
+        {
+            animator.SetTrigger(AttackHash);
+        }
+
         if (currentTargetKind == TargetKind.Fence && currentTargetFence != null)
         {
             currentTargetFence.TakeDamage(attackDamage);
@@ -698,7 +722,6 @@ public class Zombie : MonoBehaviour
         }
 
         attackTimer = Mathf.Max(0.05f, attackInterval);
-        DoAttackLunge();
     }
 
     private static float GetPlanarDistanceToTargetSurface(Transform target, Vector3 fromPosition)
@@ -719,77 +742,6 @@ public class Zombie : MonoBehaviour
         Vector3 closestPoint = targetCollider.ClosestPoint(fromPosition);
         closestPoint.y = fromPosition.y;
         return Vector3.Distance(fromPosition, closestPoint);
-    }
-
-    private void DoAttackLunge()
-    {
-        if (isLunging)
-        {
-            return;
-        }
-
-        lungeStartPosition = transform.position;
-
-        Vector3 toTarget = Vector3.forward;
-        if (currentTargetTransform != null)
-        {
-            toTarget = currentTargetTransform.position - transform.position;
-            toTarget.y = 0f;
-        }
-
-        if (toTarget.sqrMagnitude < 0.0001f)
-        {
-            toTarget = transform.forward;
-            toTarget.y = 0f;
-        }
-
-        if (toTarget.sqrMagnitude < 0.0001f)
-        {
-            toTarget = Vector3.forward;
-        }
-
-        Vector3 lungeDirection = toTarget.normalized;
-        float safeLungeDistance = Mathf.Max(0f, lungeDistance);
-        if (currentTargetTransform != null)
-        {
-            // Keep lunge from pushing into the target collider surface.
-            float surfaceDistance = GetPlanarDistanceToTargetSurface(currentTargetTransform, lungeStartPosition);
-            safeLungeDistance = Mathf.Min(safeLungeDistance, Mathf.Max(0f, surfaceDistance - 0.02f));
-        }
-
-        if (safeLungeDistance <= 0f)
-        {
-            return;
-        }
-
-        lungePeakPosition = lungeStartPosition + lungeDirection * safeLungeDistance;
-
-        isLunging = true;
-        lungeTimer = 0f;
-    }
-
-    private void UpdateAttackLunge()
-    {
-        float safeDuration = Mathf.Max(0.02f, lungeDuration);
-        lungeTimer += Time.deltaTime;
-
-        float normalizedTime = Mathf.Clamp01(lungeTimer / safeDuration);
-        if (normalizedTime < 0.5f)
-        {
-            float t = normalizedTime / 0.5f;
-            transform.position = Vector3.Lerp(lungeStartPosition, lungePeakPosition, t);
-        }
-        else
-        {
-            float t = (normalizedTime - 0.5f) / 0.5f;
-            transform.position = Vector3.Lerp(lungePeakPosition, lungeStartPosition, t);
-        }
-
-        if (normalizedTime >= 1f)
-        {
-            transform.position = lungeStartPosition;
-            isLunging = false;
-        }
     }
 
     public void TakeDamage(float amount)
@@ -816,12 +768,23 @@ public class Zombie : MonoBehaviour
         }
 
         hasDied = true;
-        isLunging = false;
         ClearTargetSelection();
         cachedBaseCoreTransform = null;
 
+        if (animator != null)
+        {
+            animator.SetFloat(SpeedHash, 0f);
+            animator.SetTrigger(DieHash);
+        }
+
+        CapsuleCollider rootCollider = GetComponent<CapsuleCollider>();
+        if (rootCollider != null)
+        {
+            rootCollider.enabled = false;
+        }
+
         Debug.Log("[Zombie] Zombie died and will be destroyed.", this);
-        Destroy(gameObject);
+        Destroy(gameObject, deathDestroyDelay);
     }
 
 #if UNITY_EDITOR
