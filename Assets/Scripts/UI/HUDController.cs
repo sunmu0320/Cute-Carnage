@@ -1,6 +1,5 @@
-using System;
-using System.IO;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using TMPro;
 
@@ -41,6 +40,28 @@ public class HUDController : MonoBehaviour
     [Tooltip("Optional. If assigned, HUD will render remaining time as MM:SS on/within the bar.")]
     [SerializeField] private TextMeshProUGUI dayTimerText;
 
+    private PlayerHealth subscribedPlayerHealth;
+    private bool hpCacheValid;
+    private int lastHpCurrent;
+    private int lastHpMax;
+    private bool hungerCacheValid;
+    private int lastHungerCurrent;
+    private int lastHungerMax;
+    private bool resourceCacheValid;
+    private int lastFood;
+    private int lastScrap;
+    private int lastWood;
+    private bool dayCacheValid;
+    private int lastDay;
+    private bool dayTimerSecondsCacheValid;
+    private int lastDayTimerSeconds;
+    private bool dayTimerFillCacheValid;
+    private float lastDayTimerFill;
+    private float nextSourceResolveTime;
+
+    private const float SourceRetryInterval = 1f;
+    private const float DayTimerFillEpsilon = 0.0001f;
+
     private void Awake()
     {
         ApplyPlaceholderText();
@@ -48,25 +69,30 @@ public class HUDController : MonoBehaviour
         if (Application.isPlaying)
         {
             RefreshFromSources(); // Replace placeholders when sources are assigned.
-            LogHudDebug();
         }
     }
 
-private void OnEnable()
-{
-    if (Application.isPlaying)
+    private void OnEnable()
     {
-        RefreshHudFromPlayerStats();
+        if (!Application.isPlaying)
+            return;
+
+        SceneManager.sceneLoaded += OnSceneLoaded;
+        InvalidateDisplayCaches();
+        ResolveMissingSources();
+        BindPlayerHealth();
+        RefreshCurrentValues();
     }
-}
 
     private void OnDisable()
     {
         if (!Application.isPlaying)
             return;
 
-        if (playerHealth != null)
-            playerHealth.onHealthChanged.RemoveListener(UpdateHP);
+        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (subscribedPlayerHealth != null)
+            subscribedPlayerHealth.onHealthChanged.RemoveListener(UpdateHP);
+        subscribedPlayerHealth = null;
     }
 
 #if UNITY_EDITOR
@@ -85,35 +111,34 @@ private void OnEnable()
         if (!Application.isPlaying)
             return;
 
-        RefreshFromSources();
+        if (HasMissingSource() && Time.unscaledTime >= nextSourceResolveTime)
+        {
+            ResolveMissingSources();
+            BindPlayerHealth();
+        }
+
+        RefreshCurrentValues();
     }
 
     public void RefreshHudFromPlayerStats()
     {
-        // Resolve references if they are missing.
-        if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
-        if (hungerSystem == null) hungerSystem = FindFirstObjectByType<HungerSystem>();
-        if (resourceManager == null) resourceManager = ResourceManager.FindInActiveLoadedScene();
-
-        if (playerHealth != null)
-        {
-            // Re-bind to ensure the HUD stays in sync, preventing double binding.
-            playerHealth.onHealthChanged.RemoveListener(UpdateHP);
-            playerHealth.onHealthChanged.AddListener(UpdateHP);
-
-            // Immediately reflect current values.
-            UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
-        }
-
-        RefreshFromSources();
+        ResolveMissingSources();
+        BindPlayerHealth();
+        RefreshCurrentValues();
     }
 
     public void UpdateHP(int current, int max)
-{
+    {
         if (hpText == null)
             return;
 
+        if (hpCacheValid && lastHpCurrent == current && lastHpMax == max)
+            return;
+
         SetTextOrIgnore(hpText, $"HP {current} / {max}");
+        lastHpCurrent = current;
+        lastHpMax = max;
+        hpCacheValid = true;
     }
 
     private void ApplyPlaceholderText()
@@ -128,26 +153,48 @@ private void OnEnable()
 
     private void RefreshFromSources()
     {
-        // Auto-resolve missing references if they aren't assigned.
-        if (playerHealth == null) playerHealth = FindFirstObjectByType<PlayerHealth>();
-        if (hungerSystem == null) hungerSystem = FindFirstObjectByType<HungerSystem>();
-        if (resourceManager == null) resourceManager = ResourceManager.FindInActiveLoadedScene();
+        ResolveMissingSources();
+        BindPlayerHealth();
+        RefreshCurrentValues();
+    }
+
+    private void RefreshCurrentValues()
+    {
+        if (playerHealth != null)
+            UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
 
         // Resources
         if (resourceManager != null && (foodText != null || scrapText != null || woodText != null))
-{
-            if (foodText != null)
-                SetTextOrIgnore(foodText, $"Food : {resourceManager.GetAmount(ResourceType.Food)}");
-            if (scrapText != null)
-                SetTextOrIgnore(scrapText, $"Scrap : {resourceManager.GetAmount(ResourceType.Scrap)}");
-            if (woodText != null)
-                SetTextOrIgnore(woodText, $"Wood : {resourceManager.GetAmount(ResourceType.Wood)}");
+        {
+            int food = resourceManager.GetAmount(ResourceType.Food);
+            int scrap = resourceManager.GetAmount(ResourceType.Scrap);
+            int wood = resourceManager.GetAmount(ResourceType.Wood);
+
+            if (!resourceCacheValid || lastFood != food)
+                SetTextOrIgnore(foodText, $"Food : {food}");
+            if (!resourceCacheValid || lastScrap != scrap)
+                SetTextOrIgnore(scrapText, $"Scrap : {scrap}");
+            if (!resourceCacheValid || lastWood != wood)
+                SetTextOrIgnore(woodText, $"Wood : {wood}");
+
+            lastFood = food;
+            lastScrap = scrap;
+            lastWood = wood;
+            resourceCacheValid = true;
         }
         else
         {
-            SetTextOrIgnore(foodText, "Food : 0");
-            SetTextOrIgnore(scrapText, "Scrap : 0");
-            SetTextOrIgnore(woodText, "Wood : 0");
+            if (!resourceCacheValid || lastFood != 0)
+                SetTextOrIgnore(foodText, "Food : 0");
+            if (!resourceCacheValid || lastScrap != 0)
+                SetTextOrIgnore(scrapText, "Scrap : 0");
+            if (!resourceCacheValid || lastWood != 0)
+                SetTextOrIgnore(woodText, "Wood : 0");
+
+            lastFood = 0;
+            lastScrap = 0;
+            lastWood = 0;
+            resourceCacheValid = true;
         }
 
         // Hunger (optional). HungerSystem owns values; HUD only displays rounded integers.
@@ -155,53 +202,125 @@ private void OnEnable()
         {
             int cur = Mathf.RoundToInt(hungerSystem.CurrentHunger);
             int max = Mathf.RoundToInt(hungerSystem.MaxHunger);
-            SetTextOrIgnore(hungerText, $"Hunger {cur} / {max}");
+            if (!hungerCacheValid || lastHungerCurrent != cur || lastHungerMax != max)
+                SetTextOrIgnore(hungerText, $"Hunger {cur} / {max}");
+
+            lastHungerCurrent = cur;
+            lastHungerMax = max;
+            hungerCacheValid = true;
         }
         else
         {
-            SetTextOrIgnore(hungerText, GetFallbackHungerText());
+            if (!hungerCacheValid || lastHungerCurrent != 100 || lastHungerMax != 100)
+                SetTextOrIgnore(hungerText, GetFallbackHungerText());
+
+            lastHungerCurrent = 100;
+            lastHungerMax = 100;
+            hungerCacheValid = true;
         }
 
         // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
         if (GameManager.Instance != null)
         {
-            SetTextOrIgnore(dayText, $"DAY {GameManager.Instance.CurrentDay}");
+            int currentDay = GameManager.Instance.CurrentDay;
+            if (!dayCacheValid || lastDay != currentDay)
+                SetTextOrIgnore(dayText, $"DAY {currentDay}");
+
+            lastDay = currentDay;
+            dayCacheValid = true;
         }
         else
         {
-            SetTextOrIgnore(dayText, GetFallbackDayText());
-        }
+            if (!dayCacheValid || lastDay != 1)
+                SetTextOrIgnore(dayText, GetFallbackDayText());
 
-        // Day timer bar (optional). If dayTimeManager isn't assigned, try to find it.
-        if (dayTimeManager == null)
-        {
-            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
+            lastDay = 1;
+            dayCacheValid = true;
         }
 
         if (dayTimeManager != null)
-{
+        {
             float remainingSeconds = dayTimeManager.RemainingTimeSeconds;
             // NormalizedTime is day-progress (0 -> 1). We want remaining fraction (1 -> 0).
             float remainingNormalized = 1f - dayTimeManager.NormalizedTime;
             float fillAmount = Mathf.Clamp01(remainingNormalized);
 
-            if (dayTimerBarFillImage != null)
+            if (dayTimerBarFillImage != null
+                && (!dayTimerFillCacheValid || Mathf.Abs(lastDayTimerFill - fillAmount) > DayTimerFillEpsilon))
+            {
                 dayTimerBarFillImage.fillAmount = fillAmount;
+                lastDayTimerFill = fillAmount;
+                dayTimerFillCacheValid = true;
+            }
 
-            if (dayTimerText != null)
-                SetTextOrIgnore(dayTimerText, FormatRemainingTime(remainingSeconds));
+            int displaySeconds = Mathf.Max(0, Mathf.CeilToInt(remainingSeconds));
+            if (!dayTimerSecondsCacheValid || lastDayTimerSeconds != displaySeconds)
+            {
+                SetTextOrIgnore(dayTimerText, FormatRemainingTime(displaySeconds));
+                lastDayTimerSeconds = displaySeconds;
+                dayTimerSecondsCacheValid = true;
+            }
         }
+    }
 
+    private void ResolveMissingSources()
+    {
+        if (playerHealth == null)
+            playerHealth = FindFirstObjectByType<PlayerHealth>();
+        if (hungerSystem == null)
+            hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (resourceManager == null)
+            resourceManager = ResourceManager.FindInActiveLoadedScene();
+        if (dayTimeManager == null)
+            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
+
+        nextSourceResolveTime = Time.unscaledTime + SourceRetryInterval;
+    }
+
+    private bool HasMissingSource()
+    {
+        return playerHealth == null
+            || hungerSystem == null
+            || resourceManager == null
+            || dayTimeManager == null;
+    }
+
+    private void BindPlayerHealth()
+    {
+        if (subscribedPlayerHealth == playerHealth)
+            return;
+
+        if (subscribedPlayerHealth != null)
+            subscribedPlayerHealth.onHealthChanged.RemoveListener(UpdateHP);
+
+        subscribedPlayerHealth = playerHealth;
+        if (subscribedPlayerHealth != null)
+            subscribedPlayerHealth.onHealthChanged.AddListener(UpdateHP);
+    }
+
+    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        ResolveMissingSources();
+        BindPlayerHealth();
+        RefreshCurrentValues();
+    }
+
+    private void InvalidateDisplayCaches()
+    {
+        hpCacheValid = false;
+        hungerCacheValid = false;
+        resourceCacheValid = false;
+        dayCacheValid = false;
+        dayTimerSecondsCacheValid = false;
+        dayTimerFillCacheValid = false;
     }
 
     private static string GetFallbackDayText() => "DAY 1";
     private static string GetFallbackHungerText() => "Hunger 100 / 100";
     private static string GetFallbackPhaseText() => "SCAVENGE";
 
-    private static string FormatRemainingTime(float seconds)
+    private static string FormatRemainingTime(int totalSeconds)
     {
-        // Use ceil so the display doesn't "flicker" early when the timer is counting down.
-        int totalSeconds = Mathf.Max(0, Mathf.CeilToInt(seconds));
         int minutes = totalSeconds / 60;
         int remainingSeconds = totalSeconds % 60;
         return $"{minutes:00}:{remainingSeconds:00}";
@@ -215,112 +334,5 @@ private void OnEnable()
         target.text = value;
     }
 
-    private void LogHudDebug()
-    {
-        Canvas canvasInParents = GetComponentInParent<Canvas>(includeInactive: true);
-        string logPath = GetLogFilePath();
-
-        bool hpNull = hpText == null;
-        bool foodNull = foodText == null;
-        bool scrapNull = scrapText == null;
-        bool woodNull = woodText == null;
-        bool dayNull = dayText == null;
-        bool phaseNull = phaseText == null;
-
-        #region agent log
-        AppendNdjson(logPath,
-            hypothesisId: "A",
-            runId: "pre-fix",
-            location: "HUDController.cs:LogHudDebug:renderMode",
-            message: "HUD Canvas renderMode (WorldSpace vs Overlay/Camera)",
-            dataJson: canvasInParents == null
-                ? "{\"canvasFound\":false}"
-                : $"{{\"canvasFound\":true,\"renderMode\":\"{canvasInParents.renderMode}\",\"renderModeInt\":{(int)canvasInParents.renderMode}}}");
-        #endregion
-
-        #region agent log
-        AppendNdjson(logPath,
-            hypothesisId: "B",
-            runId: "pre-fix",
-            location: "HUDController.cs:LogHudDebug:worldCamera",
-            message: "HUD Canvas camera reference (if applicable)",
-            dataJson: canvasInParents == null
-                ? "{\"canvasFound\":false}"
-                : $"{{\"canvasFound\":true,\"worldCameraAssigned\":{(canvasInParents.worldCamera != null ? "true" : "false")},\"worldCameraName\":\"{(canvasInParents.worldCamera != null ? canvasInParents.worldCamera.name : "")}\"}}");
-        #endregion
-
-        #region agent log
-        AppendNdjson(logPath,
-            hypothesisId: "C",
-            runId: "pre-fix",
-            location: "HUDController.cs:LogHudDebug:activeState",
-            message: "Active state of HUDRoot and canvas",
-            dataJson: canvasInParents == null
-                ? $"{{\"canvasFound\":false,\"hudRootActiveInHierarchy\":{(gameObject.activeInHierarchy ? "true" : "false")}}}"
-                : $"{{\"canvasFound\":true,\"hudRootActiveInHierarchy\":{(gameObject.activeInHierarchy ? "true" : "false")},\"canvasActiveInHierarchy\":{(canvasInParents.gameObject.activeInHierarchy ? "true" : "false")},\"canvasEnabled\":{(canvasInParents.enabled ? "true" : "false")}}}");
-        #endregion
-
-        #region agent log
-        AppendNdjson(logPath,
-            hypothesisId: "D",
-            runId: "pre-fix",
-            location: "HUDController.cs:LogHudDebug:tmpRefs",
-            message: "Serialized TMP text references null status",
-            dataJson: $"{{\"hpTextNull\":{(hpNull ? "true" : "false")},\"foodTextNull\":{(foodNull ? "true" : "false")},\"scrapTextNull\":{(scrapNull ? "true" : "false")},\"woodTextNull\":{(woodNull ? "true" : "false")},\"dayTextNull\":{(dayNull ? "true" : "false")},\"phaseTextNull\":{(phaseNull ? "true" : "false")}}}");
-        #endregion
-    }
-
-    private static string GetLogFilePath()
-    {
-        try
-        {
-            string assetsPath = Application.dataPath; // <project>/Assets
-            string projectRoot = Directory.GetParent(assetsPath)?.FullName ?? assetsPath;
-            return Path.Combine(projectRoot, "debug-decb40.log");
-        }
-        catch
-        {
-            // Fallback: write to relative path.
-            return Path.Combine(Directory.GetCurrentDirectory(), "debug-decb40.log");
-        }
-    }
-
-    private static void AppendNdjson(string logPath, string hypothesisId, string runId, string location, string message, string dataJson)
-    {
-        try
-        {
-            long timestamp = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
-            string id = $"log_{timestamp}_{Guid.NewGuid():N}";
-
-            // sessionId required by the debug workflow.
-            string sessionId = "decb40";
-
-            string safeLocation = EscapeJson(location);
-            string safeMessage = EscapeJson(message);
-
-            // dataJson is expected to already be valid JSON (built from simple primitives).
-            string line =
-                $"{{\"sessionId\":\"{sessionId}\",\"id\":\"{EscapeJson(id)}\",\"timestamp\":{timestamp},\"location\":\"{safeLocation}\",\"message\":\"{safeMessage}\",\"data\":{dataJson},\"runId\":\"{EscapeJson(runId)}\",\"hypothesisId\":\"{EscapeJson(hypothesisId)}\"}}";
-
-            File.AppendAllText(logPath, line + Environment.NewLine);
-        }
-        catch
-        {
-            // Logging must never break gameplay; swallow exceptions.
-        }
-    }
-
-    private static string EscapeJson(string value)
-    {
-        if (value == null)
-            return string.Empty;
-
-        return value
-            .Replace("\\", "\\\\")
-            .Replace("\"", "\\\"")
-            .Replace("\n", "\\n")
-            .Replace("\r", "\\r")
-            .Replace("\t", "\\t");
-    }
 }
 
