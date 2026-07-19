@@ -71,6 +71,13 @@ public class Zombie : MonoBehaviour
 
     private float attackTimer;
     private float targetRefreshTimer;
+    private TargetKind pendingAttackKind;
+    private FenceSegment pendingAttackFence;
+    private ArrowTower pendingAttackTower;
+    private PlayerHealth pendingAttackPlayer;
+    private BaseCore pendingAttackBaseCore;
+    private Collider pendingAttackCollider;
+    private bool attackHitAvailable;
 
     private float currentHp;
     private bool hasDied;
@@ -93,6 +100,11 @@ public class Zombie : MonoBehaviour
     private void OnDestroy()
     {
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
+    }
+
+    private void OnDisable()
+    {
+        ClearPendingAttack();
     }
 
     private void Awake()
@@ -743,30 +755,138 @@ public class Zombie : MonoBehaviour
             return;
         }
 
+        TryStartAttack();
+    }
+
+    private void TryStartAttack()
+    {
+        ClearPendingAttack();
+
+        if (!IsCurrentTargetColliderValid(currentTargetCollider))
+        {
+            return;
+        }
+
+        pendingAttackKind = currentTargetKind;
+        switch (currentTargetKind)
+        {
+            case TargetKind.Fence:
+                pendingAttackFence = currentTargetFence;
+                break;
+            case TargetKind.Tower:
+                pendingAttackTower = currentTargetTower;
+                break;
+            case TargetKind.Player:
+                pendingAttackPlayer = currentTargetPlayer;
+                break;
+            case TargetKind.BaseCore:
+                pendingAttackBaseCore = currentTargetBaseCore;
+                break;
+        }
+
+        pendingAttackCollider = currentTargetCollider;
+        attackHitAvailable = true;
+
         if (animator != null)
         {
             animator.SetTrigger(AttackHash);
         }
 
-        if (currentTargetKind == TargetKind.Fence && currentTargetFence != null)
+        attackTimer = Mathf.Max(0.05f, attackInterval);
+    }
+
+    public void AnimationEvent_ApplyAttackHit()
+    {
+        if (!attackHitAvailable)
         {
-            currentTargetFence.TakeDamage(attackDamage);
-        }
-        else if (currentTargetKind == TargetKind.Tower && currentTargetTower != null)
-        {
-            currentTargetTower.TakeDamage(attackDamage);
-        }
-        else if (currentTargetKind == TargetKind.Player && currentTargetPlayer != null)
-        {
-            int damage = Mathf.Max(1, Mathf.CeilToInt(attackDamage));
-            currentTargetPlayer.TakeDamage(damage);
-        }
-        else if (currentTargetKind == TargetKind.BaseCore && currentTargetBaseCore != null)
-        {
-            currentTargetBaseCore.TakeDamage(attackDamage);
+            return;
         }
 
-        attackTimer = Mathf.Max(0.05f, attackInterval);
+        attackHitAvailable = false;
+
+        if (IsDead || !IsPendingAttackValid())
+        {
+            ClearPendingAttack();
+            return;
+        }
+
+        Vector3 zombiePosition = transform.position;
+        Vector3 closestPoint = pendingAttackCollider.ClosestPoint(zombiePosition);
+        closestPoint.y = zombiePosition.y;
+        float surfaceDistance = Vector3.Distance(zombiePosition, closestPoint);
+        if (surfaceDistance > attackRange + AttackRangeTolerance)
+        {
+            ClearPendingAttack();
+            return;
+        }
+
+        if (pendingAttackKind == TargetKind.Fence)
+        {
+            pendingAttackFence.TakeDamage(attackDamage);
+        }
+        else if (pendingAttackKind == TargetKind.Tower)
+        {
+            pendingAttackTower.TakeDamage(attackDamage);
+        }
+        else if (pendingAttackKind == TargetKind.Player)
+        {
+            int damage = Mathf.Max(1, Mathf.CeilToInt(attackDamage));
+            pendingAttackPlayer.TakeDamage(damage);
+        }
+        else if (pendingAttackKind == TargetKind.BaseCore)
+        {
+            pendingAttackBaseCore.TakeDamage(attackDamage);
+        }
+
+        ClearPendingAttack();
+    }
+
+    private bool IsPendingAttackValid()
+    {
+        if (pendingAttackCollider == null ||
+            !pendingAttackCollider.enabled ||
+            !pendingAttackCollider.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        switch (pendingAttackKind)
+        {
+            case TargetKind.Fence:
+                return pendingAttackFence != null &&
+                    pendingAttackFence.isActiveAndEnabled &&
+                    !pendingAttackFence.IsDestroyed &&
+                    pendingAttackCollider.GetComponentInParent<FenceSegment>() == pendingAttackFence;
+            case TargetKind.Tower:
+                return pendingAttackTower != null &&
+                    pendingAttackTower.isActiveAndEnabled &&
+                    !pendingAttackTower.IsDestroyed &&
+                    pendingAttackCollider.GetComponentInParent<ArrowTower>() == pendingAttackTower;
+            case TargetKind.Player:
+                return pendingAttackPlayer != null &&
+                    pendingAttackPlayer.isActiveAndEnabled &&
+                    !pendingAttackPlayer.IsDead &&
+                    pendingAttackCollider.GetComponentInParent<PlayerHealth>() == pendingAttackPlayer;
+            case TargetKind.BaseCore:
+                return pendingAttackBaseCore != null &&
+                    pendingAttackBaseCore.isActiveAndEnabled &&
+                    !pendingAttackBaseCore.IsDestroyed &&
+                    pendingAttackBaseCore.AttackCollider != null &&
+                    pendingAttackCollider == pendingAttackBaseCore.AttackCollider;
+            default:
+                return false;
+        }
+    }
+
+    private void ClearPendingAttack()
+    {
+        attackHitAvailable = false;
+        pendingAttackKind = TargetKind.None;
+        pendingAttackFence = null;
+        pendingAttackTower = null;
+        pendingAttackPlayer = null;
+        pendingAttackBaseCore = null;
+        pendingAttackCollider = null;
     }
 
     private float GetPlanarDistanceToCurrentTargetSurface(Vector3 fromPosition)
@@ -979,6 +1099,7 @@ public class Zombie : MonoBehaviour
         }
 
         hasDied = true;
+        ClearPendingAttack();
         ClearTargetSelection();
         cachedBaseCoreTransform = null;
 

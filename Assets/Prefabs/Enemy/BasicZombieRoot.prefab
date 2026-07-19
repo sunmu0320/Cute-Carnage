@@ -44,7 +44,7 @@ GameObject:
   - component: {fileID: 8948067710989294263}
   - component: {fileID: 4878595367469569891}
   m_Layer: 7
-  m_Name: BasicZombie
+  m_Name: BasicZombieRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -81,16 +81,16 @@ MonoBehaviour:
   zombieData: {fileID: 11400000, guid: 4d36db6f0949891409a639e1b5fb0bd0, type: 2}
   animator: {fileID: 1096917429507906461}
   moveSpeed: 2.5
-  attackRange: 1.4
+  attackRange: 1.2
   attackDamage: 10
   attackInterval: 1
   targetRefreshInterval: 1
-  forwardDetectRange: 1.3
+  forwardDetectRange: 1.56
   forwardDetectRadius: 1.44
   forwardDetectStartOffset: 0.88
   forwardDetectMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 65
   baseCoreNameCandidates:
   - BaseCore
   - Base Core
@@ -104,8 +104,7 @@ MonoBehaviour:
   maxHp: 30
   debugDamageKey: 107
   debugDamageAmount: 10
-  lungeDistance: 0.12
-  lungeDuration: 0.12
+  deathDestroyDelay: 5
 --- !u!136 &4878595367469569891
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -188,13 +187,34 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6548559414550763333, guid: d97239f85262c364fab0faf4644d219b, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3440470516417846100}
   m_SourcePrefab: {fileID: 100100000, guid: d97239f85262c364fab0faf4644d219b, type: 3}
 --- !u!95 &1096917429507906461 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: 525465881377707909, guid: d97239f85262c364fab0faf4644d219b, type: 3}
   m_PrefabInstance: {fileID: 609073333490404376}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5950087366018161501 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6548559414550763333, guid: d97239f85262c364fab0faf4644d219b, type: 3}
+  m_PrefabInstance: {fileID: 609073333490404376}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3440470516417846100
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5950087366018161501}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4510d347b62bcca49b02469d39e423d3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::ZombieAnimationEventRelay
+  zombie: {fileID: 8948067710989294263}
 --- !u!4 &6474245812199948775 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 5884789348987489791, guid: d97239f85262c364fab0faf4644d219b, type: 3}

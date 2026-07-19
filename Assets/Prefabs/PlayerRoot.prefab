@@ -49,6 +49,7 @@ GameObject:
   - component: {fileID: 8507077320904943301}
   - component: {fileID: 2295573965754464758}
   - component: {fileID: 1099842641501820461}
+  - component: {fileID: 2787462293218592668}
   m_Layer: 0
   m_Name: PlayerRoot
   m_TagString: Player
@@ -112,12 +113,15 @@ MonoBehaviour:
     m_Bits: 64
   interactionKey: 101
   resourceManager: {fileID: 0}
-  worldPromptUI: {fileID: 0}
+  interactionPromptUI: {fileID: 0}
+  structureActionPanelUI: {fileID: 0}
   overlapBufferSize: 32
   playerAnimator: {fileID: 902382456698424084}
   playerMovement: {fileID: 8668083628741614758}
   gatherDurationSeconds: 3
   worldGatherBarPrefab: {fileID: 92352056997406519, guid: 0858d2ec4fe3a034186a511c0fc7fc00, type: 3}
+  gatherOverlayCanvasRect: {fileID: 0}
+  gatherProgressUIRoot: {fileID: 0}
   logRepairState: 1
 --- !u!114 &7661280659911657259
 MonoBehaviour:
@@ -202,7 +206,7 @@ CapsuleCollider:
   m_Radius: 0.45851415
   m_Height: 1.9737513
   m_Direction: 1
-  m_Center: {x: 0, y: 0.98687565, z: 0}
+  m_Center: {x: 0, y: 1, z: 0}
 --- !u!54 &8507077320904943301
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -254,7 +258,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 8970663843469093718}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d1f9a24dec003cf4e98cb904041937da, type: 3}
   m_Name: 
@@ -275,6 +279,18 @@ MonoBehaviour:
   feedbackDistance: 0.05
   feedbackDuration: 0.08
   logAttacksWhenNoFeedbackRoot: 0
+--- !u!114 &2787462293218592668
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8970663843469093718}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1ae4c7a70a0ae604c95fdc616e11a26d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Test
 --- !u!1001 &6768767001919583877
 PrefabInstance:
   m_ObjectHideFlags: 0

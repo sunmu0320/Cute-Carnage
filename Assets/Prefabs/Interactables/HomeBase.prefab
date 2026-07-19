@@ -613,9 +613,9 @@ MonoBehaviour:
   slotVisualRoot: {fileID: 1545051615082265934}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
-  towerHpBarTemplate: {fileID: 0}
+  towerHpBarTemplate: {fileID: 92352056997406519, guid: 0858d2ec4fe3a034186a511c0fc7fc00, type: 3}
   towerHpBarParent: {fileID: 0}
-  keepTowerHpBarAlwaysVisible: 1
+  keepTowerHpBarAlwaysVisible: 0
   hideTowerHpBarWhenDestroyed: 0
 --- !u!114 &5949134827326153215
 MonoBehaviour:
@@ -640,27 +640,27 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalScale.x
-      value: 530.6
+      value: 588.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalScale.y
-      value: 530.6
+      value: 588.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalScale.z
-      value: 530.6
+      value: 588.1
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 0
+      value: -0.08306575
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 0
+      value: 0.5710969
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 0
+      value: -0.19347
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: f6d5a78dc5656d648bd021ab462177f8, type: 3}
       propertyPath: m_LocalRotation.w
