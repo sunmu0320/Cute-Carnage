@@ -1871,6 +1871,10 @@ PrefabInstance:
       propertyPath: m_Enabled
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 4376188755347530591, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
+      propertyPath: resourceManager
+      value: 
+      objectReference: {fileID: 321777434}
     - target: {fileID: 4663261395610025437, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: hungerDrainPerSecond
       value: 0.5
@@ -2669,6 +2673,9 @@ MonoBehaviour:
   hungerText: {fileID: 1919916095}
   playerHealth: {fileID: 0}
   resourceManager: {fileID: 321777434}
+  baseCore: {fileID: 0}
+  baseHpBarFillImage: {fileID: 0}
+  baseHpBarRoot: {fileID: 0}
   foodText: {fileID: 1510025031}
   scrapText: {fileID: 1077518356}
   woodText: {fileID: 656777037}

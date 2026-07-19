@@ -809,7 +809,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3d9e5b02e6f5d8c9f4a123456789abc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DayTimeManager
-  dayDurationSeconds: 100
+  dayDurationSeconds: 5
   autoStartOnAwake: 1
 --- !u!1 &54312099
 GameObject:
@@ -8284,7 +8284,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 3402804846880297368, guid: 557a271c54370dd4f959587f92fd501c, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -162.71
+      value: -181.85
       objectReference: {fileID: 0}
     - target: {fileID: 3402804846880297368, guid: 557a271c54370dd4f959587f92fd501c, type: 3}
       propertyPath: m_LocalPosition.y
@@ -8292,7 +8292,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3402804846880297368, guid: 557a271c54370dd4f959587f92fd501c, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -117.6
+      value: -95.74
       objectReference: {fileID: 0}
     - target: {fileID: 3402804846880297368, guid: 557a271c54370dd4f959587f92fd501c, type: 3}
       propertyPath: m_LocalRotation.w
@@ -18261,6 +18261,11 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: af49066f980381f438eed8ae7603cd64, type: 3}
+--- !u!1 &1590116580 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4091553207099817937, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+  m_PrefabInstance: {fileID: 5634592839173622706}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1599712434
 GameObject:
   m_ObjectHideFlags: 0
@@ -18448,6 +18453,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: efc8d0b3d9f409c4bbeaef5d738c9731, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StructureActionPanelUI
+--- !u!114 &1614205700 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6568744246189803200, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+  m_PrefabInstance: {fileID: 5634592839173622706}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
 --- !u!1001 &1615560464
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -22115,7 +22131,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 312022484203831997, guid: e6cc0f73cd5fa8f4bbead8f86164e232, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -177.96
+      value: -183.22
       objectReference: {fileID: 0}
     - target: {fileID: 312022484203831997, guid: e6cc0f73cd5fa8f4bbead8f86164e232, type: 3}
       propertyPath: m_LocalPosition.y
@@ -22123,7 +22139,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 312022484203831997, guid: e6cc0f73cd5fa8f4bbead8f86164e232, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -119.15
+      value: -108.55
       objectReference: {fileID: 0}
     - target: {fileID: 312022484203831997, guid: e6cc0f73cd5fa8f4bbead8f86164e232, type: 3}
       propertyPath: m_LocalRotation.w
@@ -24782,6 +24798,10 @@ PrefabInstance:
       propertyPath: 'm_fontSharedMaterials.Array.data[0]'
       value: 
       objectReference: {fileID: 504870729}
+    - target: {fileID: 4183136074892628020, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+      propertyPath: m_VerticalAlignment
+      value: 512
+      objectReference: {fileID: 0}
     - target: {fileID: 5587463479072035349, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
       propertyPath: hungerSystem
       value: 
@@ -24791,6 +24811,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 1095320886}
     - target: {fileID: 5587463479072035349, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+      propertyPath: baseHpBarRoot
+      value: 
+      objectReference: {fileID: 1590116580}
+    - target: {fileID: 5587463479072035349, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
       propertyPath: dayTimeManager
       value: 
       objectReference: {fileID: 49142335}
@@ -24798,6 +24822,10 @@ PrefabInstance:
       propertyPath: resourceManager
       value: 
       objectReference: {fileID: 321777434}
+    - target: {fileID: 5587463479072035349, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
+      propertyPath: baseHpBarFillImage
+      value: 
+      objectReference: {fileID: 1614205700}
     - target: {fileID: 7506374410473950278, guid: 02c2c4102d2f46b4297835be946536c0, type: 3}
       propertyPath: m_LocalScale.x
       value: 0

@@ -21,6 +21,14 @@ public class HUDController : MonoBehaviour
     [Tooltip("Optional. If assigned, HUD will read Food/Scrap/Wood totals from this component.")]
     [SerializeField] private ResourceManager resourceManager;
 
+    [Header("Base HP (Bottom Center)")]
+    [Tooltip("Optional. If assigned, HUD will read current/max HP from this BaseCore.")]
+    [SerializeField] private BaseCore baseCore;
+    [Tooltip("Optional. Filled Image used for the fixed Screen Space Base HP bar.")]
+    [SerializeField] private Image baseHpBarFillImage;
+    [Tooltip("Optional. Root hidden while no valid BaseCore exists.")]
+    [SerializeField] private GameObject baseHpBarRoot;
+
     [Header("Resources (Bottom Left) - No Fuel")]
     [SerializeField] private TextMeshProUGUI foodText;
     [SerializeField] private TextMeshProUGUI scrapText;
@@ -57,10 +65,14 @@ public class HUDController : MonoBehaviour
     private int lastDayTimerSeconds;
     private bool dayTimerFillCacheValid;
     private float lastDayTimerFill;
+    private BaseCore lastBaseCore;
+    private bool baseHpFillCacheValid;
+    private float lastBaseHpFill;
     private float nextSourceResolveTime;
 
     private const float SourceRetryInterval = 1f;
     private const float DayTimerFillEpsilon = 0.0001f;
+    private const float BaseHpFillEpsilon = 0.0001f;
 
     private void Awake()
     {
@@ -162,6 +174,8 @@ public class HUDController : MonoBehaviour
     {
         if (playerHealth != null)
             UpdateHP(playerHealth.CurrentHealth, playerHealth.MaxHealth);
+
+        RefreshBaseHp();
 
         // Resources
         if (resourceManager != null && (foodText != null || scrapText != null || woodText != null))
@@ -273,6 +287,8 @@ public class HUDController : MonoBehaviour
             resourceManager = ResourceManager.FindInActiveLoadedScene();
         if (dayTimeManager == null)
             dayTimeManager = FindFirstObjectByType<DayTimeManager>();
+        if (!IsValidActiveSceneBaseCore(baseCore))
+            SetBaseCore(FindBaseCoreInActiveScene());
 
         nextSourceResolveTime = Time.unscaledTime + SourceRetryInterval;
     }
@@ -282,7 +298,8 @@ public class HUDController : MonoBehaviour
         return playerHealth == null
             || hungerSystem == null
             || resourceManager == null
-            || dayTimeManager == null;
+            || dayTimeManager == null
+            || !IsValidActiveSceneBaseCore(baseCore);
     }
 
     private void BindPlayerHealth()
@@ -300,6 +317,7 @@ public class HUDController : MonoBehaviour
 
     private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
     {
+        InvalidateBaseHpCache();
         ResolveMissingSources();
         BindPlayerHealth();
         RefreshCurrentValues();
@@ -313,6 +331,77 @@ public class HUDController : MonoBehaviour
         dayCacheValid = false;
         dayTimerSecondsCacheValid = false;
         dayTimerFillCacheValid = false;
+        InvalidateBaseHpCache();
+    }
+
+    private void RefreshBaseHp()
+    {
+        bool hasValidBaseCore = IsValidActiveSceneBaseCore(baseCore);
+        if (lastBaseCore != baseCore)
+        {
+            lastBaseCore = baseCore;
+            baseHpFillCacheValid = false;
+        }
+
+        if (baseHpBarRoot != null && baseHpBarRoot.activeSelf != hasValidBaseCore)
+            baseHpBarRoot.SetActive(hasValidBaseCore);
+
+        if (!hasValidBaseCore)
+            return;
+
+        float fill = Mathf.Clamp01(baseCore.CurrentHp / Mathf.Max(1f, baseCore.MaxHp));
+        if (baseHpBarFillImage != null
+            && (!baseHpFillCacheValid || Mathf.Abs(lastBaseHpFill - fill) > BaseHpFillEpsilon))
+        {
+            baseHpBarFillImage.fillAmount = fill;
+        }
+
+        lastBaseHpFill = fill;
+        baseHpFillCacheValid = true;
+    }
+
+    private void SetBaseCore(BaseCore resolvedBaseCore)
+    {
+        if (baseCore == resolvedBaseCore)
+            return;
+
+        baseCore = resolvedBaseCore;
+        InvalidateBaseHpCache();
+    }
+
+    private void InvalidateBaseHpCache()
+    {
+        lastBaseCore = null;
+        baseHpFillCacheValid = false;
+    }
+
+    private static BaseCore FindBaseCoreInActiveScene()
+    {
+        Scene activeScene = SceneManager.GetActiveScene();
+        BaseCore[] candidates = FindObjectsByType<BaseCore>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        for (int i = 0; i < candidates.Length; i++)
+        {
+            if (IsBaseCoreInScene(candidates[i], activeScene))
+                return candidates[i];
+        }
+
+        return null;
+    }
+
+    private static bool IsValidActiveSceneBaseCore(BaseCore candidate)
+    {
+        return candidate != null
+            && candidate.isActiveAndEnabled
+            && candidate.gameObject.activeInHierarchy
+            && IsBaseCoreInScene(candidate, SceneManager.GetActiveScene());
+    }
+
+    private static bool IsBaseCoreInScene(BaseCore candidate, Scene scene)
+    {
+        return candidate != null
+            && scene.IsValid()
+            && scene.isLoaded
+            && candidate.gameObject.scene == scene;
     }
 
     private static string GetFallbackDayText() => "DAY 1";
