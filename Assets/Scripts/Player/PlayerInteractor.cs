@@ -21,6 +21,9 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField, Tooltip("How far the player can reach to interact.")]
     float interactionRadius = 2f;
 
+    [SerializeField, Min(0.1f), Tooltip("Maximum horizontal distance from a structure target before its action panel closes.")]
+    float structurePanelStayOpenRadius = 4f;
+
     [SerializeField, Tooltip("Only colliders on these layers are checked for interaction.")]
     LayerMask interactableLayerMask = ~0;
 
@@ -84,6 +87,20 @@ public class PlayerInteractor : MonoBehaviour
             if (structureActionPanelUI.IsOpen && interactionPromptUI != null)
                 interactionPromptUI.Hide();
         }
+    }
+
+    public bool IsInteractableInRange(IInteractable target)
+    {
+        if (target == null)
+            return false;
+
+        Vector3 playerPosition = transform.position;
+        Vector3 targetPosition = target.GetInteractPosition();
+        playerPosition.y = 0f;
+        targetPosition.y = 0f;
+
+        return (targetPosition - playerPosition).sqrMagnitude
+            <= structurePanelStayOpenRadius * structurePanelStayOpenRadius;
     }
 
     void Awake()

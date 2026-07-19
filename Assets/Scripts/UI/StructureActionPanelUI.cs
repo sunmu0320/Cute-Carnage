@@ -18,6 +18,9 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private Button repairButton;
     [SerializeField] private Button closeButton;
 
+    [Header("Input")]
+    [SerializeField] private KeyCode closeKey = KeyCode.Escape;
+
     private TowerSlot selectedTowerSlot;
     private PlayerInteractor selectedInteractor;
 
@@ -61,6 +64,19 @@ public class StructureActionPanelUI : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+        if (!IsOpen)
+        {
+            return;
+        }
+
+        if (Input.GetKeyDown(closeKey) || !IsSelectionValid())
+        {
+            Close();
+        }
+    }
+
     public void Open(TowerSlot towerSlot, PlayerInteractor interactor)
     {
         if (towerSlot == null || interactor == null || GameManager.Instance == null || !GameManager.Instance.IsDay)
@@ -92,7 +108,13 @@ public class StructureActionPanelUI : MonoBehaviour
 
     private void HandleInstallClicked()
     {
-        if (selectedTowerSlot != null && selectedInteractor != null && selectedTowerSlot.TryBuildTower(selectedInteractor))
+        if (!IsSelectionValid())
+        {
+            Close();
+            return;
+        }
+
+        if (selectedTowerSlot.TryBuildTower(selectedInteractor))
         {
             Refresh();
         }
@@ -100,8 +122,9 @@ public class StructureActionPanelUI : MonoBehaviour
 
     private void HandleRepairClicked()
     {
-        if (selectedTowerSlot == null || selectedInteractor == null)
+        if (!IsSelectionValid())
         {
+            Close();
             return;
         }
 
@@ -185,5 +208,21 @@ public class StructureActionPanelUI : MonoBehaviour
         {
             repairButton.interactable = needsRepair;
         }
+    }
+
+    private bool IsSelectionValid()
+    {
+        if (selectedTowerSlot == null || selectedInteractor == null || !selectedInteractor.isActiveAndEnabled)
+        {
+            return false;
+        }
+
+        if (GameManager.Instance == null || !GameManager.Instance.IsDay)
+        {
+            return false;
+        }
+
+        return selectedTowerSlot.CanInteract(selectedInteractor)
+            && selectedInteractor.IsInteractableInRange(selectedTowerSlot);
     }
 }
