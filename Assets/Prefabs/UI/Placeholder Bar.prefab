@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 92352056997406519}
   - component: {fileID: -1666033181791549558}
   m_Layer: 0
-  m_Name: WorldGatherBarRoot
+  m_Name: Placeholder Bar
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -52,6 +52,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldGatherBar
   fillImage: {fileID: 4602867349108360217}
+  barRoot: {fileID: 0}
 --- !u!222 &-1666033181791549558
 CanvasRenderer:
   m_ObjectHideFlags: 0

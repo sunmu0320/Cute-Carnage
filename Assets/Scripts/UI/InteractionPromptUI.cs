@@ -41,6 +41,8 @@ public class InteractionPromptUI : MonoBehaviour
     private Vector2 scrapCostBasePos;
     private float singleLineActionTextHeight = -1f;
     private string inspectorPromptText;
+    private InteractablePromptData cachedPromptData;
+    private bool hasCachedPromptData;
 
     private void Awake()
     {
@@ -75,35 +77,42 @@ public class InteractionPromptUI : MonoBehaviour
             return;
         }
 
-        if (!isVisible)
-        {
-            Debug.Log("[InteractionPromptUI] UI shown.");
-        }
+        bool wasVisible = isVisible;
+        bool targetChanged = currentTarget != target;
 
-        if (currentTarget != target)
+        if (targetChanged)
         {
-            Debug.Log("[InteractionPromptUI] UI target changed.");
+            currentTarget = target;
+            currentAnchor = target.GetUIAnchor();
         }
-
-        currentTarget = target;
-        currentAnchor = target.GetUIAnchor();
         isVisible = true;
 
         SetPromptVisible(true);
-        ApplyData(data);
-        UpdateScreenSpacePosition();
+        if (targetChanged || !hasCachedPromptData || !IsSamePromptData(cachedPromptData, data))
+        {
+            ApplyData(data);
+            cachedPromptData = data;
+            hasCachedPromptData = true;
+        }
+
+        if (!wasVisible || targetChanged)
+            UpdateScreenSpacePosition();
     }
 
     public void Hide()
     {
-        if (isVisible)
-        {
-            Debug.Log("[InteractionPromptUI] UI hidden.");
-        }
+        bool hadPromptState = isVisible || currentTarget != null || currentAnchor != null || hasCachedPromptData;
 
         isVisible = false;
         currentTarget = null;
         currentAnchor = null;
+        cachedPromptData = default;
+        hasCachedPromptData = false;
+
+        SetPromptVisible(false);
+
+        if (!hadPromptState)
+            return;
 
         if (actionText != null)
             actionText.text = string.Empty;
@@ -119,8 +128,14 @@ public class InteractionPromptUI : MonoBehaviour
 
         if (scrapCostSection != null)
             scrapCostSection.SetActive(false);
+    }
 
-        SetPromptVisible(false);
+    private static bool IsSamePromptData(InteractablePromptData a, InteractablePromptData b)
+    {
+        return a.actionText == b.actionText
+            && a.woodCost == b.woodCost
+            && a.scrapCost == b.scrapCost
+            && a.canAfford == b.canAfford;
     }
 
     private void ApplyData(InteractablePromptData data)
@@ -149,7 +164,6 @@ public class InteractionPromptUI : MonoBehaviour
             scrapCostText.color = dataColor;
 
         ApplyCostLayoutOffset(inspectorPromptText, showWood || showScrap);
-        Debug.Log("[InteractionPromptUI] UI data updated.");
     }
 
     private void CacheCostSectionLayout()
@@ -332,7 +346,7 @@ public class InteractionPromptUI : MonoBehaviour
 
     private void SetPromptVisible(bool visible)
     {
-        if (promptRoot != null)
+        if (promptRoot != null && promptRoot.gameObject.activeSelf != visible)
             promptRoot.gameObject.SetActive(visible);
     }
 
