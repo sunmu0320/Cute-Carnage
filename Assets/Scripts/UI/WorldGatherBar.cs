@@ -10,6 +10,12 @@ public class WorldGatherBar : MonoBehaviour
     Transform followTarget;
     RectTransform rectTransform;
     Graphic[] cachedGraphics;
+    bool graphicsVisibilityInitialized;
+    bool graphicsVisible;
+    bool progressInitialized;
+    float lastProgress;
+
+    const float ProgressEpsilon = 0.0001f;
 
     void Awake()
     {
@@ -33,24 +39,39 @@ public class WorldGatherBar : MonoBehaviour
 
     public void Show()
     {
-        gameObject.SetActive(true);
+        if (!gameObject.activeSelf)
+            gameObject.SetActive(true);
+
         SetGraphicsVisible(true);
         UpdateScreenSpacePosition(forceHideWhenInvalid: false);
     }
 
     public void HideInstant()
     {
+        if (!gameObject.activeSelf
+            && graphicsVisibilityInitialized && !graphicsVisible
+            && progressInitialized && Mathf.Abs(lastProgress) <= ProgressEpsilon)
+        {
+            return;
+        }
+
         SetProgress(0f);
         SetGraphicsVisible(false);
-        gameObject.SetActive(false);
+        if (gameObject.activeSelf)
+            gameObject.SetActive(false);
     }
 
     public void SetProgress(float normalized)
     {
-        if (fillImage == null)
+        float clamped = Mathf.Clamp01(normalized);
+        if (progressInitialized && Mathf.Abs(lastProgress - clamped) <= ProgressEpsilon)
             return;
 
-        fillImage.fillAmount = Mathf.Clamp01(normalized);
+        if (fillImage != null)
+            fillImage.fillAmount = clamped;
+
+        lastProgress = clamped;
+        progressInitialized = true;
     }
 
     void LateUpdate()
@@ -85,12 +106,17 @@ public class WorldGatherBar : MonoBehaviour
         }
 
         barRoot.anchoredPosition = localPoint;
-        barRoot.localScale = Vector3.one;
         SetGraphicsVisible(true);
     }
 
     void SetGraphicsVisible(bool visible)
     {
+        if (graphicsVisibilityInitialized && graphicsVisible == visible)
+            return;
+
+        graphicsVisible = visible;
+        graphicsVisibilityInitialized = true;
+
         if (cachedGraphics == null)
             return;
 

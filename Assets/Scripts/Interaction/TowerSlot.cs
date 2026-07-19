@@ -58,6 +58,14 @@ public class TowerSlot : MonoBehaviour, IInteractable
     private WorldGatherBar spawnedTowerHpBar;
     private bool hasLoggedMissingHpBarTemplate;
     private bool hasLoggedMissingHpBarParent;
+    private GameObject cachedTowerObject;
+    private ArrowTower cachedArrowTower;
+    private bool towerReferenceCacheInitialized;
+    private bool towerHpBarCacheValid;
+    private bool lastTowerHpBarVisible;
+    private float lastTowerHpProgress;
+
+    private const float TowerHpProgressEpsilon = 0.0001f;
 
     public bool HasTower => hasTower;
     public ArrowTower CurrentTower
@@ -112,7 +120,10 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
         if (!hasTower || currentTower == null)
         {
-            spawnedTowerHpBar.HideInstant();
+            if (currentTower == null && towerReferenceCacheInitialized)
+                InvalidateTowerReferenceCache();
+
+            ApplyTowerHpBarState(false, 0f);
             return;
         }
 
@@ -120,7 +131,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
         {
             if (hideTowerHpBarWhenDestroyed && tower.IsDestroyed)
             {
-                spawnedTowerHpBar.HideInstant();
+                ApplyTowerHpBarState(false, 0f);
                 return;
             }
 
@@ -129,20 +140,51 @@ public class TowerSlot : MonoBehaviour, IInteractable
             bool isDamaged = tower.CurrentHp < tower.MaxHp - 0.01f;
             bool shouldShow = keepTowerHpBarAlwaysVisible || isDamaged;
 
-            if (shouldShow)
-            {
-                spawnedTowerHpBar.Show();
-                spawnedTowerHpBar.SetProgress(ratio);
-            }
-            else
-            {
-                spawnedTowerHpBar.HideInstant();
-            }
+            ApplyTowerHpBarState(shouldShow, ratio);
         }
         else
         {
-            spawnedTowerHpBar.HideInstant();
+            ApplyTowerHpBarState(false, 0f);
         }
+    }
+
+    private void ApplyTowerHpBarState(bool shouldShow, float progress)
+    {
+        bool visibilityChanged = !towerHpBarCacheValid || lastTowerHpBarVisible != shouldShow;
+        if (visibilityChanged)
+        {
+            if (shouldShow)
+                spawnedTowerHpBar.Show();
+            else
+                spawnedTowerHpBar.HideInstant();
+        }
+
+        float clampedProgress = Mathf.Clamp01(progress);
+        if (shouldShow
+            && (visibilityChanged
+                || !towerHpBarCacheValid
+                || Mathf.Abs(lastTowerHpProgress - clampedProgress) > TowerHpProgressEpsilon))
+        {
+            spawnedTowerHpBar.SetProgress(clampedProgress);
+        }
+
+        lastTowerHpBarVisible = shouldShow;
+        lastTowerHpProgress = shouldShow ? clampedProgress : 0f;
+        towerHpBarCacheValid = true;
+    }
+
+    private void InvalidateTowerHpBarCache()
+    {
+        towerHpBarCacheValid = false;
+        lastTowerHpProgress = 0f;
+    }
+
+    private void InvalidateTowerReferenceCache()
+    {
+        cachedTowerObject = null;
+        cachedArrowTower = null;
+        towerReferenceCacheInitialized = false;
+        InvalidateTowerHpBarCache();
     }
 
     private void CachePersistentId()
@@ -351,6 +393,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
         Transform origin = spawnPoint != null ? spawnPoint : transform;
         currentTower = Instantiate(prefab, origin.position, origin.rotation);
+        InvalidateTowerReferenceCache();
         hasTower = true;
         EnsureTowerHpBarBinding();
         RefreshSlotVisualState();
@@ -467,10 +510,21 @@ public class TowerSlot : MonoBehaviour, IInteractable
         tower = null;
         if (currentTower == null)
         {
+            if (towerReferenceCacheInitialized)
+                InvalidateTowerReferenceCache();
+
             return false;
         }
 
-        tower = currentTower.GetComponentInChildren<ArrowTower>(true);
+        if (!towerReferenceCacheInitialized || cachedTowerObject != currentTower)
+        {
+            cachedTowerObject = currentTower;
+            cachedArrowTower = currentTower.GetComponentInChildren<ArrowTower>(true);
+            towerReferenceCacheInitialized = true;
+            InvalidateTowerHpBarCache();
+        }
+
+        tower = cachedArrowTower;
         return tower != null;
     }
 
@@ -487,6 +541,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
         }
 
         tower.ApplyRuntimeDurability(state.currentHp, state.isDestroyed);
+        InvalidateTowerHpBarCache();
         EnsureTowerHpBarBinding();
     }
 
@@ -530,11 +585,13 @@ public class TowerSlot : MonoBehaviour, IInteractable
         if (nearest != null)
         {
             currentTower = nearest.gameObject;
+            InvalidateTowerReferenceCache();
             EnsureTowerHpBarBinding();
         }
         else
         {
             hasTower = false;
+            InvalidateTowerReferenceCache();
         }
     }
 
@@ -594,6 +651,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
             }
 
             spawnedTowerHpBar.Initialize(overlayRect, tower.HpAnchorTransform);
+            InvalidateTowerHpBarCache();
         }
     }
 }
