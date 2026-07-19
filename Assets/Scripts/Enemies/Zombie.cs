@@ -6,6 +6,7 @@ public class Zombie : MonoBehaviour
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int AttackHash = Animator.StringToHash("Attack");
     private static readonly int DieHash = Animator.StringToHash("Die");
+    private const float AttackRangeTolerance = 0.01f;
 
     /// <summary>Prototype: all Zombie instances in the play session (OnEnable/OnDestroy).</summary>
     public static int AliveZombieCount { get; private set; }
@@ -60,8 +61,13 @@ public class Zombie : MonoBehaviour
     private PlayerHealth currentTargetPlayer;
     private BaseCore currentTargetBaseCore;
     private Transform currentTargetTransform;
+    private Collider currentTargetCollider;
+    private bool hasDetectedCombatTarget;
     private Transform cachedBaseCoreTransform;
-    private readonly Collider[] forwardHitBuffer = new Collider[16];
+    private readonly Collider[] forwardHitBuffer = new Collider[64];
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    private bool hasWarnedForwardHitBufferSaturated;
+#endif
 
     private float attackTimer;
     private float targetRefreshTimer;
@@ -78,9 +84,6 @@ public class Zombie : MonoBehaviour
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
     public bool IsDead => currentHp <= 0f;
-
-    private float StoppingDistance => Mathf.Max(0.1f, attackRange * 0.85f);
-    private float AttackRangeSqr => attackRange * attackRange;
 
     private void OnEnable()
     {
@@ -291,14 +294,19 @@ public class Zombie : MonoBehaviour
             return true;
         }
 
+        if (hasDetectedCombatTarget && !IsCurrentTargetColliderValid(currentTargetCollider))
+        {
+            return true;
+        }
+
         switch (currentTargetKind)
         {
             case TargetKind.Fence:
-                return currentTargetFence == null || currentTargetFence.IsDestroyed;
+                return currentTargetFence == null || !currentTargetFence.isActiveAndEnabled || currentTargetFence.IsDestroyed;
             case TargetKind.Tower:
-                return currentTargetTower == null || currentTargetTower.IsDestroyed;
+                return currentTargetTower == null || !currentTargetTower.isActiveAndEnabled || currentTargetTower.IsDestroyed;
             case TargetKind.Player:
-                return currentTargetPlayer == null || currentTargetPlayer.IsDead;
+                return currentTargetPlayer == null || !currentTargetPlayer.isActiveAndEnabled || currentTargetPlayer.IsDead;
             case TargetKind.BaseCore:
                 if (cachedBaseCoreTransform == null)
                 {
@@ -324,7 +332,8 @@ public class Zombie : MonoBehaviour
                     }
                 }
 
-                return currentTargetBaseCore != null && currentTargetBaseCore.IsDestroyed;
+                return currentTargetBaseCore != null &&
+                    (!currentTargetBaseCore.isActiveAndEnabled || currentTargetBaseCore.IsDestroyed);
         }
 
         return true;
@@ -345,8 +354,6 @@ public class Zombie : MonoBehaviour
         float range = Mathf.Max(0.01f, forwardDetectRange);
         float radius = Mathf.Max(0.01f, forwardDetectRadius);
         float startOff = forwardDetectStartOffset;
-        Vector3 pos = transform.position;
-        pos.y = 0f;
         Vector3 fFlat = new Vector3(forward.x, 0f, forward.z).normalized;
 
         Vector3 p0 = transform.position + fFlat * startOff;
@@ -362,6 +369,14 @@ public class Zombie : MonoBehaviour
             forwardDetectMask,
             QueryTriggerInteraction.Collide);
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        if (count == forwardHitBuffer.Length && !hasWarnedForwardHitBufferSaturated)
+        {
+            hasWarnedForwardHitBufferSaturated = true;
+            Debug.LogWarning("[Zombie] Forward target detection buffer is full; some Colliders may not have been evaluated.", this);
+        }
+#endif
+
         TargetKind bestKind = TargetKind.None;
         float bestTargetSqr = float.MaxValue;
         FenceSegment bestFence = null;
@@ -369,8 +384,7 @@ public class Zombie : MonoBehaviour
         PlayerHealth bestPlayer = null;
         BaseCore bestBaseCore = null;
         Transform bestTransform = null;
-        float attackRangeSqr = AttackRangeSqr;
-
+        Collider bestCollider = null;
         for (int i = 0; i < count; i++)
         {
             Collider col = forwardHitBuffer[i];
@@ -388,22 +402,23 @@ public class Zombie : MonoBehaviour
                 }
             }
 
-            Vector3 colCenter = col.bounds.center;
-            colCenter.y = 0f;
-            float sqr = HorizontalDistanceSqr(pos, colCenter);
+            Vector3 closestPoint = col.ClosestPoint(transform.position);
+            closestPoint.y = transform.position.y;
+            float surfaceSqr = HorizontalDistanceSqr(transform.position, closestPoint);
 
             FenceSegment fence = col.GetComponentInParent<FenceSegment>();
             if (fence != null)
             {
-                if (!fence.IsDestroyed && sqr < bestTargetSqr)
+                if (fence.isActiveAndEnabled && !fence.IsDestroyed && surfaceSqr < bestTargetSqr)
                 {
                     bestKind = TargetKind.Fence;
-                    bestTargetSqr = sqr;
+                    bestTargetSqr = surfaceSqr;
                     bestFence = fence;
                     bestTower = null;
                     bestPlayer = null;
                     bestBaseCore = null;
                     bestTransform = fence.transform;
+                    bestCollider = col;
                 }
 
                 continue;
@@ -412,15 +427,16 @@ public class Zombie : MonoBehaviour
             ArrowTower tower = col.GetComponentInParent<ArrowTower>();
             if (tower != null)
             {
-                if (!tower.IsDestroyed && sqr < bestTargetSqr)
+                if (tower.isActiveAndEnabled && !tower.IsDestroyed && surfaceSqr < bestTargetSqr)
                 {
                     bestKind = TargetKind.Tower;
-                    bestTargetSqr = sqr;
+                    bestTargetSqr = surfaceSqr;
                     bestFence = null;
                     bestTower = tower;
                     bestPlayer = null;
                     bestBaseCore = null;
                     bestTransform = tower.transform;
+                    bestCollider = col;
                 }
 
                 continue;
@@ -429,15 +445,16 @@ public class Zombie : MonoBehaviour
             PlayerHealth ph = col.GetComponentInParent<PlayerHealth>();
             if (ph != null)
             {
-                if (!ph.IsDead && sqr < bestTargetSqr)
+                if (ph.isActiveAndEnabled && !ph.IsDead && surfaceSqr < bestTargetSqr)
                 {
                     bestKind = TargetKind.Player;
-                    bestTargetSqr = sqr;
+                    bestTargetSqr = surfaceSqr;
                     bestFence = null;
                     bestTower = null;
                     bestPlayer = ph;
                     bestBaseCore = null;
                     bestTransform = ph.transform;
+                    bestCollider = col;
                 }
 
                 continue;
@@ -446,15 +463,22 @@ public class Zombie : MonoBehaviour
             BaseCore core = col.GetComponentInParent<BaseCore>();
             if (core != null)
             {
-                if (!core.IsDestroyed && sqr <= attackRangeSqr + 0.01f && sqr < bestTargetSqr)
+                if (core.isActiveAndEnabled &&
+                    !core.IsDestroyed &&
+                    core.AttackCollider != null &&
+                    col == core.AttackCollider &&
+                    col.enabled &&
+                    col.gameObject.activeInHierarchy &&
+                    surfaceSqr < bestTargetSqr)
                 {
                     bestKind = TargetKind.BaseCore;
-                    bestTargetSqr = sqr;
+                    bestTargetSqr = surfaceSqr;
                     bestFence = null;
                     bestTower = null;
                     bestPlayer = null;
                     bestBaseCore = core;
                     bestTransform = core.transform;
+                    bestCollider = col;
                 }
             }
         }
@@ -464,6 +488,8 @@ public class Zombie : MonoBehaviour
             currentTargetKind = TargetKind.Fence;
             currentTargetFence = bestFence;
             currentTargetTransform = bestFence.transform;
+            currentTargetCollider = bestCollider;
+            hasDetectedCombatTarget = true;
             LogFrontTargetChange($"front:{currentTargetKind}:{bestFence.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestFence.name}");
             return;
         }
@@ -473,6 +499,8 @@ public class Zombie : MonoBehaviour
             currentTargetKind = TargetKind.Tower;
             currentTargetTower = bestTower;
             currentTargetTransform = bestTower.transform;
+            currentTargetCollider = bestCollider;
+            hasDetectedCombatTarget = true;
             LogFrontTargetChange($"front:{currentTargetKind}:{bestTower.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestTower.name}");
             return;
         }
@@ -482,6 +510,8 @@ public class Zombie : MonoBehaviour
             currentTargetKind = TargetKind.Player;
             currentTargetPlayer = bestPlayer;
             currentTargetTransform = bestPlayer.transform;
+            currentTargetCollider = bestCollider;
+            hasDetectedCombatTarget = true;
             LogFrontTargetChange($"front:{currentTargetKind}:{bestPlayer.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestPlayer.name}");
             return;
         }
@@ -491,19 +521,15 @@ public class Zombie : MonoBehaviour
             currentTargetKind = TargetKind.BaseCore;
             currentTargetBaseCore = bestBaseCore;
             currentTargetTransform = bestTransform != null ? bestTransform : bestBaseCore.transform;
+            currentTargetCollider = bestBaseCore.AttackCollider;
+            hasDetectedCombatTarget = true;
             LogFrontTargetChange($"front:{currentTargetKind}:{bestBaseCore.GetInstanceID()}", $"Front target selected: {currentTargetKind} {bestBaseCore.name}");
             return;
         }
 
         if (cachedBaseCoreTransform != null)
         {
-            currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInParent<BaseCore>();
-            if (currentTargetBaseCore == null)
-            {
-                currentTargetBaseCore = cachedBaseCoreTransform.GetComponentInChildren<BaseCore>();
-            }
-            
-            currentTargetKind = TargetKind.BaseCore;
+            currentTargetKind = TargetKind.None;
             currentTargetTransform = cachedBaseCoreTransform;
             LogFrontTargetChange("fallback:basecore", "No front target, moving to BaseCore");
             return;
@@ -537,6 +563,8 @@ public class Zombie : MonoBehaviour
         currentTargetPlayer = null;
         currentTargetBaseCore = null;
         currentTargetTransform = null;
+        currentTargetCollider = null;
+        hasDetectedCombatTarget = false;
     }
 
     private static float HorizontalDistanceSqr(Vector3 a, Vector3 b)
@@ -566,6 +594,12 @@ public class Zombie : MonoBehaviour
     {
         if (currentTargetTransform == null)
         {
+            return;
+        }
+
+        if (!hasDetectedCombatTarget)
+        {
+            MoveTowardBaseFallback();
             return;
         }
 
@@ -603,24 +637,29 @@ public class Zombie : MonoBehaviour
         }
 
         Vector3 currentPos = transform.position;
-        Vector3 targetPos = currentTargetTransform.position;
-        targetPos.y = currentPos.y;
-
-        Vector3 toTarget = targetPos - currentPos;
-        float distanceToTarget = GetPlanarDistanceToTargetSurface(currentTargetTransform, currentPos);
-        if (distanceToTarget <= StoppingDistance)
+        Collider targetCollider = ResolveCurrentTargetCollider();
+        if (targetCollider == null)
         {
             return;
         }
 
-        float centerDistance = toTarget.magnitude;
-        if (centerDistance <= 0.001f)
+        Vector3 closestPoint = targetCollider.ClosestPoint(currentPos);
+        closestPoint.y = currentPos.y;
+
+        Vector3 toSurface = closestPoint - currentPos;
+        float surfaceDistance = toSurface.magnitude;
+        if (surfaceDistance <= AttackRangeTolerance && TryMoveOutsideTarget(targetCollider, currentPos))
         {
             return;
         }
 
-        Vector3 moveDirection = toTarget / centerDistance;
-        Vector3 desiredPos = targetPos - moveDirection * StoppingDistance;
+        if (surfaceDistance <= attackRange + AttackRangeTolerance)
+        {
+            return;
+        }
+
+        Vector3 moveDirection = toSurface / surfaceDistance;
+        Vector3 desiredPos = closestPoint - moveDirection * attackRange;
         transform.position = Vector3.MoveTowards(currentPos, desiredPos, moveSpeed * Time.deltaTime);
 
         if (animator != null && transform.position != currentPos)
@@ -636,6 +675,11 @@ public class Zombie : MonoBehaviour
 
     private void HandleAttack()
     {
+        if (!hasDetectedCombatTarget)
+        {
+            return;
+        }
+
         if (currentTargetTransform == null)
         {
             return;
@@ -687,7 +731,8 @@ public class Zombie : MonoBehaviour
         Vector3 myPos = transform.position;
         myPos.y = 0f;
 
-        if (GetPlanarDistanceToTargetSurface(currentTargetTransform, myPos) > attackRange)
+        float distanceToTarget = GetPlanarDistanceToCurrentTargetSurface(myPos);
+        if (distanceToTarget > attackRange + AttackRangeTolerance)
         {
             return;
         }
@@ -724,24 +769,190 @@ public class Zombie : MonoBehaviour
         attackTimer = Mathf.Max(0.05f, attackInterval);
     }
 
-    private static float GetPlanarDistanceToTargetSurface(Transform target, Vector3 fromPosition)
+    private float GetPlanarDistanceToCurrentTargetSurface(Vector3 fromPosition)
     {
-        if (target == null)
-        {
-            return float.MaxValue;
-        }
-
-        Collider targetCollider = target.GetComponentInChildren<Collider>();
+        Collider targetCollider = ResolveCurrentTargetCollider();
         if (targetCollider == null)
         {
-            Vector3 fallbackTargetPos = target.position;
-            fallbackTargetPos.y = fromPosition.y;
-            return Vector3.Distance(fromPosition, fallbackTargetPos);
+            return float.MaxValue;
         }
 
         Vector3 closestPoint = targetCollider.ClosestPoint(fromPosition);
         closestPoint.y = fromPosition.y;
         return Vector3.Distance(fromPosition, closestPoint);
+    }
+
+    private Collider ResolveCurrentTargetCollider()
+    {
+        if (IsCurrentTargetColliderValid(currentTargetCollider))
+        {
+            return currentTargetCollider;
+        }
+
+        if (currentTargetKind == TargetKind.BaseCore)
+        {
+            currentTargetCollider = currentTargetBaseCore != null
+                ? currentTargetBaseCore.AttackCollider
+                : null;
+            return IsCurrentTargetColliderValid(currentTargetCollider)
+                ? currentTargetCollider
+                : null;
+        }
+
+        Transform targetRoot = GetCurrentTargetRoot();
+        if (targetRoot == null)
+        {
+            currentTargetCollider = null;
+            return null;
+        }
+
+        currentTargetCollider = FindPreferredTargetCollider(targetRoot);
+        return currentTargetCollider;
+    }
+
+    private bool IsCurrentTargetColliderValid(Collider candidate)
+    {
+        if (candidate == null || !candidate.enabled || !candidate.gameObject.activeInHierarchy)
+        {
+            return false;
+        }
+
+        switch (currentTargetKind)
+        {
+            case TargetKind.Fence:
+                return candidate.GetComponentInParent<FenceSegment>() == currentTargetFence;
+            case TargetKind.Tower:
+                return candidate.GetComponentInParent<ArrowTower>() == currentTargetTower;
+            case TargetKind.Player:
+                return candidate.GetComponentInParent<PlayerHealth>() == currentTargetPlayer;
+            case TargetKind.BaseCore:
+                return currentTargetBaseCore != null &&
+                    currentTargetBaseCore.AttackCollider != null &&
+                    candidate == currentTargetBaseCore.AttackCollider;
+            default:
+                return false;
+        }
+    }
+
+    private Transform GetCurrentTargetRoot()
+    {
+        switch (currentTargetKind)
+        {
+            case TargetKind.Fence:
+                return currentTargetFence != null ? currentTargetFence.transform : null;
+            case TargetKind.Tower:
+                return currentTargetTower != null ? currentTargetTower.transform : null;
+            case TargetKind.Player:
+                return currentTargetPlayer != null ? currentTargetPlayer.transform : null;
+            case TargetKind.BaseCore:
+                return currentTargetBaseCore != null ? currentTargetBaseCore.transform : null;
+            default:
+                return null;
+        }
+    }
+
+    private static Collider FindPreferredTargetCollider(Transform targetRoot)
+    {
+        Collider fallback = null;
+        Collider[] colliders = targetRoot.GetComponentsInChildren<Collider>(true);
+        for (int i = 0; i < colliders.Length; i++)
+        {
+            Collider candidate = colliders[i];
+            if (candidate == null ||
+                !candidate.enabled ||
+                !candidate.gameObject.activeInHierarchy)
+            {
+                continue;
+            }
+
+            if (!candidate.isTrigger)
+            {
+                return candidate;
+            }
+
+            if (fallback == null)
+            {
+                fallback = candidate;
+            }
+        }
+
+        return fallback;
+    }
+
+    private void MoveTowardBaseFallback()
+    {
+        if (cachedBaseCoreTransform == null || !cachedBaseCoreTransform.gameObject.activeInHierarchy)
+        {
+            return;
+        }
+
+        Vector3 currentPosition = transform.position;
+        Vector3 destination = cachedBaseCoreTransform.position;
+        destination.y = currentPosition.y;
+
+        Vector3 toDestination = destination - currentPosition;
+        if (toDestination.sqrMagnitude <= 0.0001f)
+        {
+            return;
+        }
+
+        Vector3 moveDirection = toDestination.normalized;
+        transform.position = Vector3.MoveTowards(
+            currentPosition,
+            destination,
+            moveSpeed * Time.deltaTime);
+
+        if (animator != null && transform.position != currentPosition)
+        {
+            animator.SetFloat(SpeedHash, 1f);
+        }
+
+        transform.rotation = Quaternion.LookRotation(moveDirection, Vector3.up);
+    }
+
+    private bool TryMoveOutsideTarget(Collider targetCollider, Vector3 currentPosition)
+    {
+        Collider zombieCollider = GetComponent<Collider>();
+        if (zombieCollider == null || !zombieCollider.enabled)
+        {
+            return false;
+        }
+
+        if (!Physics.ComputePenetration(
+                zombieCollider,
+                zombieCollider.transform.position,
+                zombieCollider.transform.rotation,
+                targetCollider,
+                targetCollider.transform.position,
+                targetCollider.transform.rotation,
+                out Vector3 separationDirection,
+                out float separationDistance))
+        {
+            return false;
+        }
+
+        separationDirection.y = 0f;
+        if (separationDirection.sqrMagnitude <= 0.0001f)
+        {
+            return false;
+        }
+
+        separationDirection.Normalize();
+        Vector3 outsidePosition = currentPosition +
+            separationDirection * (separationDistance + AttackRangeTolerance);
+        outsidePosition.y = currentPosition.y;
+        transform.position = Vector3.MoveTowards(
+            currentPosition,
+            outsidePosition,
+            moveSpeed * Time.deltaTime);
+
+        if (animator != null && transform.position != currentPosition)
+        {
+            animator.SetFloat(SpeedHash, 1f);
+        }
+
+        transform.rotation = Quaternion.LookRotation(separationDirection, Vector3.up);
+        return true;
     }
 
     public void TakeDamage(float amount)

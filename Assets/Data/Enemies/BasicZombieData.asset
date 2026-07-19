@@ -17,10 +17,10 @@ MonoBehaviour:
   targetPreference: 0
   maxHp: 30
   moveSpeed: 0.5
-  attackDamage: 7
-  attackRange: 1.4
-  attackInterval: 1.5
+  attackDamage: 10
+  attackRange: 1.2
+  attackInterval: 1
   targetRefreshInterval: 0.2
-  forwardDetectRange: 1.6
-  forwardDetectRadius: 0.6
+  forwardDetectRange: 2
+  forwardDetectRadius: 1.5
   animatorController: {fileID: 9100000, guid: 97bb4849f083c864c9b14709be9f0f13, type: 2}

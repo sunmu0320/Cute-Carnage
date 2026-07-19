@@ -7,6 +7,9 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
     [Header("Health")]
     [SerializeField] private float maxHp = 200f;
 
+    [Header("Combat")]
+    [SerializeField] private Collider attackCollider;
+
     [Header("World HP Bar")]
     [SerializeField] private GameObject worldHpBarPrefab;
     [SerializeField] private Transform worldHpAnchor;
@@ -28,6 +31,7 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
     public float MaxHp => maxHp;
     public float CurrentHp => currentHp;
     public bool IsDestroyed => currentHp <= 0f;
+    public Collider AttackCollider => attackCollider;
     public Transform HpAnchorTransform => worldHpAnchor != null ? worldHpAnchor : transform;
 
     private void Awake()

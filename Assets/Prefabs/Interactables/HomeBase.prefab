@@ -246,6 +246,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BaseCore
   maxHp: 100
+  attackCollider: {fileID: 926078343656182386}
   worldHpBarPrefab: {fileID: 2006212489256310441, guid: 73e57896f323c2f4c9a345f290de4dfb, type: 3}
   worldHpAnchor: {fileID: 0}
   worldHpLocalOffset: {x: 0, y: 2.5, z: -0.72}
@@ -606,12 +607,14 @@ MonoBehaviour:
   interactionAnchor: {fileID: 4947682089382783719}
   woodBuildCost: 1
   scrapBuildCost: 1
+  repairAmountPerStep: 20
+  woodRepairCost: 1
+  scrapRepairCost: 0
   slotVisualRoot: {fileID: 1545051615082265934}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
   towerHpBarTemplate: {fileID: 0}
   towerHpBarParent: {fileID: 0}
-  towerHpBarLocalOffset: {x: 0, y: 0.08, z: 0.78}
   keepTowerHpBarAlwaysVisible: 1
   hideTowerHpBarWhenDestroyed: 0
 --- !u!114 &5949134827326153215
