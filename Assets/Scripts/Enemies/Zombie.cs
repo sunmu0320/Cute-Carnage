@@ -741,7 +741,6 @@ public class Zombie : MonoBehaviour
         }
 
         Vector3 myPos = transform.position;
-        myPos.y = 0f;
 
         float distanceToTarget = GetPlanarDistanceToCurrentTargetSurface(myPos);
         if (distanceToTarget > attackRange + AttackRangeTolerance)

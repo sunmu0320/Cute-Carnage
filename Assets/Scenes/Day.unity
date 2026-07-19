@@ -1264,30 +1264,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalScale.x
-      value: 588.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalScale.y
-      value: 588.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalScale.z
-      value: 588.1
-      objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -0.08306575
-      objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.5710969
-      objectReference: {fileID: 0}
-    - target: {fileID: 2597496803684385542, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -0.19347
-      objectReference: {fileID: 0}
     - target: {fileID: 3241423805075985632, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
       propertyPath: m_Name
       value: HomeBase
@@ -1296,18 +1272,6 @@ PrefabInstance:
       propertyPath: towerHpBarParent
       value: 
       objectReference: {fileID: 1101447870}
-    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: towerHpBarTemplate
-      value: 
-      objectReference: {fileID: 92352056997406519, guid: 0858d2ec4fe3a034186a511c0fc7fc00, type: 3}
-    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: hideTowerHpBarWhenDestroyed
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 6749185572540903490, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
-      propertyPath: keepTowerHpBarAlwaysVisible
-      value: 0
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -11517,11 +11481,6 @@ MeshFilter:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 975594716}
   m_Mesh: {fileID: 10206, guid: 0000000000000000e000000000000000, type: 0}
---- !u!1 &986233218 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 8970663843469093718, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-  m_PrefabInstance: {fileID: 8893342876139597442}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &997177528
 GameObject:
   m_ObjectHideFlags: 0
@@ -11610,17 +11569,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: aec4980d6741db543befde0d7120403f, type: 3}
---- !u!114 &1008008388 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 5979645985062965386, guid: 3705b027d478c0a45bca264441a924c1, type: 3}
-  m_PrefabInstance: {fileID: 5327789012748378984}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a673de271c2487c4390c77b87984ecd4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::WorldPromptUI
 --- !u!1001 &1011716883
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -12493,7 +12441,7 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 7661280659911657259, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
   m_PrefabInstance: {fileID: 8893342876139597442}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 986233218}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3c8f9a2e1d4b6c8a0f2e4d6b8a0c1e3f, type: 3}
@@ -12504,24 +12452,12 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 4663261395610025437, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
   m_PrefabInstance: {fileID: 8893342876139597442}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 986233218}
+  m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e16d5f4b05e3ebe468b43c3c77719f4c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::HungerSystem
---- !u!114 &1095320890
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 986233218}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1ae4c7a70a0ae604c95fdc616e11a26d, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::Test
 --- !u!1001 &1096176957
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18563,18 +18499,6 @@ PrefabInstance:
     - target: {fileID: 8323288054292854364, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_Name
       value: BasicZombie
-      objectReference: {fileID: 0}
-    - target: {fileID: 8948067710989294263, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: attackRange
-      value: 1.2
-      objectReference: {fileID: 0}
-    - target: {fileID: 8948067710989294263, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: forwardDetectRange
-      value: 1.56
-      objectReference: {fileID: 0}
-    - target: {fileID: 8948067710989294263, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: forwardDetectMask.m_Bits
-      value: 65
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -25001,14 +24925,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1099842641501820461, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_Enabled
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3906453950919470430, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: worldPromptUI
-      value: 
-      objectReference: {fileID: 1008008388}
     - target: {fileID: 3906453950919470430, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: resourceManager
       value: 
@@ -25034,33 +24950,9 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 321777434}
     - target: {fileID: 5845222328586336022, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_Center.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 5845222328586336022, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_Center.y
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 5845222328586336022, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_Material
       value: 
       objectReference: {fileID: 1696994295}
-    - target: {fileID: 8507077320904943301, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_UseGravity
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8507077320904943301, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_Constraints
-      value: 80
-      objectReference: {fileID: 0}
-    - target: {fileID: 8507077320904943301, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_IsKinematic
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8507077320904943301, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      propertyPath: m_CollisionDetection
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 8970663843469093718, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_Name
       value: PlayerRoot
@@ -25068,10 +24960,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 8970663843469093718, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1095320890}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
