@@ -104,11 +104,13 @@ MonoBehaviour:
   interactName: Canned Food
   canUse: 1
   oneTimeUse: 1
-  uiAnchor: {fileID: 2306123101805333679}
+  uiAnchor: {fileID: 0}
+  logUIAnchorResolution: 0
   resourceType: 1
   amount: 1
   gatherAnimationType: 0
   gatherBarAnchor: {fileID: 4638955446070939721}
+  promptUIAnchor: {fileID: 2306123101805333679}
   gatherDistance: 1.4
 --- !u!1 &3651862706126604524
 GameObject:
