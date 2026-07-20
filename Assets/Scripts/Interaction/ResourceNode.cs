@@ -66,6 +66,13 @@ public class ResourceNode : BaseInteractable
         return InteractablePromptData.CreateSimple("Press E to Gather");
     }
 
+    public override bool CanInteract(PlayerInteractor interactor)
+    {
+        return base.CanInteract(interactor)
+            && GameManager.Instance != null
+            && GameManager.Instance.IsDay;
+    }
+
     private void AutoAssignAnchorsIfMissing()
     {
         if (promptUIAnchor == null)
