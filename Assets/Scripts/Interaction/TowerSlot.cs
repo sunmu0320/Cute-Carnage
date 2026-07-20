@@ -209,11 +209,44 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public bool CanInteract(PlayerInteractor interactor)
     {
-        return GameManager.Instance != null && GameManager.Instance.IsDay;
+        if (GameManager.Instance == null)
+        {
+            return false;
+        }
+
+        if (GameManager.Instance.IsDay)
+        {
+            return true;
+        }
+
+        return hasTower
+            && TryGetCurrentTowerComponent(out ArrowTower tower)
+            && tower.CurrentHp < tower.MaxHp - 0.01f;
     }
 
     public InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
     {
+        if (GameManager.Instance != null && !GameManager.Instance.IsDay)
+        {
+            ArrowTower tower = CurrentTower;
+            if (!hasTower || tower == null || tower.CurrentHp >= tower.MaxHp - 0.01f)
+            {
+                return default;
+            }
+
+            ResourceManager nightResourceManager = interactor != null ? interactor.ResourceManager : null;
+            bool canAffordRepair = nightResourceManager != null
+                && nightResourceManager.HasResource(ResourceType.Wood, WoodRepairCost)
+                && nightResourceManager.HasResource(ResourceType.Scrap, ScrapRepairCost);
+            return new InteractablePromptData
+            {
+                actionText = "Press E to repair Tower",
+                woodCost = WoodRepairCost,
+                scrapCost = ScrapRepairCost,
+                canAfford = canAffordRepair
+            };
+        }
+
         if (hasTower)
         {
             return InteractablePromptData.CreateSimple("Tower Installed");
@@ -234,9 +267,18 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     public void Interact(PlayerInteractor interactor)
     {
-        if (interactor != null)
+        if (interactor == null || GameManager.Instance == null)
+        {
+            return;
+        }
+
+        if (GameManager.Instance.IsDay)
         {
             interactor.OpenStructureActionPanel(this);
+        }
+        else
+        {
+            interactor.OpenNightRepairPanel(this);
         }
     }
 

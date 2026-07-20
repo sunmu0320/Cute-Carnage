@@ -40,6 +40,9 @@ public class PlayerInteractor : MonoBehaviour
     [SerializeField, Tooltip("Shared structure action panel opened by structure slots.")]
     StructureActionPanelUI structureActionPanelUI;
 
+    [SerializeField, Tooltip("Night-only repair panel opened for damaged towers.")]
+    NightRepairPanelUI nightRepairPanelUI;
+
     [SerializeField, Tooltip("Max colliders scanned each frame by NonAlloc overlap.")]
     int overlapBufferSize = 32;
 
@@ -81,10 +84,26 @@ public class PlayerInteractor : MonoBehaviour
 
     public void OpenStructureActionPanel(TowerSlot towerSlot)
     {
+        if (nightRepairPanelUI != null)
+            nightRepairPanelUI.Close();
+
         if (structureActionPanelUI != null)
         {
             structureActionPanelUI.Open(towerSlot, this);
             if (structureActionPanelUI.IsOpen && interactionPromptUI != null)
+                interactionPromptUI.Hide();
+        }
+    }
+
+    public void OpenNightRepairPanel(TowerSlot towerSlot)
+    {
+        if (structureActionPanelUI != null)
+            structureActionPanelUI.Close();
+
+        if (nightRepairPanelUI != null)
+        {
+            nightRepairPanelUI.Open(towerSlot, this);
+            if (nightRepairPanelUI.IsOpen && interactionPromptUI != null)
                 interactionPromptUI.Hide();
         }
     }
@@ -461,7 +480,8 @@ public class PlayerInteractor : MonoBehaviour
         if (interactionPromptUI == null)
             return;
 
-        if (structureActionPanelUI != null && structureActionPanelUI.IsOpen)
+        if ((structureActionPanelUI != null && structureActionPanelUI.IsOpen)
+            || (nightRepairPanelUI != null && nightRepairPanelUI.IsOpen))
         {
             interactionPromptUI.Hide();
             return;
