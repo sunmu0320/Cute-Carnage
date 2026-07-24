@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a4fd312fdf90ba147aa13476216f5488, type: 3}
+  m_Name: WoodFence_T2_Data
+  m_EditorClassIdentifier: Assembly-CSharp::FenceData
+  fenceId: Wood_Fence_02
+  displayName: Wooden Fence 2
+  tierNumber: 2
+  uiIcon: {fileID: 0}
+  fencePrefab: {fileID: 925577397612135249, guid: 861d4abbb0a6da7468782eff45ffa398, type: 3}
+  maxHp: 160
+  installWoodCost: 0
+  installScrapCost: 0
+  repairAmount: 20
+  repairWoodCost: 2
+  repairScrapCost: 0
+  nextFence: {fileID: 0}
+  upgradeWoodCost: 0
+  upgradeScrapCost: 0

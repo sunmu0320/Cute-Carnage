@@ -804,7 +804,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3d9e5b02e6f5d8c9f4a123456789abc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DayTimeManager
-  dayDurationSeconds: 100
+  dayDurationSeconds: 15
   autoStartOnAwake: 1
 --- !u!1 &54312099
 GameObject:
@@ -1259,6 +1259,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2114539767155623898, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
+      propertyPath: towerHpBarParent
+      value: 
+      objectReference: {fileID: 1101447870}
     - target: {fileID: 3241423805075985632, guid: bd22b0a53a84ac8458d127b46cfda428, type: 3}
       propertyPath: m_Name
       value: HomeBase
@@ -18624,7 +18628,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -4.99
+      value: -0.56
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.y
@@ -18632,7 +18636,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 3.93
+      value: 8.56
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalRotation.w
@@ -24916,7 +24920,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -172.8
+      value: -3.6
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.y
@@ -24924,7 +24928,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.z
-      value: -109.7
+      value: 18.37
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalRotation.w
@@ -24956,7 +24960,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1099842641501820461, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_Enabled
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3906453950919470430, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: resourceManager

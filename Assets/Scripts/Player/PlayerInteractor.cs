@@ -3,12 +3,6 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
-public enum PlayerActionState
-{
-    Normal,
-    Repairing
-}
-
 public class PlayerInteractor : MonoBehaviour
 {
     const string IsGatheringParameter = "IsGathering";
@@ -63,24 +57,16 @@ public class PlayerInteractor : MonoBehaviour
     RectTransform gatherProgressUIRoot;
 
     [Header("Debug")]
-    [SerializeField, Tooltip("Log repair state transitions and blocked E presses to the Console.")]
+    [SerializeField, Tooltip("Log blocked interaction attempts to the Console.")]
     bool logRepairState = true;
 
     IInteractable currentInteractable;
-    IRepairable currentRepairable;
-    IRepairable activeRepairTarget;
-    PlayerActionState currentState = PlayerActionState.Normal;
     bool isGathering;
     WorldGatherBar activeGatherBar;
     Collider[] overlapBuffer;
 
     public IInteractable CurrentInteractable => currentInteractable;
     public ResourceManager ResourceManager => resourceManager;
-    public bool IsRepairing => currentState == PlayerActionState.Repairing;
-
-    public PlayerActionState DebugCurrentState => currentState;
-    public IRepairable DebugCurrentRepairable => currentRepairable;
-    public IRepairable DebugActiveRepairTarget => activeRepairTarget;
 
     public void OpenStructureActionPanel(TowerSlot towerSlot)
     {
@@ -95,6 +81,19 @@ public class PlayerInteractor : MonoBehaviour
         }
     }
 
+    public void OpenStructureActionPanel(FenceSlot fenceSlot)
+    {
+        if (nightRepairPanelUI != null)
+            nightRepairPanelUI.Close();
+
+        if (structureActionPanelUI != null)
+        {
+            structureActionPanelUI.Open(fenceSlot, this);
+            if (structureActionPanelUI.IsOpen && interactionPromptUI != null)
+                interactionPromptUI.Hide();
+        }
+    }
+
     public void OpenNightRepairPanel(TowerSlot towerSlot)
     {
         if (structureActionPanelUI != null)
@@ -103,6 +102,19 @@ public class PlayerInteractor : MonoBehaviour
         if (nightRepairPanelUI != null)
         {
             nightRepairPanelUI.Open(towerSlot, this);
+            if (nightRepairPanelUI.IsOpen && interactionPromptUI != null)
+                interactionPromptUI.Hide();
+        }
+    }
+
+    public void OpenNightRepairPanel(FenceSlot fenceSlot)
+    {
+        if (structureActionPanelUI != null)
+            structureActionPanelUI.Close();
+
+        if (nightRepairPanelUI != null)
+        {
+            nightRepairPanelUI.Open(fenceSlot, this);
             if (nightRepairPanelUI.IsOpen && interactionPromptUI != null)
                 interactionPromptUI.Hide();
         }
@@ -171,148 +183,16 @@ public class PlayerInteractor : MonoBehaviour
     void Update()
     {
         RefreshCurrentInteractable();
-        RefreshCurrentRepairable();
 
-        if (currentState == PlayerActionState.Repairing && HasMovementInput())
-        {
-            ExitRepairState("movement");
-        }
-
-        if (Input.GetKeyDown(interactionKey)
-            && currentState == PlayerActionState.Normal
-            && currentRepairable != null
-            && CanEnterRepairState(currentRepairable))
-        {
-            EnterRepairState(currentRepairable);
-        }
-        else if (logRepairState
-                 && Input.GetKeyDown(interactionKey)
-                 && currentState == PlayerActionState.Normal
-                 && currentInteractable is IRepairable blockedRepairable
-                 && !CanEnterRepairState(blockedRepairable))
-        {
-            Debug.Log(
-                $"[PlayerInteractor] {interactionKey} ignored: cannot enter repair (full HP, missing resources, etc.). " +
-                $"Target={(blockedRepairable as Component)?.name}",
-                this);
-        }
-        else if (logRepairState
-                 && Input.GetKeyDown(interactionKey)
-                 && currentState == PlayerActionState.Normal
-                 && currentInteractable == null)
+        if (logRepairState
+            && Input.GetKeyDown(interactionKey)
+            && currentInteractable == null)
         {
             Debug.Log("[PlayerInteractor] No interactable in range.", this);
         }
 
-        if (currentState == PlayerActionState.Repairing && activeRepairTarget != null)
-        {
-            if (!IsActiveRepairTargetInRange(activeRepairTarget))
-            {
-                ExitRepairState("out_of_range");
-            }
-            else if (resourceManager == null)
-            {
-                ExitRepairState("no_resource_manager");
-            }
-            else
-            {
-                bool continueSession = activeRepairTarget.TickRepair(Time.deltaTime, resourceManager);
-                if (!continueSession)
-                {
-                    ExitRepairState("no_wood");
-                }
-                else if (activeRepairTarget.IsFullyRepaired())
-                {
-                    ExitRepairState("fully_repaired");
-                }
-            }
-        }
-
         RefreshPrompt();
         HandleInteractInput();
-    }
-
-    void RefreshCurrentRepairable()
-    {
-        if (currentInteractable is IRepairable repairable)
-        {
-            currentRepairable = repairable;
-        }
-        else
-        {
-            currentRepairable = null;
-        }
-    }
-
-    bool CanEnterRepairState(IRepairable repairable)
-    {
-        if (repairable == null)
-        {
-            return false;
-        }
-
-        if (!repairable.IsDamaged)
-        {
-            return false;
-        }
-
-        if (repairable is FenceSegment fence)
-        {
-            return fence.CanRepair() && fence.CanAffordNextRepairChunk(resourceManager);
-        }
-
-        return true;
-    }
-
-    void EnterRepairState(IRepairable target)
-    {
-        activeRepairTarget = target;
-        currentState = PlayerActionState.Repairing;
-
-        if (logRepairState)
-        {
-            Debug.Log(
-                $"[PlayerInteractor] Enter Repairing (key={interactionKey}). Target={(target as Component)?.name}, state={currentState}",
-                this);
-        }
-    }
-
-    void ExitRepairState(string reason = "movement")
-    {
-        if (activeRepairTarget != null)
-        {
-            activeRepairTarget.CancelRepair();
-        }
-
-        activeRepairTarget = null;
-        currentState = PlayerActionState.Normal;
-
-        if (logRepairState)
-        {
-            Debug.Log($"[PlayerInteractor] Exit Repairing -> Normal. ({reason})", this);
-        }
-    }
-
-    bool IsActiveRepairTargetInRange(IRepairable target)
-    {
-        Component c = target as Component;
-        if (c == null)
-        {
-            return false;
-        }
-
-        Vector3 a = transform.position;
-        Vector3 b = c.transform.position;
-        a.y = 0f;
-        b.y = 0f;
-        return (b - a).sqrMagnitude <= interactionRadius * interactionRadius;
-    }
-
-    bool HasMovementInput()
-    {
-        float h = Input.GetAxisRaw("Horizontal");
-        float v = Input.GetAxisRaw("Vertical");
-        return Mathf.Abs(h) > 0.1f || Mathf.Abs(v) > 0.1f;
     }
 
     IEnumerator GatherResourceOverTime(ResourceNode resourceNode)
@@ -511,9 +391,6 @@ public class PlayerInteractor : MonoBehaviour
             return;
 
         if (!currentInteractable.CanInteract(this))
-            return;
-
-        if (currentInteractable is IRepairable)
             return;
 
         ResourceNode resourceNode = currentInteractable as ResourceNode;

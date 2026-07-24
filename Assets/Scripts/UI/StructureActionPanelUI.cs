@@ -22,6 +22,7 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private KeyCode closeKey = KeyCode.Escape;
 
     private TowerSlot selectedTowerSlot;
+    private FenceSlot selectedFenceSlot;
     private PlayerInteractor selectedInteractor;
 
     public bool IsOpen => panelRoot != null && panelRoot.activeSelf;
@@ -85,6 +86,26 @@ public class StructureActionPanelUI : MonoBehaviour
         }
 
         selectedTowerSlot = towerSlot;
+        selectedFenceSlot = null;
+        selectedInteractor = interactor;
+
+        if (panelRoot != null)
+        {
+            panelRoot.SetActive(true);
+        }
+
+        Refresh();
+    }
+
+    public void Open(FenceSlot fenceSlot, PlayerInteractor interactor)
+    {
+        if (fenceSlot == null || interactor == null || GameManager.Instance == null || !GameManager.Instance.IsDay)
+        {
+            return;
+        }
+
+        selectedTowerSlot = null;
+        selectedFenceSlot = fenceSlot;
         selectedInteractor = interactor;
 
         if (panelRoot != null)
@@ -98,6 +119,7 @@ public class StructureActionPanelUI : MonoBehaviour
     public void Close()
     {
         selectedTowerSlot = null;
+        selectedFenceSlot = null;
         selectedInteractor = null;
 
         if (panelRoot != null)
@@ -114,7 +136,10 @@ public class StructureActionPanelUI : MonoBehaviour
             return;
         }
 
-        if (selectedTowerSlot.TryBuildTower(selectedInteractor))
+        bool installed = selectedTowerSlot != null
+            ? selectedTowerSlot.TryBuildTower(selectedInteractor)
+            : selectedFenceSlot != null && selectedFenceSlot.TryInstallFence(selectedInteractor);
+        if (installed)
         {
             Refresh();
         }
@@ -128,7 +153,10 @@ public class StructureActionPanelUI : MonoBehaviour
             return;
         }
 
-        if (selectedTowerSlot.TryRepairTower(selectedInteractor))
+        bool repaired = selectedTowerSlot != null
+            ? selectedTowerSlot.TryRepairTower(selectedInteractor)
+            : selectedFenceSlot != null && selectedFenceSlot.TryRepairFence(selectedInteractor);
+        if (repaired)
         {
             Refresh();
         }
@@ -136,9 +164,15 @@ public class StructureActionPanelUI : MonoBehaviour
 
     private void Refresh()
     {
-        if (selectedTowerSlot == null)
+        if (selectedTowerSlot == null && selectedFenceSlot == null)
         {
             Close();
+            return;
+        }
+
+        if (selectedFenceSlot != null)
+        {
+            RefreshFence();
             return;
         }
 
@@ -210,9 +244,47 @@ public class StructureActionPanelUI : MonoBehaviour
         }
     }
 
+    private void RefreshFence()
+    {
+        FenceSegment fence = selectedFenceSlot.CurrentFence;
+        bool isEmpty = !selectedFenceSlot.HasFence;
+        bool hasValidFence = !isEmpty && fence != null;
+        bool needsRepair = hasValidFence && fence.CanRepair();
+
+        if (titleText != null) titleText.text = "Fence";
+        if (hpSection != null) hpSection.SetActive(hasValidFence);
+        if (hasValidFence)
+        {
+            if (hpFill != null) hpFill.fillAmount = fence.MaxHp > 0f ? Mathf.Clamp01(fence.CurrentHp / fence.MaxHp) : 0f;
+            if (hpText != null) hpText.text = $"{Mathf.RoundToInt(fence.CurrentHp)} / {Mathf.RoundToInt(fence.MaxHp)}";
+        }
+        if (dayActionsRoot != null) dayActionsRoot.SetActive(true);
+        if (installButton != null)
+        {
+            installButton.gameObject.SetActive(isEmpty);
+            installButton.interactable = isEmpty && selectedFenceSlot.CanInstallFence();
+        }
+        if (installButtonText != null) installButtonText.text = "Install Fence";
+        if (installCostText != null)
+        {
+            installCostText.gameObject.SetActive(isEmpty || needsRepair);
+            installCostText.text = isEmpty
+                ? $"Wood: {selectedFenceSlot.WoodBuildCost}  Scrap: {selectedFenceSlot.ScrapBuildCost}"
+                : $"Wood: {selectedFenceSlot.WoodRepairCost}  Scrap: {selectedFenceSlot.ScrapRepairCost}";
+        }
+        if (upgradeButton != null) upgradeButton.gameObject.SetActive(false);
+        if (repairActionRoot != null) repairActionRoot.SetActive(needsRepair);
+        if (repairButton != null)
+        {
+            repairButton.interactable = needsRepair
+                && fence.HasEnoughResources(selectedInteractor != null ? selectedInteractor.ResourceManager : null);
+        }
+    }
+
     private bool IsSelectionValid()
     {
-        if (selectedTowerSlot == null || selectedInteractor == null || !selectedInteractor.isActiveAndEnabled)
+        if ((selectedTowerSlot == null && selectedFenceSlot == null)
+            || selectedInteractor == null || !selectedInteractor.isActiveAndEnabled)
         {
             return false;
         }
@@ -222,7 +294,13 @@ public class StructureActionPanelUI : MonoBehaviour
             return false;
         }
 
-        return selectedTowerSlot.CanInteract(selectedInteractor)
-            && selectedInteractor.IsInteractableInRange(selectedTowerSlot);
+        if (selectedTowerSlot != null)
+        {
+            return selectedTowerSlot.CanInteract(selectedInteractor)
+                && selectedInteractor.IsInteractableInRange(selectedTowerSlot);
+        }
+
+        return selectedFenceSlot.CanInteract(selectedInteractor)
+            && selectedInteractor.IsInteractableInRange(selectedFenceSlot);
     }
 }

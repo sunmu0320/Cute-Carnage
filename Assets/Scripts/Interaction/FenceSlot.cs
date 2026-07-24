@@ -25,11 +25,17 @@ public class FenceSlot : MonoBehaviour, IInteractable
     [SerializeField] private Transform slotMarker;
 
     private PersistentId persistentId;
+    private FenceSegment installedFenceSegment;
     private bool hasWarnedFallbackSpawnPoint;
 
     public bool IsUnlocked => isUnlocked;
     public bool HasFence => installedFence != null;
     public GameObject InstalledFence => installedFence;
+    public FenceSegment CurrentFence => GetFenceSegmentOnInstalledFence();
+    public int WoodBuildCost => Mathf.Max(0, woodBuildCost);
+    public int ScrapBuildCost => Mathf.Max(0, scrapBuildCost);
+    public int WoodRepairCost => CurrentFence != null ? CurrentFence.GetRequiredWood() : 0;
+    public int ScrapRepairCost => CurrentFence != null ? CurrentFence.GetRequiredScrap() : 0;
     public Transform SlotMarker => slotMarker;
     public PersistentId PersistentIdComponent => persistentId;
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
@@ -102,12 +108,14 @@ public class FenceSlot : MonoBehaviour, IInteractable
     public void SetInstalledFence(GameObject fenceObject)
     {
         installedFence = fenceObject;
+        installedFenceSegment = null;
         RefreshSlotVisualState();
     }
 
     public void ClearInstalledFence()
     {
         installedFence = null;
+        installedFenceSegment = null;
         RefreshSlotVisualState();
     }
 
@@ -162,7 +170,18 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     public bool CanInteract(PlayerInteractor interactor)
     {
-        return isUnlocked && !HasFence;
+        if (!isUnlocked || GameManager.Instance == null)
+        {
+            return false;
+        }
+
+        if (GameManager.Instance.IsDay)
+        {
+            return true;
+        }
+
+        FenceSegment segment = CurrentFence;
+        return HasFence && segment != null && segment.CanRepair();
     }
 
     public InteractablePromptData GetInteractionPromptData(PlayerInteractor interactor)
@@ -172,9 +191,27 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return InteractablePromptData.CreateSimple("Fence slot locked");
         }
 
+        if (GameManager.Instance != null && !GameManager.Instance.IsDay)
+        {
+            FenceSegment nightFence = CurrentFence;
+            if (nightFence == null || !nightFence.CanRepair())
+            {
+                return default;
+            }
+
+            ResourceManager nightManager = interactor != null ? interactor.ResourceManager : null;
+            return new InteractablePromptData
+            {
+                actionText = "Press E to repair Fence",
+                woodCost = nightFence.GetRequiredWood(),
+                scrapCost = nightFence.GetRequiredScrap(),
+                canAfford = nightFence.HasEnoughResources(nightManager)
+            };
+        }
+
         if (HasFence)
         {
-            return InteractablePromptData.CreateSimple("Fence already installed");
+            return InteractablePromptData.CreateSimple("Fence Installed");
         }
 
         ResourceManager resourceManager = interactor != null ? interactor.ResourceManager : null;
@@ -190,29 +227,33 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     public void Interact(PlayerInteractor interactor)
     {
-        if (!isUnlocked)
+        if (interactor == null || GameManager.Instance == null || !CanInteract(interactor))
         {
-            Debug.Log($"[FenceSlot] '{name}' is locked. Placement blocked.", this);
             return;
         }
 
-        if (HasFence)
+        if (GameManager.Instance.IsDay)
         {
-            Debug.Log($"[FenceSlot] '{name}' already has an installed fence.", this);
-            return;
+            interactor.OpenStructureActionPanel(this);
         }
-
-        if (fencePrefab == null)
+        else
         {
-            Debug.LogWarning($"[FenceSlot] '{name}' cannot place fence: fencePrefab is not assigned.", this);
-            return;
+            interactor.OpenNightRepairPanel(this);
+        }
+    }
+
+    public bool TryInstallFence(PlayerInteractor interactor)
+    {
+        if (!CanInstallFence())
+        {
+            return false;
         }
 
         ResourceManager resourceManager = interactor != null ? interactor.ResourceManager : null;
         if (resourceManager == null)
         {
             Debug.LogWarning($"[FenceSlot] '{name}' cannot place fence: missing ResourceManager.", this);
-            return;
+            return false;
         }
 
         if (!HasRequiredBuildResources(resourceManager))
@@ -225,7 +266,7 @@ public class FenceSlot : MonoBehaviour, IInteractable
 #else
             Debug.Log($"[FenceSlot] '{name}' cannot place fence: not enough resources (Wood {Mathf.Max(0, woodBuildCost)}, Scrap {Mathf.Max(0, scrapBuildCost)}).", this);
 #endif
-            return;
+            return false;
         }
 
         bool spentWood = resourceManager.TrySpendResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost)) || Mathf.Max(0, woodBuildCost) == 0;
@@ -233,10 +274,39 @@ public class FenceSlot : MonoBehaviour, IInteractable
         if (!spentWood || !spentScrap)
         {
             Debug.LogWarning($"[FenceSlot] '{name}' failed to spend build cost. Placement cancelled.", this);
-            return;
+            if (spentWood && Mathf.Max(0, woodBuildCost) > 0)
+            {
+                resourceManager.AddResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost));
+            }
+            if (spentScrap && Mathf.Max(0, scrapBuildCost) > 0)
+            {
+                resourceManager.AddResource(ResourceType.Scrap, Mathf.Max(0, scrapBuildCost));
+            }
+            return false;
         }
 
-        TryPlaceFence();
+        if (TryPlaceFence())
+        {
+            return true;
+        }
+
+        if (Mathf.Max(0, woodBuildCost) > 0)
+        {
+            resourceManager.AddResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost));
+        }
+        if (Mathf.Max(0, scrapBuildCost) > 0)
+        {
+            resourceManager.AddResource(ResourceType.Scrap, Mathf.Max(0, scrapBuildCost));
+        }
+        return false;
+    }
+
+    public bool TryRepairFence(PlayerInteractor interactor)
+    {
+        FenceSegment segment = CurrentFence;
+        return interactor != null
+            && segment != null
+            && segment.TryRepair(interactor.ResourceManager);
     }
 
     public FenceSlotRuntimeState CreateRuntimeState()
@@ -327,16 +397,20 @@ public class FenceSlot : MonoBehaviour, IInteractable
     {
         if (installedFence == null)
         {
+            installedFenceSegment = null;
             return null;
         }
 
-        FenceSegment segment = installedFence.GetComponent<FenceSegment>();
-        if (segment == null)
+        if (installedFenceSegment == null)
         {
-            segment = installedFence.GetComponentInChildren<FenceSegment>(true);
+            installedFenceSegment = installedFence.GetComponent<FenceSegment>();
+            if (installedFenceSegment == null)
+            {
+                installedFenceSegment = installedFence.GetComponentInChildren<FenceSegment>(true);
+            }
         }
 
-        return segment;
+        return installedFenceSegment;
     }
 
     private bool TryPlaceFence()
@@ -349,6 +423,7 @@ public class FenceSlot : MonoBehaviour, IInteractable
         Transform origin = SpawnPoint;
         GameObject spawnedFence = Instantiate(fencePrefab, origin.position, origin.rotation);
         installedFence = spawnedFence;
+        installedFenceSegment = null;
         RefreshSlotVisualState();
         Debug.Log($"[FenceSlot] Placed fence '{spawnedFence.name}' in slot '{name}'.", this);
         return true;
