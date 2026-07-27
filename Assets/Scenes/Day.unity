@@ -804,7 +804,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c3d9e5b02e6f5d8c9f4a123456789abc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DayTimeManager
-  dayDurationSeconds: 15
+  dayDurationSeconds: 30
   autoStartOnAwake: 1
 --- !u!1 &54312099
 GameObject:
@@ -18628,7 +18628,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -0.56
+      value: 0.72
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.y
@@ -18636,7 +18636,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 8.56
+      value: 3.8
       objectReference: {fileID: 0}
     - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
       propertyPath: m_LocalRotation.w
