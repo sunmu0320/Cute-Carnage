@@ -4602,9 +4602,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f7f186faf7d146e479fbd58beda0128b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ResourceManager
-  startingWood: 10
-  startingScrap: 10
-  startingFood: 10
+  startingWood: 25
+  startingScrap: 25
+  startingFood: 25
 --- !u!1001 &324830840
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -13934,7 +13934,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::CameraFollow
   target: {fileID: 1095320883}
-  offset: {x: 0, y: 14, z: -5}
+  offset: {x: 0, y: 18, z: -5}
 --- !u!1001 &1224784355
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -18618,63 +18618,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: efc8d0b3d9f409c4bbeaef5d738c9731, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StructureActionPanelUI
---- !u!1001 &1615560464
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0.72
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 0.71
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 3.8
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 660014525708114860, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8323288054292854364, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
-      propertyPath: m_Name
-      value: BasicZombie
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3477af0616b1e1141b6db78d1a9000ab, type: 3}
 --- !u!1 &1622799105
 GameObject:
   m_ObjectHideFlags: 0
@@ -24350,7 +24293,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameManager
   daySceneName: Day
   nightSceneName: Night
-  nightSurvivalSeconds: 60
   returnToDayKey: 110
 --- !u!1001 &428294470117071079
 PrefabInstance:
@@ -24920,7 +24862,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.x
-      value: -3.6
+      value: 1.56
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.y
@@ -24928,7 +24870,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 18.37
+      value: 16.07
       objectReference: {fileID: 0}
     - target: {fileID: 767657653024391801, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_LocalRotation.w
@@ -24960,7 +24902,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1099842641501820461, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: m_Enabled
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3906453950919470430, guid: 29aac32f1443a494c8dd80aca03cc7ec, type: 3}
       propertyPath: resourceManager
@@ -25037,7 +24979,6 @@ SceneRoots:
   - {fileID: 1517461356}
   - {fileID: 781669505}
   - {fileID: 797952896}
-  - {fileID: 1615560464}
   - {fileID: 412184516}
   - {fileID: 547414292}
   - {fileID: 146657911}

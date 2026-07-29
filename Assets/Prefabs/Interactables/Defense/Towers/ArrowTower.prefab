@@ -86,7 +86,7 @@ MonoBehaviour:
   currentHp: 10
   attackRange: 13.76
   attackInterval: 1
-  damage: 1
+  damage: 5
   hitRadius: 0.25
   targetAimHeightOffset: 1
   hpAnchor: {fileID: 4706308212784418641}

@@ -20,9 +20,6 @@ public class GameManager : MonoBehaviour
     private string nightSceneName = "Night";
 
     [SerializeField]
-    private float nightSurvivalSeconds = 60f;
-
-    [SerializeField]
     private KeyCode returnToDayKey = KeyCode.N;
 
     private const int DefaultBaseLevel = 1;
@@ -39,7 +36,6 @@ public class GameManager : MonoBehaviour
     private DayTimeManager boundDayTimeManager;
     private BaseManager baseManager;
     private ResourceManager cachedResourceManager;
-    private float nightTimerRemaining;
     private GamePhase currentPhase = GamePhase.Unknown;
     private RunRuntimeState currentRunState;
     private bool hasInitializedRunState;
@@ -98,29 +94,15 @@ public class GameManager : MonoBehaviour
 
     private void Update()
     {
-        if (currentPhase != GamePhase.Night)
+        if (currentPhase != GamePhase.Night || !Input.GetKeyDown(returnToDayKey))
         {
             return;
         }
 
-        UpdateNightStageTimer();
-    }
-
-    private void UpdateNightStageTimer()
-    {
-        nightTimerRemaining -= Time.deltaTime;
-        bool timerExpired = nightTimerRemaining <= 0f;
-        bool debugReturnToDay = Input.GetKeyDown(returnToDayKey);
-        if (timerExpired || debugReturnToDay)
-        {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (debugReturnToDay)
-            {
-                LogTransition($"Debug Night->Day: '{returnToDayKey}' pressed. Calling TransitionToDay() (same path as timer end).");
-            }
+        LogTransition($"Debug Night->Day: '{returnToDayKey}' pressed. Calling TransitionToDay().");
 #endif
-            TransitionToDay();
-        }
+        TransitionToDay();
     }
 
     public void TransitionToNight()
@@ -191,7 +173,6 @@ public class GameManager : MonoBehaviour
             currentPhase = GamePhase.Night;
             LogTransition("Entered Night scene.");
             UnbindDayManager();
-            nightTimerRemaining = nightSurvivalSeconds;
             AfterEnterNightScene();
         }
         else

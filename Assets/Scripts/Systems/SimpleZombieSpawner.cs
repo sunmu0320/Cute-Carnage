@@ -4,15 +4,45 @@ using UnityEngine.SceneManagement;
 
 public class SimpleZombieSpawner : MonoBehaviour
 {
+    [Serializable]
+    private class WaveDefinition
+    {
+        [Min(1)] public int zombieCount = 10;
+        [Min(0.01f)] public float spawnInterval = 1f;
+    }
+
+    private enum SpawnMode
+    {
+        FullCircle,
+        DirectionalArc
+    }
+
+    private enum WaveState
+    {
+        InitialDelay,
+        Spawning,
+        WaitingForClear,
+        InterWaveDelay,
+        Complete,
+        Stopped
+    }
+
     [Header("Spawn Setup")]
     [SerializeField] private GameObject zombiePrefab;
     [SerializeField] private Transform baseCoreTransform;
-    [SerializeField] private int zombiesPerWave = 12;
-    [SerializeField] private float spawnInterval = 1.5f;
     [SerializeField] private float minSpawnRadius = 12f;
     [SerializeField] private float maxSpawnRadius = 18f;
     [SerializeField] private float spawnHeightOffset = 0f;
     [SerializeField] private int maxSpawnPositionAttempts = 4;
+
+    [Header("Night Waves")]
+    [SerializeField] private float initialWaveStartDelay = 3f;
+    [SerializeField] private float interWaveDelay = 3f;
+    [SerializeField] private WaveDefinition[] nightWaves;
+
+    [Header("Spawn Direction")]
+    [SerializeField] private SpawnMode spawnMode = SpawnMode.FullCircle;
+    [SerializeField, Range(1f, 360f)] private float arcAngle = 45f;
 
     public event Action OnNightWaveCompleted;
 
@@ -21,12 +51,13 @@ public class SimpleZombieSpawner : MonoBehaviour
     private float timer;
     private int spawnedCount;
     private int totalZombiesSpawned;
-    private bool spawningFinished;
+    private int currentWaveIndex;
+    private WaveState waveState;
     private bool hasTriggeredDayTransition;
     private bool warnedMissingPrefab;
     private bool warnedMissingBaseCore;
-    private bool warnedSpawnFailed;
     private bool warnedInvalidSpawnRadiusOrder;
+    private bool warnedMissingWaves;
 
     private void Awake()
     {
@@ -38,16 +69,68 @@ public class SimpleZombieSpawner : MonoBehaviour
         ClampSettings();
     }
 
-    private void Update()
+    private void Start()
     {
-        if (spawningFinished)
+        if (nightWaves == null || nightWaves.Length == 0)
         {
-            TryCompleteNightWhenCleared();
+            WarnMissingWavesAndStop();
             return;
         }
 
+        waveState = WaveState.InitialDelay;
+        timer = initialWaveStartDelay;
+        Debug.Log(
+            $"[SimpleZombieSpawner] Night wave countdown started ({initialWaveStartDelay:0.##}s).",
+            this);
+    }
+
+    private void Update()
+    {
+        switch (waveState)
+        {
+            case WaveState.InitialDelay:
+                UpdateDelayAndStartWave();
+                break;
+            case WaveState.Spawning:
+                UpdateSpawning();
+                break;
+            case WaveState.WaitingForClear:
+                UpdateWaitingForClear();
+                break;
+            case WaveState.InterWaveDelay:
+                UpdateDelayAndStartWave();
+                break;
+        }
+    }
+
+    private void UpdateDelayAndStartWave()
+    {
+        timer -= Time.deltaTime;
+        if (timer > 0f)
+        {
+            return;
+        }
+
+        StartCurrentWave();
+    }
+
+    private void StartCurrentWave()
+    {
+        spawnedCount = 0;
+        timer = 0f;
+        waveState = WaveState.Spawning;
+
+        WaveDefinition wave = nightWaves[currentWaveIndex];
+        Debug.Log(
+            $"[SimpleZombieSpawner] Wave {currentWaveIndex + 1}/{nightWaves.Length} started (zombies={wave.zombieCount}).",
+            this);
+    }
+
+    private void UpdateSpawning()
+    {
+        WaveDefinition wave = nightWaves[currentWaveIndex];
         timer += Time.deltaTime;
-        if (timer < spawnInterval)
+        if (timer < wave.spawnInterval)
         {
             return;
         }
@@ -77,52 +160,53 @@ public class SimpleZombieSpawner : MonoBehaviour
             return;
         }
 
-        bool spawnedThisTick = false;
-        for (int i = 0; i < maxSpawnPositionAttempts; i++)
-        {
-            Vector3 spawnPosition = GetRandomSpawnPositionAroundBase(resolvedBaseCore.position);
-            Instantiate(zombiePrefab, spawnPosition, Quaternion.identity);
-            spawnedThisTick = true;
-            break;
-        }
-
-        if (!spawnedThisTick)
-        {
-            if (!warnedSpawnFailed)
-            {
-                Debug.LogWarning("[SimpleZombieSpawner] Failed to resolve a valid spawn position this tick.", this);
-                warnedSpawnFailed = true;
-            }
-
-            timer = 0f;
-            return;
-        }
-
-        warnedSpawnFailed = false;
+        Vector3 spawnPosition = GetRandomSpawnPositionAroundBase(resolvedBaseCore.position);
+        Instantiate(zombiePrefab, spawnPosition, Quaternion.identity);
         warnedMissingBaseCore = false;
         spawnedCount++;
         totalZombiesSpawned++;
-        if (spawnedCount >= zombiesPerWave)
+        if (spawnedCount >= wave.zombieCount)
         {
-            spawningFinished = true;
+            waveState = WaveState.WaitingForClear;
         }
 
         timer = 0f;
     }
 
-    private void TryCompleteNightWhenCleared()
+    private void UpdateWaitingForClear()
+    {
+        if (Zombie.AliveZombieCount > 0)
+        {
+            return;
+        }
+
+        Debug.Log(
+            $"[SimpleZombieSpawner] Wave {currentWaveIndex + 1}/{nightWaves.Length} cleared.",
+            this);
+
+        if (currentWaveIndex < nightWaves.Length - 1)
+        {
+            currentWaveIndex++;
+            timer = interWaveDelay;
+            waveState = WaveState.InterWaveDelay;
+            Debug.Log(
+                $"[SimpleZombieSpawner] Inter-wave countdown started ({interWaveDelay:0.##}s); Wave {currentWaveIndex + 1} follows.",
+                this);
+            return;
+        }
+
+        CompleteNight();
+    }
+
+    private void CompleteNight()
     {
         if (hasTriggeredDayTransition)
         {
             return;
         }
 
-        if (Zombie.AliveZombieCount > 0)
-        {
-            return;
-        }
-
         hasTriggeredDayTransition = true;
+        waveState = WaveState.Complete;
         OnNightWaveCompleted?.Invoke();
 
         if (GameManager.Instance != null)
@@ -135,14 +219,43 @@ public class SimpleZombieSpawner : MonoBehaviour
         }
 
         Debug.Log(
-            $"[SimpleZombieSpawner] Night wave complete (spawned={spawnedCount}, totalSpawned={totalZombiesSpawned}). TransitionToDay invoked.",
+            $"[SimpleZombieSpawner] Final Night wave complete (totalSpawned={totalZombiesSpawned}). TransitionToDay invoked.",
+            this);
+    }
+
+    private void WarnMissingWavesAndStop()
+    {
+        waveState = WaveState.Stopped;
+        if (warnedMissingWaves)
+        {
+            return;
+        }
+
+        warnedMissingWaves = true;
+        Debug.LogWarning(
+            "[SimpleZombieSpawner] nightWaves is null or empty. Night spawning has stopped; Day transition was not triggered.",
             this);
     }
 
     private void ClampSettings()
     {
-        zombiesPerWave = Mathf.Max(1, zombiesPerWave);
-        spawnInterval = Mathf.Max(0.01f, spawnInterval);
+        initialWaveStartDelay = Mathf.Max(0f, initialWaveStartDelay);
+        interWaveDelay = Mathf.Max(0f, interWaveDelay);
+        arcAngle = Mathf.Clamp(arcAngle, 1f, 360f);
+        if (nightWaves != null)
+        {
+            for (int i = 0; i < nightWaves.Length; i++)
+            {
+                if (nightWaves[i] == null)
+                {
+                    nightWaves[i] = new WaveDefinition();
+                }
+
+                nightWaves[i].zombieCount = Mathf.Max(1, nightWaves[i].zombieCount);
+                nightWaves[i].spawnInterval = Mathf.Max(0.01f, nightWaves[i].spawnInterval);
+            }
+        }
+
         minSpawnRadius = Mathf.Max(0f, minSpawnRadius);
         maxSpawnRadius = Mathf.Max(0f, maxSpawnRadius);
         if (maxSpawnRadius < minSpawnRadius)
@@ -164,12 +277,30 @@ public class SimpleZombieSpawner : MonoBehaviour
 
     private Vector3 GetRandomSpawnPositionAroundBase(Vector3 baseCorePosition)
     {
-        float randomAngleRadians = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
         float randomDistance = UnityEngine.Random.Range(minSpawnRadius, maxSpawnRadius);
-        Vector3 direction = new Vector3(Mathf.Cos(randomAngleRadians), 0f, Mathf.Sin(randomAngleRadians));
+        Vector3 direction;
+        if (spawnMode == SpawnMode.DirectionalArc)
+        {
+            direction = GetHorizontalForward();
+            float angle = UnityEngine.Random.Range(-arcAngle * 0.5f, arcAngle * 0.5f);
+            direction = Quaternion.AngleAxis(angle, Vector3.up) * direction;
+        }
+        else
+        {
+            float randomAngleRadians = UnityEngine.Random.Range(0f, Mathf.PI * 2f);
+            direction = new Vector3(Mathf.Cos(randomAngleRadians), 0f, Mathf.Sin(randomAngleRadians));
+        }
+
         Vector3 spawnPosition = baseCorePosition + direction * randomDistance;
         spawnPosition.y = baseCorePosition.y + spawnHeightOffset;
         return spawnPosition;
+    }
+
+    private Vector3 GetHorizontalForward()
+    {
+        Vector3 forward = transform.forward;
+        forward.y = 0f;
+        return forward.sqrMagnitude > 0.0001f ? forward.normalized : Vector3.forward;
     }
 
     private Transform ResolveBaseCoreTransform()
@@ -259,9 +390,40 @@ public class SimpleZombieSpawner : MonoBehaviour
 
         Vector3 center = gizmoBase.position;
         center.y += spawnHeightOffset;
+        if (spawnMode == SpawnMode.FullCircle)
+        {
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawWireSphere(center, minSpawnRadius);
+            Gizmos.color = Color.red;
+            Gizmos.DrawWireSphere(center, maxSpawnRadius);
+            return;
+        }
+
+        Vector3 forward = GetHorizontalForward();
+        Vector3 left = Quaternion.AngleAxis(-arcAngle * 0.5f, Vector3.up) * forward;
+        Vector3 right = Quaternion.AngleAxis(arcAngle * 0.5f, Vector3.up) * forward;
+
         Gizmos.color = Color.yellow;
-        Gizmos.DrawWireSphere(center, minSpawnRadius);
+        DrawArcGizmo(center, forward, minSpawnRadius);
         Gizmos.color = Color.red;
-        Gizmos.DrawWireSphere(center, maxSpawnRadius);
+        DrawArcGizmo(center, forward, maxSpawnRadius);
+        Gizmos.DrawLine(center + left * minSpawnRadius, center + left * maxSpawnRadius);
+        Gizmos.DrawLine(center + right * minSpawnRadius, center + right * maxSpawnRadius);
+        Gizmos.color = Color.cyan;
+        Gizmos.DrawLine(center, center + forward * maxSpawnRadius);
+    }
+
+    private void DrawArcGizmo(Vector3 center, Vector3 centerDirection, float radius)
+    {
+        const int segments = 24;
+        float startAngle = -arcAngle * 0.5f;
+        Vector3 previous = center + Quaternion.AngleAxis(startAngle, Vector3.up) * centerDirection * radius;
+        for (int i = 1; i <= segments; i++)
+        {
+            float angle = Mathf.Lerp(startAngle, arcAngle * 0.5f, i / (float)segments);
+            Vector3 next = center + Quaternion.AngleAxis(angle, Vector3.up) * centerDirection * radius;
+            Gizmos.DrawLine(previous, next);
+            previous = next;
+        }
     }
 }
