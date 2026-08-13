@@ -8,7 +8,7 @@ public class Zombie : MonoBehaviour
     private static readonly int DieHash = Animator.StringToHash("Die");
     private const float AttackRangeTolerance = 0.01f;
 
-    /// <summary>Prototype: all Zombie instances in the play session (OnEnable/OnDestroy).</summary>
+    /// <summary>Prototype: zombies not yet dead (OnEnable increments, death judgment in Die() decrements).</summary>
     public static int AliveZombieCount { get; private set; }
 
     [Header("Data (optional)")]
@@ -95,11 +95,6 @@ public class Zombie : MonoBehaviour
     private void OnEnable()
     {
         AliveZombieCount++;
-    }
-
-    private void OnDestroy()
-    {
-        AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
     }
 
     private void OnDisable()
@@ -1098,6 +1093,7 @@ public class Zombie : MonoBehaviour
         }
 
         hasDied = true;
+        AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
         ClearPendingAttack();
         ClearTargetSelection();
         cachedBaseCoreTransform = null;

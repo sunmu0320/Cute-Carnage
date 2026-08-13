@@ -22,6 +22,7 @@ public class SimpleZombieSpawner : MonoBehaviour
         InitialDelay,
         Spawning,
         WaitingForClear,
+        PostClearDelay,
         InterWaveDelay,
         Complete,
         Stopped
@@ -38,6 +39,7 @@ public class SimpleZombieSpawner : MonoBehaviour
     [Header("Night Waves")]
     [SerializeField] private float initialWaveStartDelay = 3f;
     [SerializeField] private float interWaveDelay = 3f;
+    [SerializeField] private float postClearDelay = 1.5f;
     [SerializeField] private WaveDefinition[] nightWaves;
 
     [Header("Spawn Direction")]
@@ -96,6 +98,9 @@ public class SimpleZombieSpawner : MonoBehaviour
                 break;
             case WaveState.WaitingForClear:
                 UpdateWaitingForClear();
+                break;
+            case WaveState.PostClearDelay:
+                UpdatePostClearDelay();
                 break;
             case WaveState.InterWaveDelay:
                 UpdateDelayAndStartWave();
@@ -206,6 +211,21 @@ public class SimpleZombieSpawner : MonoBehaviour
             $"[SimpleZombieSpawner] Wave {currentWaveIndex + 1}/{nightWaves.Length} cleared.",
             this);
 
+        timer = postClearDelay;
+        waveState = WaveState.PostClearDelay;
+        Debug.Log(
+            $"[SimpleZombieSpawner] Post-clear countdown started ({postClearDelay:0.##}s).",
+            this);
+    }
+
+    private void UpdatePostClearDelay()
+    {
+        timer -= Time.deltaTime;
+        if (timer > 0f)
+        {
+            return;
+        }
+
         if (currentWaveIndex < nightWaves.Length - 1)
         {
             currentWaveIndex++;
@@ -263,6 +283,7 @@ public class SimpleZombieSpawner : MonoBehaviour
     {
         initialWaveStartDelay = Mathf.Max(0f, initialWaveStartDelay);
         interWaveDelay = Mathf.Max(0f, interWaveDelay);
+        postClearDelay = Mathf.Max(0f, postClearDelay);
         arcAngle = Mathf.Clamp(arcAngle, 1f, 360f);
         if (nightWaves != null)
         {
