@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 
 public class PlayerInteractor : MonoBehaviour
@@ -147,13 +146,6 @@ public class PlayerInteractor : MonoBehaviour
         if (overlapBufferSize < 4)
             overlapBufferSize = 4;
         overlapBuffer = new Collider[overlapBufferSize];
-
-        SceneManager.sceneLoaded += OnSceneLoadedForResources;
-    }
-
-    void OnDestroy()
-    {
-        SceneManager.sceneLoaded -= OnSceneLoadedForResources;
     }
 
     void OnEnable()
@@ -162,11 +154,6 @@ public class PlayerInteractor : MonoBehaviour
     }
 
     void Start()
-    {
-        BindResourceManagerFromActiveScene();
-    }
-
-    void OnSceneLoadedForResources(Scene scene, LoadSceneMode mode)
     {
         BindResourceManagerFromActiveScene();
     }

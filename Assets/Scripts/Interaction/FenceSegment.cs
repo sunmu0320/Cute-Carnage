@@ -182,40 +182,6 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
         RefreshScreenSpaceHpBar();
     }
 
-    /// <summary>
-    /// Sets HP for runtime restore / sync. Clamps to [0, MaxHp] and refreshes the HP bar.
-    /// Does not spend resources. When HP is 0, sets destroyed state; when HP is positive, clears it.
-    /// </summary>
-    public void SetCurrentHp(float value)
-    {
-        EnsureValidState();
-
-        float clamped = Mathf.Clamp(value, 0f, MaxHp);
-        currentHp = clamped;
-        isDestroyed = clamped <= 0f;
-        ApplyDestroyedState();
-        RefreshScreenSpaceHpBar();
-    }
-
-    /// <summary>
-    /// Sets HP and broken state for load; if HP is above zero, destroyed is always cleared.
-    /// </summary>
-    public void SetCurrentHp(float value, bool destroyed)
-    {
-        EnsureValidState();
-
-        float clamped = Mathf.Clamp(value, 0f, MaxHp);
-        currentHp = clamped;
-        isDestroyed = destroyed;
-        if (currentHp > 0f)
-        {
-            isDestroyed = false;
-        }
-
-        ApplyDestroyedState();
-        RefreshScreenSpaceHpBar();
-    }
-
     void CacheBarrierColliders()
     {
         if (cachedBarrierColliders != null)

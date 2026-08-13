@@ -99,21 +99,6 @@ public class PlayerHealth : MonoBehaviour
         NotifyHealthChanged();
     }
 
-    public PlayerRuntimeState CaptureRuntimeState()
-    {
-        return new PlayerRuntimeState { currentHp = CurrentHealth };
-    }
-
-    public void ApplyRuntimeState(PlayerRuntimeState state)
-    {
-        if (state == null)
-        {
-            return;
-        }
-
-        SetHealth(Mathf.RoundToInt(state.currentHp));
-    }
-
     private void SetHealth(int newHealth)
     {
         int previousHealth = currentHealth;

@@ -1700,7 +1700,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: arcAngle
-      value: 39
+      value: 94
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: spawnMode
@@ -1712,11 +1712,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: maxSpawnRadius
-      value: 29.3
+      value: 51
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: minSpawnRadius
-      value: 23.3
+      value: 36.7
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: zombiesPerWave
@@ -1744,15 +1744,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: nightWaves.Array.data[1].zombieCount
-      value: 10
+      value: 12
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: nightWaves.Array.data[2].zombieCount
-      value: 10
+      value: 15
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: nightWaves.Array.data[0].spawnInterval
-      value: 0.7
+      value: 0.6
       objectReference: {fileID: 0}
     - target: {fileID: 3311263037659571044, guid: 502b787fc547c4a4ba4f5018bc64f3c7, type: 3}
       propertyPath: nightWaves.Array.data[1].spawnInterval

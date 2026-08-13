@@ -47,7 +47,17 @@ public class DayTimeManager : MonoBehaviour
 
     private void Awake()
     {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[TEMP-DEBUG][DayTimeManager] Awake id={GetInstanceID()} scene='{gameObject.scene.name}' autoStartOnAwake={autoStartOnAwake} duration={dayDurationSeconds}", this);
+#endif
         ResetTimerState(autoStartOnAwake);
+    }
+
+    private void OnDestroy()
+    {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[TEMP-DEBUG][DayTimeManager] OnDestroy id={GetInstanceID()}", this);
+#endif
     }
 
     private void Update()
@@ -84,6 +94,9 @@ public class DayTimeManager : MonoBehaviour
         hasDayEnded = false;
         isPaused = false;
         isCountingDown = shouldCountDown;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        Debug.Log($"[TEMP-DEBUG][DayTimeManager] ResetTimerState id={GetInstanceID()} shouldCountDown={shouldCountDown} totalDuration={totalDuration}", this);
+#endif
     }
 
     public void Pause()

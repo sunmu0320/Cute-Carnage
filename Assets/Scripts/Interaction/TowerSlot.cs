@@ -444,72 +444,6 @@ public class TowerSlot : MonoBehaviour, IInteractable
 #endif
     }
 
-    public TowerSlotRuntimeState CreateRuntimeState()
-    {
-        EnsureCurrentTowerReference();
-        bool occupied = hasTower || currentTower != null;
-        float capturedHp = 0f;
-        bool capturedDestroyed = false;
-        if (occupied && TryGetCurrentTowerComponent(out ArrowTower tower))
-        {
-            capturedHp = tower.CurrentHp;
-            capturedDestroyed = tower.IsDestroyed;
-        }
-
-        return new TowerSlotRuntimeState
-        {
-            id = PersistentId,
-            hasTower = occupied,
-            towerId = occupied ? ArrowTowerTowerId : string.Empty,
-            level = 1,
-            currentHp = capturedHp,
-            isDestroyed = capturedDestroyed
-        };
-    }
-
-    public void ApplyRuntimeState(TowerSlotRuntimeState state)
-    {
-        if (state == null)
-        {
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(state.id) || state.id != PersistentId)
-        {
-            return;
-        }
-
-        if (!state.hasTower)
-        {
-            return;
-        }
-
-        EnsureCurrentTowerReference();
-        if (hasTower)
-        {
-            ApplyTowerDurabilityState(state);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            Debug.Log(
-                $"[TowerSlot] ApplyRuntimeState slot id='{PersistentId}' incoming hasTower={state.hasTower} towerId='{state.towerId}' " +
-                "restored=False skipped=True (tower already exists on slot).",
-                this);
-#endif
-            return;
-        }
-
-        bool hadTowerBeforePlace = hasTower;
-        PlaceTowerInternal(state.towerId);
-        EnsureCurrentTowerReference();
-        ApplyTowerDurabilityState(state);
-        bool restored = !hadTowerBeforePlace && hasTower;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log(
-            $"[TowerSlot] ApplyRuntimeState slot id='{PersistentId}' incoming hasTower={state.hasTower} towerId='{state.towerId}' " +
-            $"restored={restored} skipped=False",
-            this);
-#endif
-    }
-
     private GameObject ResolveTowerPrefab(string towerId)
     {
         if (string.IsNullOrWhiteSpace(towerId) || towerId == ArrowTowerTowerId)
@@ -568,23 +502,6 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
         tower = cachedArrowTower;
         return tower != null;
-    }
-
-    private void ApplyTowerDurabilityState(TowerSlotRuntimeState state)
-    {
-        if (state == null || !state.hasTower)
-        {
-            return;
-        }
-
-        if (!TryGetCurrentTowerComponent(out ArrowTower tower))
-        {
-            return;
-        }
-
-        tower.ApplyRuntimeDurability(state.currentHp, state.isDestroyed);
-        InvalidateTowerHpBarCache();
-        EnsureTowerHpBarBinding();
     }
 
     private void EnsureCurrentTowerReference()

@@ -126,14 +126,4 @@ public class HungerSystem : MonoBehaviour
             starvationDamageAccumulator = 0f;
     }
 
-    public void ApplyRuntimeState(PlayerRuntimeState state)
-    {
-        if (state == null)
-        {
-            return;
-        }
-
-        currentHunger = Mathf.Clamp(state.currentHunger, 0f, MaxHunger);
-        starvationDamageAccumulator = 0f;
-    }
 }

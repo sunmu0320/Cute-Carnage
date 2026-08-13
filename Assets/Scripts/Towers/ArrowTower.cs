@@ -37,19 +37,6 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     public bool IsDestroyed => isDestroyed;
     public Transform HpAnchorTransform => hpAnchor != null ? hpAnchor : transform;
 
-    public void ApplyRuntimeDurability(float runtimeCurrentHp, bool runtimeDestroyed)
-    {
-        float clampedHp = Mathf.Clamp(runtimeCurrentHp, 0f, maxHp);
-        isDestroyed = runtimeDestroyed || clampedHp <= 0f;
-        currentHp = isDestroyed ? 0f : clampedHp;
-        if (isDestroyed)
-        {
-            ClearAttackState();
-        }
-
-        ApplyDestroyedState();
-    }
-
     private void Awake()
     {
         ClampHealthSettings(resetCurrentToMaxIfNeeded: true);

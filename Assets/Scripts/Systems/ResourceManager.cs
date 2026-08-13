@@ -345,21 +345,4 @@ public class ResourceManager : MonoBehaviour
             food = GetAmount(ResourceType.Food)
         };
     }
-
-    public void ApplyRuntimeState(ResourceRuntimeState state)
-    {
-        if (state == null)
-        {
-            return;
-        }
-
-        InitializeIfNeeded();
-        resources[ResourceType.Wood] = Mathf.Max(0, state.wood);
-        resources[ResourceType.Scrap] = Mathf.Max(0, state.scrap);
-        resources[ResourceType.Food] = Mathf.Max(0, state.food);
-
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[ResourceManager] After ApplyRuntimeState. {GetDebugSummary()}", this);
-#endif
-    }
 }

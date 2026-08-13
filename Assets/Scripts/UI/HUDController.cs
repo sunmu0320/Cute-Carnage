@@ -69,6 +69,8 @@ public class HUDController : MonoBehaviour
     private bool baseHpFillCacheValid;
     private float lastBaseHpFill;
     private float nextSourceResolveTime;
+    private float nextTempDebugLogTime;
+    private bool subscribedToPhaseChanges;
 
     private const float SourceRetryInterval = 1f;
     private const float DayTimerFillEpsilon = 0.0001f;
@@ -77,6 +79,9 @@ public class HUDController : MonoBehaviour
     private void Awake()
     {
         ApplyPlaceholderText();
+
+        if (dayTimeManager == null)
+            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
 
         if (Application.isPlaying)
         {
@@ -89,7 +94,7 @@ public class HUDController : MonoBehaviour
         if (!Application.isPlaying)
             return;
 
-        SceneManager.sceneLoaded += OnSceneLoaded;
+        TrySubscribeToPhaseChanges();
         InvalidateDisplayCaches();
         ResolveMissingSources();
         BindPlayerHealth();
@@ -101,10 +106,30 @@ public class HUDController : MonoBehaviour
         if (!Application.isPlaying)
             return;
 
-        SceneManager.sceneLoaded -= OnSceneLoaded;
+        if (subscribedToPhaseChanges && GameManager.Instance != null)
+            GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
+        subscribedToPhaseChanges = false;
+
         if (subscribedPlayerHealth != null)
             subscribedPlayerHealth.onHealthChanged.RemoveListener(UpdateHP);
         subscribedPlayerHealth = null;
+    }
+
+    private void TrySubscribeToPhaseChanges()
+    {
+        if (subscribedToPhaseChanges || GameManager.Instance == null)
+            return;
+
+        GameManager.Instance.OnPhaseChanged += HandlePhaseChanged;
+        subscribedToPhaseChanges = true;
+    }
+
+    private void HandlePhaseChanged(GameManager.GamePhase phase)
+    {
+        InvalidateBaseHpCache();
+        ResolveMissingSources();
+        BindPlayerHealth();
+        RefreshCurrentValues();
     }
 
 #if UNITY_EDITOR
@@ -122,6 +147,8 @@ public class HUDController : MonoBehaviour
         // If sources are missing, it will just keep the fallback placeholders.
         if (!Application.isPlaying)
             return;
+
+        TrySubscribeToPhaseChanges();
 
         if (HasMissingSource() && Time.unscaledTime >= nextSourceResolveTime)
         {
@@ -254,6 +281,14 @@ public class HUDController : MonoBehaviour
 
         if (dayTimeManager != null)
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (Time.unscaledTime >= nextTempDebugLogTime)
+            {
+                Debug.Log($"[TEMP-DEBUG][HUDController] hud id={GetInstanceID()} scene='{gameObject.scene.name}' bound dayTimeManager id={dayTimeManager.GetInstanceID()} remaining={dayTimeManager.RemainingTimeSeconds:0.0}");
+                nextTempDebugLogTime = Time.unscaledTime + 1f;
+            }
+#endif
+
             float remainingSeconds = dayTimeManager.RemainingTimeSeconds;
             // NormalizedTime is day-progress (0 -> 1). We want remaining fraction (1 -> 0).
             float remainingNormalized = 1f - dayTimeManager.NormalizedTime;
@@ -285,8 +320,6 @@ public class HUDController : MonoBehaviour
             hungerSystem = FindFirstObjectByType<HungerSystem>();
         if (resourceManager == null)
             resourceManager = ResourceManager.FindInActiveLoadedScene();
-        if (dayTimeManager == null)
-            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
         if (!IsValidActiveSceneBaseCore(baseCore))
             SetBaseCore(FindBaseCoreInActiveScene());
 
@@ -298,7 +331,6 @@ public class HUDController : MonoBehaviour
         return playerHealth == null
             || hungerSystem == null
             || resourceManager == null
-            || dayTimeManager == null
             || !IsValidActiveSceneBaseCore(baseCore);
     }
 
@@ -313,14 +345,6 @@ public class HUDController : MonoBehaviour
         subscribedPlayerHealth = playerHealth;
         if (subscribedPlayerHealth != null)
             subscribedPlayerHealth.onHealthChanged.AddListener(UpdateHP);
-    }
-
-    private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
-        InvalidateBaseHpCache();
-        ResolveMissingSources();
-        BindPlayerHealth();
-        RefreshCurrentValues();
     }
 
     private void InvalidateDisplayCaches()

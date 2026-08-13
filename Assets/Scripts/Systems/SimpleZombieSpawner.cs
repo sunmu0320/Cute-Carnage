@@ -103,6 +103,28 @@ public class SimpleZombieSpawner : MonoBehaviour
         }
     }
 
+    /// <summary>Re-arms the spawner for a new night. Without this, the second night never starts:
+    /// hasTriggeredDayTransition stays true and waveState stays Complete/Stopped from the previous night.</summary>
+    public void ResetForNewNight()
+    {
+        hasTriggeredDayTransition = false;
+        currentWaveIndex = 0;
+        totalZombiesSpawned = 0;
+        spawnedCount = 0;
+
+        if (nightWaves == null || nightWaves.Length == 0)
+        {
+            WarnMissingWavesAndStop();
+            return;
+        }
+
+        waveState = WaveState.InitialDelay;
+        timer = initialWaveStartDelay;
+        Debug.Log(
+            $"[SimpleZombieSpawner] ResetForNewNight: wave countdown restarted ({initialWaveStartDelay:0.##}s).",
+            this);
+    }
+
     private void UpdateDelayAndStartWave()
     {
         timer -= Time.deltaTime;
