@@ -71,10 +71,11 @@ public class HUDController : MonoBehaviour
     private float nextSourceResolveTime;
     private float nextTempDebugLogTime;
     private bool subscribedToPhaseChanges;
-    private int sourceResolveAttempts;
+    private float sourcePollingStartTime;
 
     private const float SourceRetryInterval = 1f;
-    private const int MaxSourceResolveAttempts = 5;
+    private const float SlowSourceRetryInterval = 2.5f;
+    private const float FastSourceRetryWindowSeconds = 5f;
     private const float DayTimerFillEpsilon = 0.0001f;
     private const float BaseHpFillEpsilon = 0.0001f;
 
@@ -87,6 +88,7 @@ public class HUDController : MonoBehaviour
 
         if (Application.isPlaying)
         {
+            sourcePollingStartTime = Time.unscaledTime;
             RefreshFromSources(); // Replace placeholders when sources are assigned.
         }
     }
@@ -95,6 +97,8 @@ public class HUDController : MonoBehaviour
     {
         if (!Application.isPlaying)
             return;
+
+        sourcePollingStartTime = Time.unscaledTime;
 
         TrySubscribeToPhaseChanges();
         InvalidateDisplayCaches();
@@ -152,9 +156,8 @@ public class HUDController : MonoBehaviour
 
         TrySubscribeToPhaseChanges();
 
-        if (HasMissingSource() && sourceResolveAttempts < MaxSourceResolveAttempts && Time.unscaledTime >= nextSourceResolveTime)
+        if (HasMissingSource() && Time.unscaledTime >= nextSourceResolveTime)
         {
-            sourceResolveAttempts++;
             ResolveMissingSources();
             BindPlayerHealth();
         }
@@ -326,7 +329,12 @@ public class HUDController : MonoBehaviour
         if (!IsValidActiveSceneBaseCore(baseCore))
             SetBaseCore(FindBaseCoreInActiveScene());
 
-        nextSourceResolveTime = Time.unscaledTime + SourceRetryInterval;
+        // Fast retries for the first few seconds (init-order edge cases resolve almost immediately);
+        // beyond that, back off to a slower interval but keep retrying indefinitely - never stop outright,
+        // since a legitimately slow load (asset loading delays, etc.) shouldn't leave the HUD stuck forever.
+        bool withinFastWindow = Time.unscaledTime - sourcePollingStartTime < FastSourceRetryWindowSeconds;
+        float retryInterval = withinFastWindow ? SourceRetryInterval : SlowSourceRetryInterval;
+        nextSourceResolveTime = Time.unscaledTime + retryInterval;
     }
 
     private bool HasMissingSource()
