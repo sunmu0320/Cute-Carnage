@@ -61,6 +61,7 @@ public class HUDController : MonoBehaviour
     private int lastWood;
     private bool dayCacheValid;
     private int lastDay;
+    private bool lastDayIsDay;
     private bool dayTimerSecondsCacheValid;
     private int lastDayTimerSeconds;
     private bool dayTimerFillCacheValid;
@@ -270,18 +271,21 @@ public class HUDController : MonoBehaviour
         if (GameManager.Instance != null)
         {
             int currentDay = GameManager.Instance.CurrentDay;
-            if (!dayCacheValid || lastDay != currentDay)
-                SetTextOrIgnore(dayText, $"DAY {currentDay}");
+            bool isDay = GameManager.Instance.IsDay;
+            if (!dayCacheValid || lastDay != currentDay || lastDayIsDay != isDay)
+                SetTextOrIgnore(dayText, isDay ? $"DAY {currentDay}" : $"NIGHT {currentDay}");
 
             lastDay = currentDay;
+            lastDayIsDay = isDay;
             dayCacheValid = true;
         }
         else
         {
-            if (!dayCacheValid || lastDay != 1)
+            if (!dayCacheValid || lastDay != 1 || !lastDayIsDay)
                 SetTextOrIgnore(dayText, GetFallbackDayText());
 
             lastDay = 1;
+            lastDayIsDay = true;
             dayCacheValid = true;
         }
 
