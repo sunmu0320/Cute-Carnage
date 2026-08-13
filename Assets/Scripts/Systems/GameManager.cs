@@ -90,7 +90,7 @@ public class GameManager : MonoBehaviour
             nightRoot.SetActive(false);
         }
 
-        BindDayManager();
+        ResolveDayTimeManager();
     }
 
     private void Start()
@@ -106,7 +106,11 @@ public class GameManager : MonoBehaviour
             Instance = null;
         }
 
-        UnbindDayManager();
+        if (boundDayTimeManager != null)
+        {
+            boundDayTimeManager.OnDayEnded -= HandleDayEnded;
+            boundDayTimeManager = null;
+        }
     }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -201,11 +205,11 @@ public class GameManager : MonoBehaviour
         LogTransition("Transitioning Day -> Night.");
         currentPhase = GamePhase.Night;
 
+        ResolveDayTimeManager();
         if (boundDayTimeManager != null)
         {
             boundDayTimeManager.Pause();
         }
-        UnbindDayManager();
 
         if (nightRoot != null)
         {
@@ -251,7 +255,7 @@ public class GameManager : MonoBehaviour
             nightRoot.SetActive(false);
         }
 
-        BindDayManager();
+        ResolveDayTimeManager();
         AfterEnterDayScene();
         CloseNightOnlyPanels();
         OnPhaseChanged?.Invoke(GamePhase.Day);
@@ -292,57 +296,35 @@ public class GameManager : MonoBehaviour
         }
     }
 
-    private void BindDayManager()
+    /// <summary>Resolves and subscribes to the single persistent DayTimeManager once. Single scene means the
+    /// instance never changes across phase transitions, so this is a no-op after the first successful call;
+    /// it's safe to call again from TransitionToNight/Day as a retry in case the initial Awake() resolve
+    /// found nothing yet (e.g. init-order edge case).</summary>
+    private void ResolveDayTimeManager()
     {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-        DayTimeManager[] allFound = FindObjectsByType<DayTimeManager>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        Debug.Log($"[TEMP-DEBUG][GameManager] BindDayManager: {allFound.Length} DayTimeManager instance(s) in memory: " +
-            string.Join(", ", System.Array.ConvertAll(allFound, m => $"id={m.GetInstanceID()} active={m.gameObject.activeInHierarchy} scene='{m.gameObject.scene.name}'")));
-#endif
+        if (boundDayTimeManager != null)
+        {
+            return;
+        }
 
         DayTimeManager manager = FindFirstObjectByType<DayTimeManager>();
         if (manager == null)
         {
-            Debug.Log("[GameManager] DayTimeManager not found in Day scene.");
+            Debug.Log("[GameManager] DayTimeManager not found; will retry on next phase transition.");
             return;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-        Debug.Log($"[TEMP-DEBUG][GameManager] BindDayManager selected id={manager.GetInstanceID()}");
+        Debug.Log($"[TEMP-DEBUG][GameManager] ResolveDayTimeManager selected id={manager.GetInstanceID()}");
 #endif
 
-        if (boundDayTimeManager == manager)
-        {
-            return;
-        }
-
-        UnbindDayManager();
         boundDayTimeManager = manager;
-        boundDayTimeManager.OnDayEnded -= HandleDayEnded;
         boundDayTimeManager.OnDayEnded += HandleDayEnded;
         Debug.Log("[GameManager] Bound DayTimeManager.");
     }
 
-    private void UnbindDayManager()
-    {
-        if (boundDayTimeManager == null)
-        {
-            return;
-        }
-
-        boundDayTimeManager.OnDayEnded -= HandleDayEnded;
-        boundDayTimeManager = null;
-        Debug.Log("[GameManager] Unbound DayTimeManager.");
-    }
-
     private void HandleDayEnded()
     {
-        if (boundDayTimeManager != null)
-        {
-            boundDayTimeManager.OnDayEnded -= HandleDayEnded;
-            boundDayTimeManager = null;
-        }
-
         TransitionToNight();
     }
 

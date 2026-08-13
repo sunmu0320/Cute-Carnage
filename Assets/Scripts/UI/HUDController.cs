@@ -71,8 +71,10 @@ public class HUDController : MonoBehaviour
     private float nextSourceResolveTime;
     private float nextTempDebugLogTime;
     private bool subscribedToPhaseChanges;
+    private int sourceResolveAttempts;
 
     private const float SourceRetryInterval = 1f;
+    private const int MaxSourceResolveAttempts = 5;
     private const float DayTimerFillEpsilon = 0.0001f;
     private const float BaseHpFillEpsilon = 0.0001f;
 
@@ -150,8 +152,9 @@ public class HUDController : MonoBehaviour
 
         TrySubscribeToPhaseChanges();
 
-        if (HasMissingSource() && Time.unscaledTime >= nextSourceResolveTime)
+        if (HasMissingSource() && sourceResolveAttempts < MaxSourceResolveAttempts && Time.unscaledTime >= nextSourceResolveTime)
         {
+            sourceResolveAttempts++;
             ResolveMissingSources();
             BindPlayerHealth();
         }
