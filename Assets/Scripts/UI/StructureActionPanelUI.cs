@@ -14,9 +14,19 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI installButtonText;
     [SerializeField] private TextMeshProUGUI installCostText;
     [SerializeField] private Button upgradeButton;
+    [SerializeField] private TextMeshProUGUI upgradeButtonText;
     [SerializeField] private GameObject repairActionRoot;
     [SerializeField] private Button repairButton;
     [SerializeField] private Button closeButton;
+
+    [Header("Fence Panel (Phase 1)")]
+    [SerializeField] private TextMeshProUGUI subtitleText;
+    [SerializeField] private TextMeshProUGUI tierBadgeText;
+    [SerializeField] private TextMeshProUGUI repairAmountText;
+    [SerializeField] private TextMeshProUGUI upgradeWoodCountText;
+    [SerializeField] private TextMeshProUGUI upgradeScrapCountText;
+    [SerializeField] private TextMeshProUGUI repairWoodCountText;
+    [SerializeField] private TextMeshProUGUI repairScrapCountText;
 
     [Header("Input")]
     [SerializeField] private KeyCode closeKey = KeyCode.Escape;
@@ -29,9 +39,9 @@ public class StructureActionPanelUI : MonoBehaviour
 
     private void Awake()
     {
-        if (installButton != null)
+        if (upgradeButton != null)
         {
-            installButton.onClick.AddListener(HandleInstallClicked);
+            upgradeButton.onClick.AddListener(HandleUpgradeClicked);
         }
 
         if (closeButton != null)
@@ -49,9 +59,9 @@ public class StructureActionPanelUI : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (installButton != null)
+        if (upgradeButton != null)
         {
-            installButton.onClick.RemoveListener(HandleInstallClicked);
+            upgradeButton.onClick.RemoveListener(HandleUpgradeClicked);
         }
 
         if (closeButton != null)
@@ -128,7 +138,7 @@ public class StructureActionPanelUI : MonoBehaviour
         }
     }
 
-    private void HandleInstallClicked()
+    private void HandleUpgradeClicked()
     {
         if (!IsSelectionValid())
         {
@@ -136,10 +146,11 @@ public class StructureActionPanelUI : MonoBehaviour
             return;
         }
 
-        bool installed = selectedTowerSlot != null
-            ? selectedTowerSlot.TryBuildTower(selectedInteractor)
-            : selectedFenceSlot != null && selectedFenceSlot.TryInstallFence(selectedInteractor);
-        if (installed)
+        // Tower has no Upgrade logic yet (Phase 1-B); upgradeButton stays
+        // non-interactable for Tower selections in Refresh(), so this is a
+        // no-op for that case rather than something reachable via UI.
+        bool upgraded = selectedFenceSlot != null && selectedFenceSlot.TryUpgradeFence(selectedInteractor);
+        if (upgraded)
         {
             Refresh();
         }
@@ -250,8 +261,12 @@ public class StructureActionPanelUI : MonoBehaviour
         bool isEmpty = !selectedFenceSlot.HasFence;
         bool hasValidFence = !isEmpty && fence != null;
         bool needsRepair = hasValidFence && fence.CanRepair();
+        bool isMaxTier = hasValidFence && fence.NextTierData == null;
 
         if (titleText != null) titleText.text = "Fence";
+        if (subtitleText != null) subtitleText.text = "DEFENSE BARRIER";
+        if (tierBadgeText != null) tierBadgeText.text = $"T{selectedFenceSlot.CurrentTierNumber}";
+
         if (hpSection != null) hpSection.SetActive(hasValidFence);
         if (hasValidFence)
         {
@@ -259,26 +274,28 @@ public class StructureActionPanelUI : MonoBehaviour
             if (hpText != null) hpText.text = $"{Mathf.RoundToInt(fence.CurrentHp)} / {Mathf.RoundToInt(fence.MaxHp)}";
         }
         if (dayActionsRoot != null) dayActionsRoot.SetActive(true);
-        if (installButton != null)
+
+        if (upgradeButton != null)
         {
-            installButton.gameObject.SetActive(isEmpty);
-            installButton.interactable = isEmpty && selectedFenceSlot.CanInstallFence();
+            upgradeButton.gameObject.SetActive(true);
+            upgradeButton.interactable = !isMaxTier;
         }
-        if (installButtonText != null) installButtonText.text = "Install Fence";
-        if (installCostText != null)
-        {
-            installCostText.gameObject.SetActive(isEmpty || needsRepair);
-            installCostText.text = isEmpty
-                ? $"Wood: {selectedFenceSlot.WoodBuildCost}  Scrap: {selectedFenceSlot.ScrapBuildCost}"
-                : $"Wood: {selectedFenceSlot.WoodRepairCost}  Scrap: {selectedFenceSlot.ScrapRepairCost}";
-        }
-        if (upgradeButton != null) upgradeButton.gameObject.SetActive(false);
+        if (upgradeButtonText != null) upgradeButtonText.text = isEmpty ? "INSTALL" : "UPGRADE";
+        if (upgradeWoodCountText != null) upgradeWoodCountText.text = selectedFenceSlot.UpgradeWoodCost.ToString();
+        if (upgradeScrapCountText != null) upgradeScrapCountText.text = selectedFenceSlot.UpgradeScrapCost.ToString();
+
         if (repairActionRoot != null) repairActionRoot.SetActive(needsRepair);
         if (repairButton != null)
         {
             repairButton.interactable = needsRepair
                 && fence.HasEnoughResources(selectedInteractor != null ? selectedInteractor.ResourceManager : null);
         }
+        if (repairAmountText != null && hasValidFence)
+        {
+            repairAmountText.text = $"+{Mathf.RoundToInt(fence.GetRepairAmount())} HP";
+        }
+        if (repairWoodCountText != null) repairWoodCountText.text = selectedFenceSlot.WoodRepairCost.ToString();
+        if (repairScrapCountText != null) repairScrapCountText.text = selectedFenceSlot.ScrapRepairCost.ToString();
     }
 
     private bool IsSelectionValid()

@@ -13,7 +13,10 @@ using UnityEngine.UI;
 /// InstallButton is out of scope and expected to be gone (removed by design);
 /// its old cost text (installCostText, formerly "InstallCost"/"UpgradeCost")
 /// and the hand-made "RepairAmount"/"RepairCost" placeholders are deleted
-/// here and replaced by the CostRoot structure below.
+/// here and replaced by the CostRoot structure below. Also wires the new
+/// StructureActionPanelUI SerializeFields (subtitleText, tierBadgeText,
+/// upgradeButtonText, repairAmountText, upgrade/repair Wood/ScrapCountText)
+/// to the objects it creates, via WireGeneratedFields.
 /// </summary>
 public static class FencePanelUIBuilder
 {
@@ -80,7 +83,10 @@ public static class FencePanelUIBuilder
             Transform repairActionRow = BuildButtonCostLayout(repairButton, font, fontMaterial);
             EnsureRepairAmountText(repairActionRow, font, fontMaterial);
 
-            BuildButtonCostLayout(upgradeButton, font, fontMaterial);
+            Transform upgradeActionRow = BuildButtonCostLayout(upgradeButton, font, fontMaterial);
+
+            WireGeneratedFields(so, panelRoot, repairButton, repairActionRow, upgradeButton, upgradeActionRow);
+            so.ApplyModifiedProperties();
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             AssetDatabase.SaveAssets();
@@ -97,6 +103,40 @@ public static class FencePanelUIBuilder
     {
         SerializedProperty prop = so.FindProperty(propertyName);
         return prop != null ? prop.objectReferenceValue as T : null;
+    }
+
+    private static void SetRef(SerializedObject so, string propertyName, Object value)
+    {
+        SerializedProperty prop = so.FindProperty(propertyName);
+        if (prop != null)
+        {
+            prop.objectReferenceValue = value;
+        }
+    }
+
+    // Wires the SerializeFields StructureActionPanelUI.cs added for Fence
+    // Phase 1 (subtitleText, tierBadgeText, upgradeButtonText,
+    // repairAmountText, upgrade/repair Wood/ScrapCountText) to the objects
+    // this builder just created. Safe to call every run - re-wiring an
+    // already-correct reference is a no-op.
+    private static void WireGeneratedFields(
+        SerializedObject so,
+        Transform panelRoot,
+        Transform repairButton,
+        Transform repairActionRow,
+        Transform upgradeButton,
+        Transform upgradeActionRow)
+    {
+        SetRef(so, "subtitleText", panelRoot.Find("SubtitleText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "tierBadgeText", panelRoot.Find("TierBadge/TierBadgeFill/TierBadgeText")?.GetComponent<TextMeshProUGUI>());
+
+        SetRef(so, "repairAmountText", repairActionRow.Find("RepairAmountText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "repairWoodCountText", repairButton.Find("CostRoot/WoodCost/WoodCountText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "repairScrapCountText", repairButton.Find("CostRoot/ScrapCost/ScrapCountText")?.GetComponent<TextMeshProUGUI>());
+
+        SetRef(so, "upgradeButtonText", upgradeActionRow.Find("Text (TMP)")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "upgradeWoodCountText", upgradeButton.Find("CostRoot/WoodCost/WoodCountText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "upgradeScrapCountText", upgradeButton.Find("CostRoot/ScrapCost/ScrapCountText")?.GetComponent<TextMeshProUGUI>());
     }
 
     private static GameObject EnsureChild(Transform parent, string name, params System.Type[] components)
@@ -178,7 +218,7 @@ public static class FencePanelUIBuilder
         tmp.fontSize = 12f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = AccentColor;
-        tmp.text = string.Empty; // set at runtime in Phase 2
+        tmp.text = string.Empty; // set at runtime by StructureActionPanelUI.RefreshFence()
     }
 
     private static void EnsureTierBadge(Transform panelRoot, Transform titleText, TMP_FontAsset font, Material fontMaterial)
@@ -222,7 +262,7 @@ public static class FencePanelUIBuilder
         tmp.fontSize = 11f;
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
-        tmp.text = string.Empty; // set at runtime in Phase 2, e.g. "T{fence.CurrentTierNumber}"
+        tmp.text = string.Empty; // set at runtime by StructureActionPanelUI.RefreshFence()
     }
 
     // Small keycap-style label docked to the left edge of a button:
@@ -344,7 +384,8 @@ public static class FencePanelUIBuilder
     }
 
     // "+0 HP"-style repair amount, placed after KeyLabel + "Repair" inside
-    // ActionRow. Static placeholder - Phase 2 binds it to FenceData.RepairAmount.
+    // ActionRow. Initial text is a placeholder; StructureActionPanelUI.RefreshFence()
+    // overwrites it at runtime with the installed fence's actual repair amount.
     private static void EnsureRepairAmountText(Transform actionRow, TMP_FontAsset font, Material fontMaterial)
     {
         GameObject go = EnsureChild(actionRow, "RepairAmountText", typeof(TextMeshProUGUI));
@@ -411,6 +452,6 @@ public static class FencePanelUIBuilder
         tmp.fontSize = 11f;
         tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.color = Color.white;
-        tmp.text = "0"; // set at runtime in Phase 2
+        tmp.text = "0"; // set at runtime by StructureActionPanelUI.RefreshFence()
     }
 }

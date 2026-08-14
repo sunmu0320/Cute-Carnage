@@ -73,6 +73,12 @@ public class TowerSlot : MonoBehaviour, IInteractable
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
     public string PersistentId => PersistentSlotId;
 
+    /// <summary>Fixed at 1 - no multi-tier Tower data exists yet. Mirrors FenceSlot.CurrentTierNumber's shape for future parity.</summary>
+    public int CurrentTierNumber => 1;
+
+    /// <summary>Always null (treated as Max Tier) - no T2+ TowerData exists yet. Mirrors FenceSlot.NextTierData's shape for future parity.</summary>
+    public TowerData NextTierData => null;
+
     /// <summary>The built tower's own data once placed, otherwise this slot's starting data. Repair values should track the installed tower.</summary>
     private TowerData ActiveTowerData
     {

@@ -35,17 +35,42 @@ public class FenceSlot : MonoBehaviour, IInteractable
     public int ScrapBuildCost => startingFenceData != null ? Mathf.Max(0, startingFenceData.InstallScrapCost) : 0;
     public int WoodRepairCost => CurrentFence != null ? CurrentFence.GetRequiredWood() : 0;
     public int ScrapRepairCost => CurrentFence != null ? CurrentFence.GetRequiredScrap() : 0;
+
+    /// <summary>Cost to reach the next tier: Install cost while empty, otherwise the installed fence's Upgrade cost.</summary>
+    public int UpgradeWoodCost => HasFence ? UpgradeWoodCostForInstalledFence() : WoodBuildCost;
+    public int UpgradeScrapCost => HasFence ? UpgradeScrapCostForInstalledFence() : ScrapBuildCost;
+
     public Transform SlotMarker => slotMarker;
     public PersistentId PersistentIdComponent => persistentId;
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
 
-    /// <summary>Next-tier fence data for the installed fence, if any. Null until Phase 2 wires an upgrade action to it.</summary>
+    /// <summary>One-based tier number: the installed fence's tier, or the starting fence type's tier while empty.</summary>
+    public int CurrentTierNumber
+    {
+        get
+        {
+            FenceSegment fence = CurrentFence;
+            if (fence != null)
+            {
+                return fence.CurrentTierNumber;
+            }
+
+            return startingFenceData != null ? startingFenceData.TierNumber : 1;
+        }
+    }
+
+    /// <summary>Next-tier fence data: the installed fence's next tier, or the starting fence type while empty (so Upgrade can install T1).</summary>
     public FenceData NextTierData
     {
         get
         {
             FenceSegment fence = CurrentFence;
-            return fence != null ? fence.NextTierData : null;
+            if (fence != null)
+            {
+                return fence.NextTierData;
+            }
+
+            return startingFenceData;
         }
     }
 
@@ -319,6 +344,86 @@ public class FenceSlot : MonoBehaviour, IInteractable
         return interactor != null
             && segment != null
             && segment.TryRepair(interactor.ResourceManager);
+    }
+
+    /// <summary>Empty slots install T1 (same as TryInstallFence); installed slots spend the current tier's Upgrade
+    /// cost, destroy the current fence, and instantiate NextTierData.FencePrefab in its place.</summary>
+    public bool TryUpgradeFence(PlayerInteractor interactor)
+    {
+        if (!HasFence)
+        {
+            return TryInstallFence(interactor);
+        }
+
+        FenceSegment currentSegment = CurrentFence;
+        FenceData currentData = currentSegment != null ? currentSegment.Data : null;
+        FenceData nextData = currentData != null ? currentData.NextFence : null;
+        if (currentSegment == null || nextData == null || nextData.FencePrefab == null)
+        {
+            return false;
+        }
+
+        ResourceManager resourceManager = interactor != null ? interactor.ResourceManager : null;
+        if (resourceManager == null)
+        {
+            Debug.LogWarning($"[FenceSlot] '{name}' cannot upgrade fence: missing ResourceManager.", this);
+            return false;
+        }
+
+        int requiredWood = Mathf.Max(0, currentData.UpgradeWoodCost);
+        int requiredScrap = Mathf.Max(0, currentData.UpgradeScrapCost);
+
+        if (!resourceManager.HasResource(ResourceType.Wood, requiredWood) ||
+            !resourceManager.HasResource(ResourceType.Scrap, requiredScrap))
+        {
+            Debug.Log(
+                $"[FenceSlot] '{name}' cannot upgrade fence: not enough resources. Need wood={requiredWood}, scrap={requiredScrap}.",
+                this);
+            return false;
+        }
+
+        bool spentWood = requiredWood == 0 || resourceManager.TrySpendResource(ResourceType.Wood, requiredWood);
+        bool spentScrap = requiredScrap == 0 || resourceManager.TrySpendResource(ResourceType.Scrap, requiredScrap);
+        if (!spentWood || !spentScrap)
+        {
+            if (spentWood && requiredWood > 0)
+            {
+                resourceManager.AddResource(ResourceType.Wood, requiredWood);
+            }
+            if (spentScrap && requiredScrap > 0)
+            {
+                resourceManager.AddResource(ResourceType.Scrap, requiredScrap);
+            }
+            Debug.LogWarning($"[FenceSlot] '{name}' failed to spend upgrade cost. Upgrade cancelled.", this);
+            return false;
+        }
+
+        GameObject oldFence = installedFence;
+        Transform origin = SpawnPoint;
+        GameObject spawnedFence = Instantiate(nextData.FencePrefab, origin.position, origin.rotation);
+        installedFence = spawnedFence;
+        installedFenceSegment = null;
+
+        if (oldFence != null)
+        {
+            Destroy(oldFence);
+        }
+
+        RefreshSlotVisualState();
+        Debug.Log($"[FenceSlot] Upgraded fence in slot '{name}' to '{spawnedFence.name}'.", this);
+        return true;
+    }
+
+    private int UpgradeWoodCostForInstalledFence()
+    {
+        FenceSegment fence = CurrentFence;
+        return fence != null && fence.Data != null ? Mathf.Max(0, fence.Data.UpgradeWoodCost) : 0;
+    }
+
+    private int UpgradeScrapCostForInstalledFence()
+    {
+        FenceSegment fence = CurrentFence;
+        return fence != null && fence.Data != null ? Mathf.Max(0, fence.Data.UpgradeScrapCost) : 0;
     }
 
     private FenceSegment GetFenceSegmentOnInstalledFence()
