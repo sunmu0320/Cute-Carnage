@@ -71,12 +71,12 @@ public static class BasePersistentIdValidator
 
         AddIfInScene(explicitBaseCore, scene, result, unique);
 
-        FenceSegment[] fences = Object.FindObjectsByType<FenceSegment>(FindObjectsSortMode.None);
-        for (int i = 0; i < fences.Length; i++)
+        FenceSlot[] fenceSlots = Object.FindObjectsByType<FenceSlot>(FindObjectsSortMode.None);
+        for (int i = 0; i < fenceSlots.Length; i++)
         {
-            if (fences[i] != null)
+            if (fenceSlots[i] != null)
             {
-                AddIfInScene(fences[i].gameObject, scene, result, unique);
+                AddIfInScene(fenceSlots[i].gameObject, scene, result, unique);
             }
         }
 
