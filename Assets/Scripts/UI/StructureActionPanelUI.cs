@@ -167,6 +167,10 @@ public class StructureActionPanelUI : MonoBehaviour
         bool repaired = selectedTowerSlot != null
             ? selectedTowerSlot.TryRepairTower(selectedInteractor)
             : selectedFenceSlot != null && selectedFenceSlot.TryRepairFence(selectedInteractor);
+
+        Debug.Log($"[TEMP-DEBUG][HandleRepairClicked] repaired={repaired}, " +
+            $"IsSelectionValid={IsSelectionValid()}");
+
         if (repaired)
         {
             Refresh();
@@ -272,11 +276,22 @@ public class StructureActionPanelUI : MonoBehaviour
         if (tierBadgeText != null) tierBadgeText.text = isEmpty ? "—" : $"T{selectedFenceSlot.CurrentTierNumber}";
 
         if (hpSection != null) hpSection.SetActive(hasValidFence);
+
+        Debug.Log($"[TEMP-DEBUG][RefreshFence] called. hasValidFence={hasValidFence}, " +
+            $"fence.CurrentHp={fence?.CurrentHp}, fence.MaxHp={fence?.MaxHp}, " +
+            $"hpFill.fillAmount(before)={hpFill?.fillAmount}, hpText.text(before)={hpText?.text}");
+
         if (hasValidFence)
         {
             if (hpFill != null) hpFill.fillAmount = fence.MaxHp > 0f ? Mathf.Clamp01(fence.CurrentHp / fence.MaxHp) : 0f;
             if (hpText != null) hpText.text = $"{Mathf.RoundToInt(fence.CurrentHp)} / {Mathf.RoundToInt(fence.MaxHp)}";
         }
+
+        Debug.Log($"[TEMP-DEBUG][RefreshFence] after set. " +
+            $"hpFill.fillAmount(after)={hpFill?.fillAmount}, hpText.text(after)={hpText?.text}, " +
+            $"hpFill.gameObject.activeInHierarchy={hpFill?.gameObject.activeInHierarchy}, " +
+            $"hpFill.canvasRenderer null={hpFill?.canvas == null}");
+
         if (dayActionsRoot != null) dayActionsRoot.SetActive(true);
 
         if (upgradeButton != null)
