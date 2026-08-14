@@ -1,7 +1,6 @@
 using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using System.Collections.Generic;
 
 public class GameManager : MonoBehaviour
 {
@@ -332,8 +331,7 @@ public class GameManager : MonoBehaviour
     {
         BasePersistentIdValidator.ValidateActiveScene(logContext: this);
         LogTransition(
-            $"AfterEnterDayScene (Day {currentDay}). CurrentRunState exists={currentRunState != null}, CurrentBaseState exists={CurrentBaseState != null}, " +
-            $"towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}");
+            $"AfterEnterDayScene (Day {currentDay}). CurrentRunState exists={currentRunState != null}, CurrentBaseState exists={CurrentBaseState != null}.");
         TryInitializeDefaultBaseRuntimeState();
 
         if (boundDayTimeManager != null)
@@ -350,8 +348,7 @@ public class GameManager : MonoBehaviour
     {
         BasePersistentIdValidator.ValidateActiveScene(logContext: this);
         LogTransition(
-            $"AfterEnterNightScene. CurrentRunState exists={currentRunState != null}, activeInstanceId={runtimeInstanceId}, " +
-            $"fenceSlots={CurrentBaseState?.fenceSlots?.Count ?? 0}, towerSlots={CurrentBaseState?.towerSlots?.Count ?? 0}.");
+            $"AfterEnterNightScene. CurrentRunState exists={currentRunState != null}, activeInstanceId={runtimeInstanceId}.");
     }
 
     public void SetRunRuntimeState(RunRuntimeState run)
@@ -404,8 +401,6 @@ public class GameManager : MonoBehaviour
             baseUpgradeId = DefaultBaseUpgradeId
         };
 
-        baseState.towerSlots = BuildDefaultTowerSlotStates();
-
         ResourceManager resourceManager = GetOrFindResourceManager();
         ResourceRuntimeState resourceState = resourceManager != null
             ? resourceManager.CaptureRuntimeState()
@@ -420,71 +415,7 @@ public class GameManager : MonoBehaviour
         }
 
         SetRunRuntimeState(new RunRuntimeState(baseState, resourceState, playerState));
-        LogTransition($"Created default RunRuntimeState. TowerSlots: {baseState.towerSlots.Count}.");
-    }
-
-    private List<TowerSlotRuntimeState> BuildDefaultTowerSlotStates()
-    {
-        List<TowerSlotRuntimeState> slots = new List<TowerSlotRuntimeState>();
-        HashSet<string> seen = new HashSet<string>();
-        TowerSlot[] sceneSlots = FindObjectsByType<TowerSlot>(FindObjectsSortMode.None);
-
-        for (int i = 0; i < sceneSlots.Length; i++)
-        {
-            TowerSlot slot = sceneSlots[i];
-            if (slot == null || slot.gameObject.scene != SceneManager.GetActiveScene())
-            {
-                continue;
-            }
-
-            if (!TryGetPersistentId(slot.gameObject, out string id))
-            {
-                continue;
-            }
-
-            if (!seen.Add(id))
-            {
-                Debug.LogWarning($"[GameManager] Skipping duplicate tower slot PersistentId '{id}' on '{slot.name}'.", slot);
-                continue;
-            }
-
-            slots.Add(new TowerSlotRuntimeState
-            {
-                id = id,
-                hasTower = false,
-                towerId = string.Empty,
-                level = 1,
-                currentHp = 0f,
-                isDestroyed = false
-            });
-        }
-
-        return slots;
-    }
-
-    private bool TryGetPersistentId(GameObject target, out string id)
-    {
-        id = string.Empty;
-        if (target == null)
-        {
-            return false;
-        }
-
-        PersistentId persistentId = target.GetComponent<PersistentId>();
-        if (persistentId == null)
-        {
-            Debug.LogWarning($"[GameManager] '{target.name}' is missing PersistentId and will be skipped from default runtime initialization.", target);
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(persistentId.Id))
-        {
-            Debug.LogWarning($"[GameManager] '{target.name}' has an empty PersistentId and will be skipped from default runtime initialization.", target);
-            return false;
-        }
-
-        id = persistentId.Id;
-        return true;
+        LogTransition("Created default RunRuntimeState.");
     }
 
     private ResourceManager GetOrFindResourceManager()
