@@ -258,10 +258,14 @@ public class StructureActionPanelUI : MonoBehaviour
     private void RefreshFence()
     {
         FenceSegment fence = selectedFenceSlot.CurrentFence;
+        ResourceManager resourceManager = selectedInteractor != null ? selectedInteractor.ResourceManager : null;
         bool isEmpty = !selectedFenceSlot.HasFence;
         bool hasValidFence = !isEmpty && fence != null;
         bool needsRepair = hasValidFence && fence.CanRepair();
         bool isMaxTier = hasValidFence && fence.NextTierData == null;
+        bool canAffordUpgrade = resourceManager != null
+            && resourceManager.HasResource(ResourceType.Wood, selectedFenceSlot.UpgradeWoodCost)
+            && resourceManager.HasResource(ResourceType.Scrap, selectedFenceSlot.UpgradeScrapCost);
 
         if (titleText != null) titleText.text = "Fence";
         if (subtitleText != null) subtitleText.text = "DEFENSE BARRIER";
@@ -278,7 +282,7 @@ public class StructureActionPanelUI : MonoBehaviour
         if (upgradeButton != null)
         {
             upgradeButton.gameObject.SetActive(true);
-            upgradeButton.interactable = !isMaxTier;
+            upgradeButton.interactable = !isMaxTier && canAffordUpgrade;
         }
         if (upgradeButtonText != null) upgradeButtonText.text = isEmpty ? "INSTALL" : "UPGRADE";
         if (upgradeWoodCountText != null) upgradeWoodCountText.text = selectedFenceSlot.UpgradeWoodCost.ToString();
@@ -287,8 +291,7 @@ public class StructureActionPanelUI : MonoBehaviour
         if (repairActionRoot != null) repairActionRoot.SetActive(needsRepair);
         if (repairButton != null)
         {
-            repairButton.interactable = needsRepair
-                && fence.HasEnoughResources(selectedInteractor != null ? selectedInteractor.ResourceManager : null);
+            repairButton.interactable = needsRepair && fence.HasEnoughResources(resourceManager);
         }
         if (repairAmountText != null && hasValidFence)
         {
