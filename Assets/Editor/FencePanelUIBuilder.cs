@@ -59,6 +59,15 @@ public static class FencePanelUIBuilder
             TMP_FontAsset font = titleTmp.font;
             Material fontMaterial = titleTmp.fontSharedMaterial;
 
+            // Readability only, no functional change. Named "HpValueText"
+            // rather than "HpText" because a sibling static "HP" label
+            // already owns that name (see HpSection children).
+            TextMeshProUGUI hpValueText = GetRef<TextMeshProUGUI>(so, "hpText");
+            if (hpValueText != null)
+            {
+                hpValueText.gameObject.name = "HpValueText";
+            }
+
             StyleBackground(background);
             EnsureAccentBorder(panelRoot, background);
             EnsureSubtitleText(panelRoot, titleText, font, fontMaterial);
