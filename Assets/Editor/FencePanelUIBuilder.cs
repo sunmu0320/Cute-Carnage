@@ -68,7 +68,9 @@ public static class FencePanelUIBuilder
             RemoveObsoletePlaceholders(so, repairButton);
             so.ApplyModifiedProperties();
 
-            BuildButtonCostLayout(repairButton, font, fontMaterial);
+            Transform repairActionRow = BuildButtonCostLayout(repairButton, font, fontMaterial);
+            EnsureRepairAmountText(repairActionRow, font, fontMaterial);
+
             BuildButtonCostLayout(upgradeButton, font, fontMaterial);
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
@@ -269,7 +271,9 @@ public static class FencePanelUIBuilder
     // Wraps a button's existing "Text (TMP)" label (and "KeyLabel", if the
     // button has one) into an ActionRow, adds a Wood/Scrap CostRoot below
     // it, and stacks the two with a VerticalLayoutGroup on the button itself.
-    private static void BuildButtonCostLayout(Transform button, TMP_FontAsset font, Material fontMaterial)
+    // Returns the ActionRow so callers can append button-specific extras
+    // (e.g. RepairAmountText) after KeyLabel + Text(TMP).
+    private static Transform BuildButtonCostLayout(Transform button, TMP_FontAsset font, Material fontMaterial)
     {
         Transform actionRow = EnsureActionRow(button);
         Transform costRoot = EnsureCostRoot(button, font, fontMaterial);
@@ -288,13 +292,16 @@ public static class FencePanelUIBuilder
         vlg.childForceExpandHeight = false;
         vlg.childControlWidth = false;
         vlg.childControlHeight = false;
+
+        return actionRow;
     }
 
     // Existing "Text (TMP)" is normally full-stretch (fills the whole
     // button); that's incompatible with a layout group, so it's pinned to a
     // fixed size here. "KeyLabel" is only reparented if the button has one -
     // UpgradeButton currently doesn't (Install's KeyLabel was never ported
-    // over when InstallButton was removed).
+    // over when InstallButton was removed). Sibling order is forced to
+    // [KeyLabel, Text (TMP)] every run so the keycap always reads first.
     private static Transform EnsureActionRow(Transform button)
     {
         GameObject rowGo = EnsureChild(button, "ActionRow", typeof(HorizontalLayoutGroup));
@@ -309,20 +316,39 @@ public static class FencePanelUIBuilder
         hlg.childControlWidth = false;
         hlg.childControlHeight = false;
 
+        Transform keyLabel = button.Find("KeyLabel") ?? rowGo.transform.Find("KeyLabel");
+        if (keyLabel != null)
+        {
+            keyLabel.SetParent(rowGo.transform, false);
+            keyLabel.SetSiblingIndex(0);
+        }
+
         Transform textLabel = button.Find("Text (TMP)") ?? rowGo.transform.Find("Text (TMP)");
         if (textLabel != null)
         {
             FixNonStretchedRect(textLabel.GetComponent<RectTransform>(), new Vector2(74f, 20f));
             textLabel.SetParent(rowGo.transform, false);
-        }
-
-        Transform keyLabel = button.Find("KeyLabel") ?? rowGo.transform.Find("KeyLabel");
-        if (keyLabel != null)
-        {
-            keyLabel.SetParent(rowGo.transform, false);
+            textLabel.SetSiblingIndex(keyLabel != null ? 1 : 0);
         }
 
         return rowGo.transform;
+    }
+
+    // "+0 HP"-style repair amount, placed after KeyLabel + "Repair" inside
+    // ActionRow. Static placeholder - Phase 2 binds it to FenceData.RepairAmount.
+    private static void EnsureRepairAmountText(Transform actionRow, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject go = EnsureChild(actionRow, "RepairAmountText", typeof(TextMeshProUGUI));
+        FixNonStretchedRect(go.GetComponent<RectTransform>(), new Vector2(50f, 20f));
+        go.transform.SetSiblingIndex(actionRow.childCount - 1);
+
+        TextMeshProUGUI tmp = go.GetComponent<TextMeshProUGUI>();
+        tmp.font = font;
+        tmp.fontSharedMaterial = fontMaterial;
+        tmp.fontSize = 11f;
+        tmp.alignment = TextAlignmentOptions.MidlineLeft;
+        tmp.color = Color.white;
+        tmp.text = "+0 HP";
     }
 
     private static Transform EnsureCostRoot(Transform button, TMP_FontAsset font, Material fontMaterial)
