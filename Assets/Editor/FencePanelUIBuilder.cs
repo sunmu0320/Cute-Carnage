@@ -10,6 +10,10 @@ using UnityEngine.UI;
 /// updates existing generated children in place instead of duplicating them.
 /// Only touches the real StructureActionPanel instance (gameObject named
 /// "StructureActionPanel"), never the dead NightRepairPanel copy.
+/// InstallButton is out of scope and expected to be gone (removed by design);
+/// its old cost text (installCostText, formerly "InstallCost"/"UpgradeCost")
+/// and the hand-made "RepairAmount"/"RepairCost" placeholders are deleted
+/// here and replaced by the CostRoot structure below.
 /// </summary>
 public static class FencePanelUIBuilder
 {
@@ -19,6 +23,8 @@ public static class FencePanelUIBuilder
 
     private static readonly Color BackgroundColor = new Color(0x1a / 255f, 0x1a / 255f, 0x1a / 255f, 1f);
     private static readonly Color AccentColor = new Color(0xff / 255f, 0x8c / 255f, 0x1a / 255f, 1f);
+    private static readonly Color WoodColor = new Color(0x8B / 255f, 0x5A / 255f, 0x2B / 255f, 1f);
+    private static readonly Color ScrapColor = new Color(0x88 / 255f, 0x88 / 255f, 0x88 / 255f, 1f);
 
     [MenuItem(MenuPath)]
     private static void Build()
@@ -38,14 +44,14 @@ public static class FencePanelUIBuilder
             SerializedObject so = new SerializedObject(panelUI);
             Transform panelRoot = panelUI.transform;
             Transform titleText = GetRef<TextMeshProUGUI>(so, "titleText")?.transform;
-            Transform installButton = GetRef<Button>(so, "installButton")?.transform;
             Transform repairButton = GetRef<Button>(so, "repairButton")?.transform;
+            Transform upgradeButton = GetRef<Button>(so, "upgradeButton")?.transform;
             Transform closeButton = GetRef<Button>(so, "closeButton")?.transform;
             Transform background = panelRoot.Find("Background");
 
-            if (titleText == null || installButton == null || repairButton == null || closeButton == null || background == null)
+            if (titleText == null || repairButton == null || upgradeButton == null || closeButton == null || background == null)
             {
-                Debug.LogError("FencePanelUIBuilder: one or more expected references (titleText/installButton/repairButton/closeButton/Background) were missing. Aborting without saving to avoid a partial edit.");
+                Debug.LogError("FencePanelUIBuilder: one or more expected references (titleText/repairButton/upgradeButton/closeButton/Background) were missing. Aborting without saving to avoid a partial edit. Note: installButton is expected to be null now that it has been removed, and is intentionally not required.");
                 return;
             }
 
@@ -57,10 +63,13 @@ public static class FencePanelUIBuilder
             EnsureAccentBorder(panelRoot, background);
             EnsureSubtitleText(panelRoot, titleText, font, fontMaterial);
             EnsureTierBadge(panelRoot, titleText, font, fontMaterial);
-            EnsureKeyLabel(installButton, "E", font, fontMaterial);
-            EnsureKeyLabel(repairButton, "R", font, fontMaterial);
             EnsureKeyLabel(closeButton, "ESC", font, fontMaterial);
-            EnsureRepairAmountText(repairButton, font, fontMaterial);
+
+            RemoveObsoletePlaceholders(so, repairButton);
+            so.ApplyModifiedProperties();
+
+            BuildButtonCostLayout(repairButton, font, fontMaterial);
+            BuildButtonCostLayout(upgradeButton, font, fontMaterial);
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             AssetDatabase.SaveAssets();
@@ -90,6 +99,24 @@ public static class FencePanelUIBuilder
         GameObject go = new GameObject(name, components);
         go.transform.SetParent(parent, false);
         return go;
+    }
+
+    private static void DestroyChildIfPresent(Transform parent, string name)
+    {
+        Transform child = parent.Find(name);
+        if (child != null)
+        {
+            Object.DestroyImmediate(child.gameObject);
+        }
+    }
+
+    private static void FixNonStretchedRect(RectTransform rect, Vector2 size)
+    {
+        rect.anchorMin = new Vector2(0.5f, 0.5f);
+        rect.anchorMax = new Vector2(0.5f, 0.5f);
+        rect.pivot = new Vector2(0.5f, 0.5f);
+        rect.anchoredPosition = Vector2.zero;
+        rect.sizeDelta = size;
     }
 
     private static void StyleBackground(Transform background)
@@ -220,21 +247,135 @@ public static class FencePanelUIBuilder
         tmp.text = key;
     }
 
-    private static void EnsureRepairAmountText(Transform repairButton, TMP_FontAsset font, Material fontMaterial)
+    // Deletes the hand-made cost/amount placeholders that predate CostRoot:
+    // RepairButton's "RepairAmount"/"RepairCost" texts, and the object
+    // installCostText points to (originally "InstallCost", later relocated
+    // into UpgradeButton and renamed "UpgradeCost"). Confirmed disposable -
+    // no functional wiring, position references only.
+    private static void RemoveObsoletePlaceholders(SerializedObject so, Transform repairButton)
     {
-        GameObject go = EnsureChild(repairButton, "RepairAmountText", typeof(TextMeshProUGUI));
-        RectTransform rect = go.GetComponent<RectTransform>();
-        rect.anchorMin = Vector2.zero;
-        rect.anchorMax = Vector2.one;
-        rect.offsetMin = new Vector2(26f, 0f); // leaves room for KeyLabel on the left
-        rect.offsetMax = new Vector2(-4f, 0f);
+        DestroyChildIfPresent(repairButton, "RepairAmount");
+        DestroyChildIfPresent(repairButton, "RepairCost");
 
-        TextMeshProUGUI tmp = go.GetComponent<TextMeshProUGUI>();
+        SerializedProperty installCostProp = so.FindProperty("installCostText");
+        if (installCostProp != null && installCostProp.objectReferenceValue != null)
+        {
+            GameObject obsolete = ((Component)installCostProp.objectReferenceValue).gameObject;
+            Object.DestroyImmediate(obsolete);
+            installCostProp.objectReferenceValue = null;
+        }
+    }
+
+    // Wraps a button's existing "Text (TMP)" label (and "KeyLabel", if the
+    // button has one) into an ActionRow, adds a Wood/Scrap CostRoot below
+    // it, and stacks the two with a VerticalLayoutGroup on the button itself.
+    private static void BuildButtonCostLayout(Transform button, TMP_FontAsset font, Material fontMaterial)
+    {
+        Transform actionRow = EnsureActionRow(button);
+        Transform costRoot = EnsureCostRoot(button, font, fontMaterial);
+
+        actionRow.SetSiblingIndex(0);
+        costRoot.SetSiblingIndex(1);
+
+        VerticalLayoutGroup vlg = button.GetComponent<VerticalLayoutGroup>();
+        if (vlg == null)
+        {
+            vlg = button.gameObject.AddComponent<VerticalLayoutGroup>();
+        }
+        vlg.spacing = 4f;
+        vlg.childAlignment = TextAnchor.MiddleCenter;
+        vlg.childForceExpandWidth = false;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = false;
+        vlg.childControlHeight = false;
+    }
+
+    // Existing "Text (TMP)" is normally full-stretch (fills the whole
+    // button); that's incompatible with a layout group, so it's pinned to a
+    // fixed size here. "KeyLabel" is only reparented if the button has one -
+    // UpgradeButton currently doesn't (Install's KeyLabel was never ported
+    // over when InstallButton was removed).
+    private static Transform EnsureActionRow(Transform button)
+    {
+        GameObject rowGo = EnsureChild(button, "ActionRow", typeof(HorizontalLayoutGroup));
+        RectTransform rowRect = rowGo.GetComponent<RectTransform>();
+        rowRect.sizeDelta = new Vector2(100f, 20f);
+
+        HorizontalLayoutGroup hlg = rowGo.GetComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 6f;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = false;
+
+        Transform textLabel = button.Find("Text (TMP)") ?? rowGo.transform.Find("Text (TMP)");
+        if (textLabel != null)
+        {
+            FixNonStretchedRect(textLabel.GetComponent<RectTransform>(), new Vector2(74f, 20f));
+            textLabel.SetParent(rowGo.transform, false);
+        }
+
+        Transform keyLabel = button.Find("KeyLabel") ?? rowGo.transform.Find("KeyLabel");
+        if (keyLabel != null)
+        {
+            keyLabel.SetParent(rowGo.transform, false);
+        }
+
+        return rowGo.transform;
+    }
+
+    private static Transform EnsureCostRoot(Transform button, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject costRootGo = EnsureChild(button, "CostRoot", typeof(HorizontalLayoutGroup));
+        RectTransform costRootRect = costRootGo.GetComponent<RectTransform>();
+        costRootRect.sizeDelta = new Vector2(90f, 16f);
+
+        HorizontalLayoutGroup costRootLayout = costRootGo.GetComponent<HorizontalLayoutGroup>();
+        costRootLayout.spacing = 8f;
+        costRootLayout.childAlignment = TextAnchor.MiddleCenter;
+        costRootLayout.childForceExpandWidth = false;
+        costRootLayout.childForceExpandHeight = false;
+        costRootLayout.childControlWidth = false;
+        costRootLayout.childControlHeight = false;
+
+        EnsureCostEntry(costRootGo.transform, "WoodCost", "WoodIcon", "WoodCountText", WoodColor, font, fontMaterial);
+        EnsureCostEntry(costRootGo.transform, "ScrapCost", "ScrapIcon", "ScrapCountText", ScrapColor, font, fontMaterial);
+
+        return costRootGo.transform;
+    }
+
+    private static void EnsureCostEntry(Transform parent, string rowName, string iconName, string textName, Color iconColor, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject rowGo = EnsureChild(parent, rowName, typeof(HorizontalLayoutGroup));
+        RectTransform rowRect = rowGo.GetComponent<RectTransform>();
+        rowRect.sizeDelta = new Vector2(34f, 14f);
+
+        HorizontalLayoutGroup rowLayout = rowGo.GetComponent<HorizontalLayoutGroup>();
+        rowLayout.spacing = 2f;
+        rowLayout.childAlignment = TextAnchor.MiddleLeft;
+        rowLayout.childForceExpandWidth = false;
+        rowLayout.childForceExpandHeight = false;
+        rowLayout.childControlWidth = false;
+        rowLayout.childControlHeight = false;
+
+        GameObject iconGo = EnsureChild(rowGo.transform, iconName, typeof(Image));
+        RectTransform iconRect = iconGo.GetComponent<RectTransform>();
+        iconRect.sizeDelta = new Vector2(12f, 12f);
+        Image icon = iconGo.GetComponent<Image>();
+        icon.color = iconColor;
+        icon.raycastTarget = false;
+
+        GameObject textGo = EnsureChild(rowGo.transform, textName, typeof(TextMeshProUGUI));
+        RectTransform textRect = textGo.GetComponent<RectTransform>();
+        textRect.sizeDelta = new Vector2(18f, 14f);
+
+        TextMeshProUGUI tmp = textGo.GetComponent<TextMeshProUGUI>();
         tmp.font = font;
         tmp.fontSharedMaterial = fontMaterial;
         tmp.fontSize = 11f;
-        tmp.alignment = TextAlignmentOptions.MidlineRight;
+        tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.color = Color.white;
-        tmp.text = string.Empty; // set at runtime in Phase 2, e.g. "+20 HP"
+        tmp.text = "0"; // set at runtime in Phase 2
     }
 }
