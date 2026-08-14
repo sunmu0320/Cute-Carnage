@@ -82,11 +82,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 42149c48f6fcf9c459fcfaa24736c904, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ArrowTower
-  maxHp: 80
+  towerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   currentHp: 10
-  attackRange: 13.76
-  attackInterval: 1
-  damage: 12
   hitRadius: 0.25
   targetAimHeightOffset: 1
   hpAnchor: {fileID: 4706308212784418641}

@@ -2,16 +2,18 @@ using UnityEngine;
 
 public class ArrowTower : MonoBehaviour, IStructureHpSource
 {
+    [Header("Tower Data")]
+    [SerializeField, Tooltip("Authoritative design-time data for this tower. Sole source of MaxHp/damage/attackInterval/attackRange.")]
+    private TowerData towerData;
+
     [Header("Health")]
-    [SerializeField] private float maxHp = 80f;
     [SerializeField] private float currentHp = 80f;
 
     [Header("Attack")]
-    [SerializeField] private float attackRange = 6f;
-    [SerializeField] private float attackInterval = 1f;
-    [SerializeField] private float damage = 5f;
-    [SerializeField] private float hitRadius = 0.25f;
-    [SerializeField] private float targetAimHeightOffset = 0.75f;
+    [SerializeField, Tooltip("Implementation detail, not a balance value: projectile hit-test capsule radius.")]
+    private float hitRadius = 0.25f;
+    [SerializeField, Tooltip("Implementation detail, not a balance value: vertical aim point offset for targeting.")]
+    private float targetAimHeightOffset = 0.75f;
 
     [Header("References")]
     [SerializeField] private Transform hpAnchor;
@@ -33,9 +35,14 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     private bool isDestroyed;
 
     public float CurrentHp => currentHp;
-    public float MaxHp => maxHp;
+    public float MaxHp => towerData != null ? Mathf.Max(1f, towerData.MaxHp) : 1f;
     public bool IsDestroyed => isDestroyed;
     public Transform HpAnchorTransform => hpAnchor != null ? hpAnchor : transform;
+    public TowerData Data => towerData;
+
+    private float AttackRange => towerData != null ? Mathf.Max(0.01f, towerData.AttackRange) : 0.01f;
+    private float AttackInterval => towerData != null ? Mathf.Max(0.05f, towerData.AttackInterval) : 0.05f;
+    private float Damage => towerData != null ? Mathf.Max(0f, towerData.Damage) : 0f;
 
     private void Awake()
     {
@@ -51,6 +58,11 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         isDestroyed = currentHp <= 0f;
         ResolveTowerColliders();
         ApplyDestroyedState();
+
+        if (towerData == null)
+        {
+            Debug.LogWarning($"[ArrowTower] '{name}' has no TowerData assigned. Stats will fall back to minimal defaults.", this);
+        }
     }
 
     private void Update()
@@ -91,8 +103,8 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
             return;
         }
 
-        currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, maxHp);
-        Debug.Log($"[ArrowTower] Tower damaged by {damageAmount:0.##}. HP: {currentHp:0.##}/{maxHp:0.##}", this);
+        currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, MaxHp);
+        Debug.Log($"[ArrowTower] Tower damaged by {damageAmount:0.##}. HP: {currentHp:0.##}/{MaxHp:0.##}", this);
 
         if (currentHp <= 0f)
         {
@@ -102,13 +114,13 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     public bool Repair(float repairAmount)
     {
-        if (repairAmount <= 0f || currentHp >= maxHp)
+        if (repairAmount <= 0f || currentHp >= MaxHp)
         {
             return false;
         }
 
         float previousHp = currentHp;
-        currentHp = Mathf.Clamp(currentHp + repairAmount, 0f, maxHp);
+        currentHp = Mathf.Clamp(currentHp + repairAmount, 0f, MaxHp);
 
         if (currentHp > 0f && isDestroyed)
         {
@@ -123,7 +135,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         }
 
         Debug.Log(
-            $"[ArrowTower] Repaired by {actualRepairAmount:0.##}. HP: {currentHp:0.##}/{maxHp:0.##}",
+            $"[ArrowTower] Repaired by {actualRepairAmount:0.##}. HP: {currentHp:0.##}/{MaxHp:0.##}",
             this);
         return true;
     }
@@ -187,16 +199,14 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private void ClampHealthSettings(bool resetCurrentToMaxIfNeeded)
     {
-        maxHp = Mathf.Max(1f, maxHp);
         if (resetCurrentToMaxIfNeeded)
         {
-            currentHp = maxHp;
+            currentHp = MaxHp;
         }
         else
         {
-            currentHp = Mathf.Clamp(currentHp, 0f, maxHp);
+            currentHp = Mathf.Clamp(currentHp, 0f, MaxHp);
         }
-
     }
 
     private Transform FindTarget()
@@ -208,7 +218,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
         Collider[] hits = Physics.OverlapSphere(
             transform.position,
-            Mathf.Max(0.01f, attackRange),
+            AttackRange,
             targetLayerMask,
             QueryTriggerInteraction.Collide);
 
@@ -274,7 +284,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
     private bool IsWithinRange(Vector3 worldPosition)
     {
-        float range = Mathf.Max(0.01f, attackRange);
+        float range = AttackRange;
         return HorizontalDistanceSqr(transform.position, worldPosition) <= range * range;
     }
 
@@ -329,7 +339,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
 
         attackTimer += Time.deltaTime;
 
-        if (attackTimer < Mathf.Max(0.05f, attackInterval))
+        if (attackTimer < AttackInterval)
         {
             return;
         }
@@ -349,7 +359,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         }
 
         Vector3 fireDirection = rawFireDirection.normalized;
-        Vector3 missEndPoint = firePoint.position + fireDirection * Mathf.Max(0.01f, attackRange);
+        Vector3 missEndPoint = firePoint.position + fireDirection * AttackRange;
 
         bool hasHit = TryResolveHitAtFireTime(
             firePoint.position,
@@ -366,7 +376,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         {
             projectileEndPoint = hitPoint;
             deferredTarget = hitZombie;
-            deferredDamage = Mathf.Max(0f, damage);
+            deferredDamage = Damage;
             deferredHitVfxPrefab = hitVfxPrefab;
             deferredHitPoint = hitPoint;
         }
@@ -413,9 +423,9 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         out Vector3 resolvedHitPoint)
     {
         resolvedZombie = null;
-        resolvedHitPoint = shotOrigin + shotDirection * Mathf.Max(0.01f, attackRange);
+        resolvedHitPoint = shotOrigin + shotDirection * AttackRange;
 
-        float clampedRange = Mathf.Max(0.01f, attackRange);
+        float clampedRange = AttackRange;
         float clampedRadius = Mathf.Max(0.01f, hitRadius);
         Vector3 shotEnd = shotOrigin + shotDirection * clampedRange;
 
@@ -485,7 +495,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
     private void OnDrawGizmosSelected()
     {
         Gizmos.color = new Color(1f, 0.85f, 0.2f, 0.9f);
-        Gizmos.DrawWireSphere(transform.position, Mathf.Max(0.01f, attackRange));
+        Gizmos.DrawWireSphere(transform.position, AttackRange);
 
         if (firePoint == null || currentTarget == null)
         {
@@ -499,7 +509,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         }
 
         Vector3 direction = toTarget.normalized;
-        float range = Mathf.Max(0.01f, attackRange);
+        float range = AttackRange;
         float radius = Mathf.Max(0.01f, hitRadius);
         Vector3 end = firePoint.position + direction * range;
 

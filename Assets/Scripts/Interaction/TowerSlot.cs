@@ -10,9 +10,6 @@ public class TowerSlot : MonoBehaviour, IInteractable
     private bool hasTower;
 
     [SerializeField]
-    private GameObject towerPrefab;
-
-    [SerializeField]
     private Transform spawnPoint;
 
     [SerializeField]
@@ -20,17 +17,9 @@ public class TowerSlot : MonoBehaviour, IInteractable
 
     private GameObject currentTower;
 
-    [Header("Build Cost")]
-    [SerializeField]
-    private int woodBuildCost = 1;
-
-    [SerializeField]
-    private int scrapBuildCost = 1;
-
-    [Header("Repair")]
-    [SerializeField] private float repairAmountPerStep = 20f;
-    [SerializeField] private int woodRepairCost = 1;
-    [SerializeField] private int scrapRepairCost = 0;
+    [Header("Tower Data")]
+    [SerializeField, Tooltip("Tower type this slot builds. Supplies the prefab and all install/repair costs.")]
+    private TowerData startingTowerData;
 
     [SerializeField]
     private GameObject slotVisualRoot;
@@ -76,13 +65,23 @@ public class TowerSlot : MonoBehaviour, IInteractable
             return tower;
         }
     }
-    public int WoodBuildCost => Mathf.Max(0, woodBuildCost);
-    public int ScrapBuildCost => Mathf.Max(0, scrapBuildCost);
-    public float RepairAmountPerStep => Mathf.Max(0f, repairAmountPerStep);
-    public int WoodRepairCost => Mathf.Max(0, woodRepairCost);
-    public int ScrapRepairCost => Mathf.Max(0, scrapRepairCost);
+    public int WoodBuildCost => startingTowerData != null ? Mathf.Max(0, startingTowerData.InstallWoodCost) : 0;
+    public int ScrapBuildCost => startingTowerData != null ? Mathf.Max(0, startingTowerData.InstallScrapCost) : 0;
+    public float RepairAmountPerStep => ActiveTowerData != null ? Mathf.Max(0f, ActiveTowerData.RepairAmount) : 0f;
+    public int WoodRepairCost => ActiveTowerData != null ? Mathf.Max(0, ActiveTowerData.RepairWoodCost) : 0;
+    public int ScrapRepairCost => ActiveTowerData != null ? Mathf.Max(0, ActiveTowerData.RepairScrapCost) : 0;
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
     public string PersistentId => PersistentSlotId;
+
+    /// <summary>The built tower's own data once placed, otherwise this slot's starting data. Repair values should track the installed tower.</summary>
+    private TowerData ActiveTowerData
+    {
+        get
+        {
+            ArrowTower tower = CurrentTower;
+            return tower != null && tower.Data != null ? tower.Data : startingTowerData;
+        }
+    }
 
     private void Awake()
     {
@@ -253,8 +252,8 @@ public class TowerSlot : MonoBehaviour, IInteractable
         }
 
         ResourceManager resourceManager = interactor != null ? interactor.ResourceManager : null;
-        int wood = Mathf.Max(0, woodBuildCost);
-        int scrap = Mathf.Max(0, scrapBuildCost);
+        int wood = WoodBuildCost;
+        int scrap = ScrapBuildCost;
         bool canAfford = HasRequiredBuildResources(resourceManager);
         return new InteractablePromptData
         {
@@ -289,9 +288,9 @@ public class TowerSlot : MonoBehaviour, IInteractable
             return false;
         }
 
-        if (towerPrefab == null)
+        if (startingTowerData == null || startingTowerData.TowerPrefab == null)
         {
-            Debug.LogWarning("[TowerSlot] towerPrefab is not assigned.", this);
+            Debug.LogWarning("[TowerSlot] startingTowerData (or its TowerPrefab) is not assigned.", this);
             return false;
         }
 
@@ -302,8 +301,8 @@ public class TowerSlot : MonoBehaviour, IInteractable
             return false;
         }
 
-        int reqWood = Mathf.Max(0, woodBuildCost);
-        int reqScrap = Mathf.Max(0, scrapBuildCost);
+        int reqWood = WoodBuildCost;
+        int reqScrap = ScrapBuildCost;
 
         if (!HasRequiredBuildResources(resourceManager))
         {
@@ -448,7 +447,7 @@ public class TowerSlot : MonoBehaviour, IInteractable
     {
         if (string.IsNullOrWhiteSpace(towerId) || towerId == ArrowTowerTowerId)
         {
-            return towerPrefab;
+            return startingTowerData != null ? startingTowerData.TowerPrefab : null;
         }
 
         Debug.LogWarning($"[TowerSlot] slot id='{PersistentId}' unsupported towerId='{towerId}'.", this);
@@ -462,8 +461,8 @@ public class TowerSlot : MonoBehaviour, IInteractable
             return false;
         }
 
-        int requiredWood = Mathf.Max(0, woodBuildCost);
-        int requiredScrap = Mathf.Max(0, scrapBuildCost);
+        int requiredWood = WoodBuildCost;
+        int requiredScrap = ScrapBuildCost;
         return resourceManager.HasResource(ResourceType.Wood, requiredWood) &&
                resourceManager.HasResource(ResourceType.Scrap, requiredScrap);
     }

@@ -6,11 +6,10 @@ public class FenceSlot : MonoBehaviour, IInteractable
     [Header("Slot State")]
     [SerializeField] private bool isUnlocked = true;
     [SerializeField] private GameObject installedFence;
-    [SerializeField] private GameObject fencePrefab;
 
-    [Header("Build Cost")]
-    [SerializeField] private int woodBuildCost = 1;
-    [SerializeField] private int scrapBuildCost = 0;
+    [Header("Fence Data")]
+    [SerializeField, Tooltip("Fence type this slot builds. Supplies the prefab and all install/repair costs.")]
+    private FenceData startingFenceData;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [SerializeField, Tooltip("Minimum seconds between resource cost debug logs (prompt refresh can be every frame).")]
@@ -32,13 +31,23 @@ public class FenceSlot : MonoBehaviour, IInteractable
     public bool HasFence => installedFence != null;
     public GameObject InstalledFence => installedFence;
     public FenceSegment CurrentFence => GetFenceSegmentOnInstalledFence();
-    public int WoodBuildCost => Mathf.Max(0, woodBuildCost);
-    public int ScrapBuildCost => Mathf.Max(0, scrapBuildCost);
+    public int WoodBuildCost => startingFenceData != null ? Mathf.Max(0, startingFenceData.InstallWoodCost) : 0;
+    public int ScrapBuildCost => startingFenceData != null ? Mathf.Max(0, startingFenceData.InstallScrapCost) : 0;
     public int WoodRepairCost => CurrentFence != null ? CurrentFence.GetRequiredWood() : 0;
     public int ScrapRepairCost => CurrentFence != null ? CurrentFence.GetRequiredScrap() : 0;
     public Transform SlotMarker => slotMarker;
     public PersistentId PersistentIdComponent => persistentId;
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
+
+    /// <summary>Next-tier fence data for the installed fence, if any. Null until Phase 2 wires an upgrade action to it.</summary>
+    public FenceData NextTierData
+    {
+        get
+        {
+            FenceSegment fence = CurrentFence;
+            return fence != null ? fence.NextTierData : null;
+        }
+    }
 
     public Transform SpawnPoint
     {
@@ -75,7 +84,7 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     public bool CanInstallFence()
     {
-        return isUnlocked && !HasFence && fencePrefab != null;
+        return isUnlocked && !HasFence && startingFenceData != null && startingFenceData.FencePrefab != null;
     }
 
     public bool HasRequiredBuildResources(ResourceManager resourceManager)
@@ -85,8 +94,8 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return false;
         }
 
-        int requiredWood = Mathf.Max(0, woodBuildCost);
-        int requiredScrap = Mathf.Max(0, scrapBuildCost);
+        int requiredWood = WoodBuildCost;
+        int requiredScrap = ScrapBuildCost;
         bool canAfford = resourceManager.HasResource(ResourceType.Wood, requiredWood) &&
                          resourceManager.HasResource(ResourceType.Scrap, requiredScrap);
 
@@ -219,8 +228,8 @@ public class FenceSlot : MonoBehaviour, IInteractable
         return new InteractablePromptData
         {
             actionText = "Press E to place fence",
-            woodCost = Mathf.Max(0, woodBuildCost),
-            scrapCost = Mathf.Max(0, scrapBuildCost),
+            woodCost = WoodBuildCost,
+            scrapCost = ScrapBuildCost,
             canAfford = canAfford
         };
     }
@@ -256,31 +265,34 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return false;
         }
 
+        int requiredWood = WoodBuildCost;
+        int requiredScrap = ScrapBuildCost;
+
         if (!HasRequiredBuildResources(resourceManager))
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             Debug.Log(
                 $"[FenceSlot] '{name}' cannot place fence: not enough resources. ResourceManager instanceId={resourceManager.GetInstanceID()} " +
-                $"{resourceManager.GetDebugSummary()} requiredWood={Mathf.Max(0, woodBuildCost)} requiredScrap={Mathf.Max(0, scrapBuildCost)}.",
+                $"{resourceManager.GetDebugSummary()} requiredWood={requiredWood} requiredScrap={requiredScrap}.",
                 this);
 #else
-            Debug.Log($"[FenceSlot] '{name}' cannot place fence: not enough resources (Wood {Mathf.Max(0, woodBuildCost)}, Scrap {Mathf.Max(0, scrapBuildCost)}).", this);
+            Debug.Log($"[FenceSlot] '{name}' cannot place fence: not enough resources (Wood {requiredWood}, Scrap {requiredScrap}).", this);
 #endif
             return false;
         }
 
-        bool spentWood = resourceManager.TrySpendResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost)) || Mathf.Max(0, woodBuildCost) == 0;
-        bool spentScrap = resourceManager.TrySpendResource(ResourceType.Scrap, Mathf.Max(0, scrapBuildCost)) || Mathf.Max(0, scrapBuildCost) == 0;
+        bool spentWood = resourceManager.TrySpendResource(ResourceType.Wood, requiredWood) || requiredWood == 0;
+        bool spentScrap = resourceManager.TrySpendResource(ResourceType.Scrap, requiredScrap) || requiredScrap == 0;
         if (!spentWood || !spentScrap)
         {
             Debug.LogWarning($"[FenceSlot] '{name}' failed to spend build cost. Placement cancelled.", this);
-            if (spentWood && Mathf.Max(0, woodBuildCost) > 0)
+            if (spentWood && requiredWood > 0)
             {
-                resourceManager.AddResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost));
+                resourceManager.AddResource(ResourceType.Wood, requiredWood);
             }
-            if (spentScrap && Mathf.Max(0, scrapBuildCost) > 0)
+            if (spentScrap && requiredScrap > 0)
             {
-                resourceManager.AddResource(ResourceType.Scrap, Mathf.Max(0, scrapBuildCost));
+                resourceManager.AddResource(ResourceType.Scrap, requiredScrap);
             }
             return false;
         }
@@ -290,13 +302,13 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return true;
         }
 
-        if (Mathf.Max(0, woodBuildCost) > 0)
+        if (requiredWood > 0)
         {
-            resourceManager.AddResource(ResourceType.Wood, Mathf.Max(0, woodBuildCost));
+            resourceManager.AddResource(ResourceType.Wood, requiredWood);
         }
-        if (Mathf.Max(0, scrapBuildCost) > 0)
+        if (requiredScrap > 0)
         {
-            resourceManager.AddResource(ResourceType.Scrap, Mathf.Max(0, scrapBuildCost));
+            resourceManager.AddResource(ResourceType.Scrap, requiredScrap);
         }
         return false;
     }
@@ -331,13 +343,13 @@ public class FenceSlot : MonoBehaviour, IInteractable
 
     private bool TryPlaceFence()
     {
-        if (!isUnlocked || HasFence || fencePrefab == null)
+        if (!isUnlocked || HasFence || startingFenceData == null || startingFenceData.FencePrefab == null)
         {
             return false;
         }
 
         Transform origin = SpawnPoint;
-        GameObject spawnedFence = Instantiate(fencePrefab, origin.position, origin.rotation);
+        GameObject spawnedFence = Instantiate(startingFenceData.FencePrefab, origin.position, origin.rotation);
         installedFence = spawnedFence;
         installedFenceSegment = null;
         RefreshSlotVisualState();

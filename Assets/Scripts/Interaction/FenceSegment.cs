@@ -1,56 +1,15 @@
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-[Serializable]
-public class FenceTierData
-{
-    [SerializeField] private string tierName = "Tier 1";
-    [SerializeField] private float maxHp = 100f;
-    [SerializeField] private float repairAmount = 30f;
-    [SerializeField] private int woodCost = 1;
-    [SerializeField] private int scrapCost = 0;
-
-    public string TierName => string.IsNullOrWhiteSpace(tierName) ? "Unnamed Tier" : tierName;
-    public float MaxHp => Mathf.Max(1f, maxHp);
-    public float RepairAmount => Mathf.Max(0f, repairAmount);
-    public int WoodCost => Mathf.Max(0, woodCost);
-    public int ScrapCost => Mathf.Max(0, scrapCost);
-
-    public FenceTierData()
-    {
-    }
-
-    public FenceTierData(string tierName, float maxHp, float repairAmount, int woodCost, int scrapCost)
-    {
-        this.tierName = tierName;
-        this.maxHp = maxHp;
-        this.repairAmount = repairAmount;
-        this.woodCost = woodCost;
-        this.scrapCost = scrapCost;
-    }
-}
-
 public class FenceSegment : MonoBehaviour, IStructureHpSource
 {
     [Header("Fence Data")]
-    [SerializeField, Tooltip("Authoritative design-time data for this fence. Uses legacy tier values when unassigned.")]
+    [SerializeField, Tooltip("Authoritative design-time data for this fence. Sole source of MaxHp/repair values.")]
     private FenceData fenceData;
-
-    // Tier Data
-    [Header("Fence Tiers")]
-    [SerializeField] private List<FenceTierData> tiers = new List<FenceTierData>
-    {
-        new FenceTierData(), // Tier 1 default: 100 HP, repair 30, wood 1, scrap 0
-        new FenceTierData(), // Override values below in Reset() for clear startup data
-        new FenceTierData(),
-        new FenceTierData()
-    };
 
     // Runtime State
     [Header("Fence Runtime State")]
-    [SerializeField, Tooltip("0-based index of the active tier.")] private int currentTierIndex;
     [SerializeField] private float currentHp;
 
     [SerializeField, Tooltip("Explicit broken state; also toggles barrier colliders. HP at 0 when true during play.")]
@@ -83,50 +42,23 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
     private static RectTransform cachedStructureHpBarsRoot;
 
     public FenceData Data => fenceData;
-    public int CurrentTierNumber => currentTierIndex + 1;
+    public int CurrentTierNumber => fenceData != null ? fenceData.TierNumber : 1;
     public float CurrentHp => currentHp;
-    public float MaxHp
-    {
-        get
-        {
-            if (fenceData != null)
-            {
-                return Mathf.Max(1f, fenceData.MaxHp);
-            }
-
-            return CurrentTier.MaxHp;
-        }
-    }
+    public float MaxHp => fenceData != null ? Mathf.Max(1f, fenceData.MaxHp) : 1f;
     public bool IsDestroyed => isDestroyed;
     public Transform HpAnchorTransform => hpBarAnchor != null ? hpBarAnchor : uiAnchor != null ? uiAnchor : transform;
 
-    private FenceTierData CurrentTier
-    {
-        get
-        {
-            EnsureLegacyTierState();
-            return tiers[currentTierIndex];
-        }
-    }
+    /// <summary>Next-tier fence data, if this fence's data has one configured. Null at the maximum tier.</summary>
+    public FenceData NextTierData => fenceData != null ? fenceData.NextFence : null;
 
     private void Reset()
     {
-        tiers = new List<FenceTierData>
-        {
-            new FenceTierData("Tier 1", 100f, 30f, 1, 0),
-            new FenceTierData("Tier 2", 160f, 30f, 2, 0),
-            new FenceTierData("Tier 3", 210f, 30f, 1, 1),
-            new FenceTierData("Tier 4", 260f, 30f, 1, 2)
-        };
-
-        currentTierIndex = 0;
-        currentHp = tiers[0].MaxHp;
         isDestroyed = false;
+        currentHp = fenceData != null ? Mathf.Max(1f, fenceData.MaxHp) : 1f;
     }
 
     private void Awake()
     {
-        InitializeResolvedHp();
         EnsureValidState();
         CacheBarrierColliders();
         TrySpawnScreenSpaceHpBar();
@@ -145,7 +77,11 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
     private void OnValidate()
     {
         EnsureValidState();
-        if (fenceData != null && fenceData.MaxHp <= 0f)
+        if (fenceData == null)
+        {
+            Debug.LogWarning($"[{nameof(FenceSegment)}] '{name}' has no FenceData assigned. MaxHp/repair values will fall back to 1/0.", this);
+        }
+        else if (fenceData.MaxHp <= 0f)
         {
             Debug.LogWarning($"[{nameof(FenceSegment)}] '{name}' has FenceData '{fenceData.name}' with non-positive MaxHp.", this);
         }
@@ -265,12 +201,12 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
 
     public int GetRequiredWood()
     {
-        return fenceData != null ? Mathf.Max(0, fenceData.RepairWoodCost) : CurrentTier.WoodCost;
+        return fenceData != null ? Mathf.Max(0, fenceData.RepairWoodCost) : 0;
     }
 
     public int GetRequiredScrap()
     {
-        return fenceData != null ? Mathf.Max(0, fenceData.RepairScrapCost) : CurrentTier.ScrapCost;
+        return fenceData != null ? Mathf.Max(0, fenceData.RepairScrapCost) : 0;
     }
 
     public bool ShouldShowWoodCost()
@@ -285,7 +221,7 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
 
     public float GetRepairAmount()
     {
-        return fenceData != null ? Mathf.Max(0f, fenceData.RepairAmount) : CurrentTier.RepairAmount;
+        return fenceData != null ? Mathf.Max(0f, fenceData.RepairAmount) : 0f;
     }
 
     // Display helper only. Core repair logic uses numeric getters and checks.
@@ -398,44 +334,6 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
         return name;
     }
 
-    public void UpgradeToTier(int newTierNumber, bool fillHpToMax = true)
-    {
-        EnsureValidState();
-
-        int requestedIndex = newTierNumber - 1;
-        if (requestedIndex < 0 || requestedIndex >= tiers.Count)
-        {
-            Debug.LogWarning(
-                $"[{nameof(FenceSegment)}] {name} upgrade failed. Tier {newTierNumber} is out of range (1-{tiers.Count}).");
-            return;
-        }
-
-        int oldTierNumber = CurrentTierNumber;
-        float oldHp = currentHp;
-
-        currentTierIndex = requestedIndex;
-        if (fillHpToMax)
-        {
-            currentHp = MaxHp;
-        }
-        else
-        {
-            currentHp = Mathf.Clamp(currentHp, 0f, MaxHp);
-        }
-
-        if (currentHp > 0f)
-        {
-            isDestroyed = false;
-        }
-
-        Debug.Log(
-            $"[{nameof(FenceSegment)}] {name} upgraded Tier {oldTierNumber} -> {CurrentTierNumber} ({CurrentTier.TierName}). " +
-            $"HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#} (fillHpToMax={fillHpToMax}).");
-
-        ApplyDestroyedState();
-        RefreshScreenSpaceHpBar();
-    }
-
     void TrySpawnScreenSpaceHpBar()
     {
         if (hpBarInstance != null)
@@ -526,47 +424,13 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
     }
 
     // Validation
-    private void InitializeResolvedHp()
-    {
-        EnsureLegacyTierState();
-
-        if (fenceData == null || isDestroyed)
-        {
-            return;
-        }
-
-        float legacyMaxHp = tiers[currentTierIndex].MaxHp;
-        if (Mathf.Approximately(currentHp, legacyMaxHp))
-        {
-            currentHp = MaxHp;
-        }
-    }
-
     private void EnsureValidState()
     {
-        EnsureLegacyTierState();
-
         currentHp = Mathf.Clamp(currentHp, 0f, MaxHp);
         if (currentHp > 0f && isDestroyed)
         {
             isDestroyed = false;
             ApplyDestroyedState();
         }
-    }
-
-    private void EnsureLegacyTierState()
-    {
-        if (tiers == null)
-        {
-            tiers = new List<FenceTierData>();
-        }
-
-        if (tiers.Count == 0)
-        {
-            tiers.Add(new FenceTierData("Tier 1", 100f, 30f, 1, 0));
-            Debug.LogWarning($"[{nameof(FenceSegment)}] {name} had no tiers configured. Added fallback Tier 1.");
-        }
-
-        currentTierIndex = Mathf.Clamp(currentTierIndex, 0, tiers.Count - 1);
     }
 }
