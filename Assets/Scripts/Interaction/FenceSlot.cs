@@ -398,11 +398,19 @@ public class FenceSlot : MonoBehaviour, IInteractable
             return false;
         }
 
+        float hpRatio = currentSegment.MaxHp > 0f ? Mathf.Clamp01(currentSegment.CurrentHp / currentSegment.MaxHp) : 1f;
+
         GameObject oldFence = installedFence;
         Transform origin = SpawnPoint;
         GameObject spawnedFence = Instantiate(nextData.FencePrefab, origin.position, origin.rotation);
         installedFence = spawnedFence;
         installedFenceSegment = null;
+
+        FenceSegment newSegment = CurrentFence;
+        if (newSegment != null)
+        {
+            newSegment.SetCurrentHp(newSegment.MaxHp * hpRatio);
+        }
 
         if (oldFence != null)
         {

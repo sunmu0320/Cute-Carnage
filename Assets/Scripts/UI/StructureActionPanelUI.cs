@@ -269,7 +269,7 @@ public class StructureActionPanelUI : MonoBehaviour
 
         if (titleText != null) titleText.text = "Fence";
         if (subtitleText != null) subtitleText.text = "DEFENSE BARRIER";
-        if (tierBadgeText != null) tierBadgeText.text = $"T{selectedFenceSlot.CurrentTierNumber}";
+        if (tierBadgeText != null) tierBadgeText.text = isEmpty ? "—" : $"T{selectedFenceSlot.CurrentTierNumber}";
 
         if (hpSection != null) hpSection.SetActive(hasValidFence);
         if (hasValidFence)
@@ -299,6 +299,11 @@ public class StructureActionPanelUI : MonoBehaviour
         }
         if (repairWoodCountText != null) repairWoodCountText.text = selectedFenceSlot.WoodRepairCost.ToString();
         if (repairScrapCountText != null) repairScrapCountText.text = selectedFenceSlot.ScrapRepairCost.ToString();
+
+        // hpFill/hpText otherwise don't visibly refresh until the panel is
+        // closed and reopened (data is correct immediately - see TryRepair -
+        // this just forces the same redraw a SetActive toggle would trigger).
+        Canvas.ForceUpdateCanvases();
     }
 
     private bool IsSelectionValid()

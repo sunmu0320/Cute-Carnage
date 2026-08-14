@@ -178,6 +178,16 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
         }
     }
 
+    /// <summary>Sets CurrentHp directly (clamped to [0, MaxHp]). Used by FenceSlot.TryUpgradeFence to
+    /// carry the pre-upgrade HP ratio over to the newly instantiated tier.</summary>
+    public void SetCurrentHp(float hp)
+    {
+        currentHp = Mathf.Clamp(hp, 0f, MaxHp);
+        ClearDestroyedStateIfRepaired();
+        ApplyDestroyedState();
+        RefreshScreenSpaceHpBar();
+    }
+
     public bool CanRepair()
     {
         EnsureValidState();

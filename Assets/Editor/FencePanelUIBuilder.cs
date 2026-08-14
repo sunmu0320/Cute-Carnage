@@ -71,6 +71,10 @@ public static class FencePanelUIBuilder
                 hpValueText.gameObject.name = "HpValueText";
             }
 
+            // Hand-made wireframe reference text, never read by code. Superseded
+            // by SubtitleText, which occupies the same spot with real content.
+            DestroyChildIfPresent(panelRoot, "Description");
+
             StyleBackground(background);
             EnsureAccentBorder(panelRoot, background);
             EnsureSubtitleText(panelRoot, titleText, font, fontMaterial);
