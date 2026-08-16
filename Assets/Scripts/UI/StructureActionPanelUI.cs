@@ -28,6 +28,14 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private TextMeshProUGUI repairWoodCountText;
     [SerializeField] private TextMeshProUGUI repairScrapCountText;
 
+    [Header("Tower Panel (Stats/Evolve)")]
+    [SerializeField] private GameObject statsSection;
+    [SerializeField] private TextMeshProUGUI damageValueText;
+    [SerializeField] private TextMeshProUGUI attackSpeedValueText;
+    [SerializeField] private TextMeshProUGUI rangeValueText;
+    [SerializeField] private Button evolveButton;
+    [SerializeField] private TextMeshProUGUI evolveButtonText;
+
     [Header("Input")]
     [SerializeField] private KeyCode closeKey = KeyCode.Escape;
 
@@ -54,6 +62,11 @@ public class StructureActionPanelUI : MonoBehaviour
             repairButton.onClick.AddListener(HandleRepairClicked);
         }
 
+        if (evolveButton != null)
+        {
+            evolveButton.onClick.AddListener(HandleEvolveClicked);
+        }
+
         Close();
     }
 
@@ -72,6 +85,11 @@ public class StructureActionPanelUI : MonoBehaviour
         if (repairButton != null)
         {
             repairButton.onClick.RemoveListener(HandleRepairClicked);
+        }
+
+        if (evolveButton != null)
+        {
+            evolveButton.onClick.RemoveListener(HandleEvolveClicked);
         }
     }
 
@@ -177,6 +195,15 @@ public class StructureActionPanelUI : MonoBehaviour
         }
     }
 
+    private void HandleEvolveClicked()
+    {
+        // Evolution selection screen (8-way grid) is a separate session's
+        // scope. This button is only interactable at CurrentTierNumber >= 3,
+        // which is currently unreachable (Tower T2/T3 data doesn't exist
+        // yet), so this is a no-op in practice.
+        Debug.Log("[TODO] Evolution selection screen not yet implemented");
+    }
+
     private void Refresh()
     {
         if (selectedTowerSlot == null && selectedFenceSlot == null)
@@ -200,6 +227,11 @@ public class StructureActionPanelUI : MonoBehaviour
             titleText.text = "Arrow Tower";
         }
 
+        if (subtitleText != null)
+        {
+            subtitleText.text = "DEFENSE TOWER";
+        }
+
         if (hpSection != null)
         {
             hpSection.SetActive(hasValidTower);
@@ -215,6 +247,52 @@ public class StructureActionPanelUI : MonoBehaviour
             if (hpText != null)
             {
                 hpText.text = $"{Mathf.RoundToInt(tower.CurrentHp)} / {Mathf.RoundToInt(tower.MaxHp)}";
+            }
+        }
+
+        if (statsSection != null)
+        {
+            statsSection.SetActive(true);
+        }
+
+        // hasValidTower && tower.Data == null is reachable if a tower prefab
+        // is placed without its TowerData assigned (see ArrowTower.OnValidate
+        // warning) - treated the same as "no tower" for stat display rather
+        // than crashing.
+        TowerData towerData = hasValidTower ? tower.Data : null;
+        if (towerData != null)
+        {
+            if (damageValueText != null)
+            {
+                damageValueText.text = towerData.Damage.ToString("0.#");
+            }
+
+            if (attackSpeedValueText != null)
+            {
+                float attackInterval = Mathf.Max(0.05f, towerData.AttackInterval);
+                attackSpeedValueText.text = $"{1f / attackInterval:0.#}/s";
+            }
+
+            if (rangeValueText != null)
+            {
+                rangeValueText.text = $"{towerData.AttackRange:0.#}m";
+            }
+        }
+        else
+        {
+            if (damageValueText != null) damageValueText.text = "—";
+            if (attackSpeedValueText != null) attackSpeedValueText.text = "—";
+            if (rangeValueText != null) rangeValueText.text = "—";
+        }
+
+        if (evolveButton != null)
+        {
+            evolveButton.gameObject.SetActive(true);
+            bool canEvolve = selectedTowerSlot.CurrentTierNumber >= 3;
+            evolveButton.interactable = canEvolve;
+            if (evolveButtonText != null)
+            {
+                evolveButtonText.text = canEvolve ? "EVOLVE" : "EVOLVE (T3 필요)";
             }
         }
 
@@ -274,6 +352,9 @@ public class StructureActionPanelUI : MonoBehaviour
         if (titleText != null) titleText.text = "Fence";
         if (subtitleText != null) subtitleText.text = "DEFENSE BARRIER";
         if (tierBadgeText != null) tierBadgeText.text = isEmpty ? "—" : $"T{selectedFenceSlot.CurrentTierNumber}";
+
+        if (statsSection != null) statsSection.SetActive(false);
+        if (evolveButton != null) evolveButton.gameObject.SetActive(false);
 
         if (hpSection != null) hpSection.SetActive(hasValidFence);
 

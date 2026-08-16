@@ -5,22 +5,28 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>
-/// One-shot structural builder for the Fence/Tower StructureActionPanel.
-/// Run via Tools/UI Builders/Build Fence Panel. Idempotent: re-running
-/// updates existing generated children in place instead of duplicating them.
-/// Only touches the real StructureActionPanel instance (gameObject named
-/// "StructureActionPanel"), never the dead NightRepairPanel copy.
+/// One-shot structural builder for the shared Fence/Tower StructureActionPanel.
+/// Renamed from FencePanelUIBuilder when Tower-specific generation (StatsSection,
+/// EvolveButton) was added - the builder was never Fence-only, it has always
+/// targeted the single shared StructureActionPanelUI, and the old name was
+/// actively misleading once Tower got its own generated sections.
+/// Run via Tools/UI Builders/Build Structure Action Panel. Idempotent:
+/// re-running updates existing generated children in place instead of
+/// duplicating them. Only touches the real StructureActionPanel instance
+/// (gameObject named "StructureActionPanel"), never the dead NightRepairPanel
+/// copy.
 /// InstallButton is out of scope and expected to be gone (removed by design);
 /// its old cost text (installCostText, formerly "InstallCost"/"UpgradeCost")
 /// and the hand-made "RepairAmount"/"RepairCost" placeholders are deleted
 /// here and replaced by the CostRoot structure below. Also wires the new
 /// StructureActionPanelUI SerializeFields (subtitleText, tierBadgeText,
-/// upgradeButtonText, repairAmountText, upgrade/repair Wood/ScrapCountText)
-/// to the objects it creates, via WireGeneratedFields.
+/// upgradeButtonText, repairAmountText, upgrade/repair Wood/ScrapCountText,
+/// statsSection, damage/attackSpeed/rangeValueText, evolveButton,
+/// evolveButtonText) to the objects it creates, via WireGeneratedFields.
 /// </summary>
-public static class FencePanelUIBuilder
+public static class StructureActionPanelUIBuilder
 {
-    private const string MenuPath = "Tools/UI Builders/Build Fence Panel";
+    private const string MenuPath = "Tools/UI Builders/Build Structure Action Panel";
     private const string PrefabPath = "Assets/Prefabs/UI/UIRoot.prefab";
     private const float BorderThickness = 2f;
 
@@ -40,7 +46,7 @@ public static class FencePanelUIBuilder
 
             if (panelUI == null)
             {
-                Debug.LogError("FencePanelUIBuilder: could not find the active StructureActionPanelUI on a GameObject named 'StructureActionPanel'. Aborting without saving.");
+                Debug.LogError("StructureActionPanelUIBuilder: could not find the active StructureActionPanelUI on a GameObject named 'StructureActionPanel'. Aborting without saving.");
                 return;
             }
 
@@ -51,10 +57,13 @@ public static class FencePanelUIBuilder
             Transform upgradeButton = GetRef<Button>(so, "upgradeButton")?.transform;
             Transform closeButton = GetRef<Button>(so, "closeButton")?.transform;
             Transform background = panelRoot.Find("Background");
+            Transform hpSection = GetRef<GameObject>(so, "hpSection")?.transform;
+            Transform dayActionsRoot = GetRef<GameObject>(so, "dayActionsRoot")?.transform;
 
-            if (titleText == null || repairButton == null || upgradeButton == null || closeButton == null || background == null)
+            if (titleText == null || repairButton == null || upgradeButton == null || closeButton == null
+                || background == null || hpSection == null || dayActionsRoot == null)
             {
-                Debug.LogError("FencePanelUIBuilder: one or more expected references (titleText/repairButton/upgradeButton/closeButton/Background) were missing. Aborting without saving to avoid a partial edit. Note: installButton is expected to be null now that it has been removed, and is intentionally not required.");
+                Debug.LogError("StructureActionPanelUIBuilder: one or more expected references (titleText/repairButton/upgradeButton/closeButton/Background/hpSection/dayActionsRoot) were missing. Aborting without saving to avoid a partial edit. Note: installButton is expected to be null now that it has been removed, and is intentionally not required.");
                 return;
             }
 
@@ -89,13 +98,16 @@ public static class FencePanelUIBuilder
 
             Transform upgradeActionRow = BuildButtonCostLayout(upgradeButton, font, fontMaterial);
 
-            WireGeneratedFields(so, panelRoot, repairButton, repairActionRow, upgradeButton, upgradeActionRow);
+            Transform statsSection = EnsureStatsSection(panelRoot, dayActionsRoot, font, fontMaterial);
+            Transform evolveButton = EnsureEvolveButton(dayActionsRoot, upgradeButton, font, fontMaterial);
+
+            WireGeneratedFields(so, panelRoot, repairButton, repairActionRow, upgradeButton, upgradeActionRow, statsSection, evolveButton);
             so.ApplyModifiedProperties();
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
-            Debug.Log("FencePanelUIBuilder: StructureActionPanel structure updated.");
+            Debug.Log("StructureActionPanelUIBuilder: StructureActionPanel structure updated.");
         }
         finally
         {
@@ -120,16 +132,20 @@ public static class FencePanelUIBuilder
 
     // Wires the SerializeFields StructureActionPanelUI.cs added for Fence
     // Phase 1 (subtitleText, tierBadgeText, upgradeButtonText,
-    // repairAmountText, upgrade/repair Wood/ScrapCountText) to the objects
-    // this builder just created. Safe to call every run - re-wiring an
-    // already-correct reference is a no-op.
+    // repairAmountText, upgrade/repair Wood/ScrapCountText) and Tower
+    // Phase 1-3 (statsSection, damage/attackSpeed/rangeValueText,
+    // evolveButton, evolveButtonText) to the objects this builder just
+    // created. Safe to call every run - re-wiring an already-correct
+    // reference is a no-op.
     private static void WireGeneratedFields(
         SerializedObject so,
         Transform panelRoot,
         Transform repairButton,
         Transform repairActionRow,
         Transform upgradeButton,
-        Transform upgradeActionRow)
+        Transform upgradeActionRow,
+        Transform statsSection,
+        Transform evolveButton)
     {
         SetRef(so, "subtitleText", panelRoot.Find("SubtitleText")?.GetComponent<TextMeshProUGUI>());
         SetRef(so, "tierBadgeText", panelRoot.Find("TierBadge/TierBadgeFill/TierBadgeText")?.GetComponent<TextMeshProUGUI>());
@@ -141,6 +157,14 @@ public static class FencePanelUIBuilder
         SetRef(so, "upgradeButtonText", upgradeActionRow.Find("Text (TMP)")?.GetComponent<TextMeshProUGUI>());
         SetRef(so, "upgradeWoodCountText", upgradeButton.Find("CostRoot/WoodCost/WoodCountText")?.GetComponent<TextMeshProUGUI>());
         SetRef(so, "upgradeScrapCountText", upgradeButton.Find("CostRoot/ScrapCost/ScrapCountText")?.GetComponent<TextMeshProUGUI>());
+
+        SetRef(so, "statsSection", statsSection.gameObject);
+        SetRef(so, "damageValueText", statsSection.Find("DamageRow/ValueText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "attackSpeedValueText", statsSection.Find("AttackSpeedRow/ValueText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "rangeValueText", statsSection.Find("RangeRow/ValueText")?.GetComponent<TextMeshProUGUI>());
+
+        SetRef(so, "evolveButton", evolveButton.GetComponent<Button>());
+        SetRef(so, "evolveButtonText", evolveButton.Find("Text (TMP)")?.GetComponent<TextMeshProUGUI>());
     }
 
     private static GameObject EnsureChild(Transform parent, string name, params System.Type[] components)
@@ -457,5 +481,117 @@ public static class FencePanelUIBuilder
         tmp.alignment = TextAlignmentOptions.MidlineLeft;
         tmp.color = Color.white;
         tmp.text = "0"; // set at runtime by StructureActionPanelUI.RefreshFence()
+    }
+
+    // Tower-only stats block (Damage/Atk Speed/Range), placed directly above
+    // DayActionsRoot. Fence hides this whole section (RefreshFence sets
+    // statsSection inactive) since a Fence has no attack stats.
+    private static Transform EnsureStatsSection(Transform panelRoot, Transform dayActionsRoot, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject sectionGo = EnsureChild(panelRoot, "StatsSection", typeof(VerticalLayoutGroup));
+        // Always re-anchored directly above DayActionsRoot rather than
+        // relative to HpSection - keeps this idempotent regardless of
+        // exactly where HpSection sits in the sibling order.
+        sectionGo.transform.SetSiblingIndex(dayActionsRoot.GetSiblingIndex());
+
+        RectTransform sectionRect = sectionGo.GetComponent<RectTransform>();
+        FixNonStretchedRect(sectionRect, new Vector2(150f, 58f));
+        sectionRect.anchoredPosition = new Vector2(0f, 14f);
+
+        VerticalLayoutGroup vlg = sectionGo.GetComponent<VerticalLayoutGroup>();
+        vlg.spacing = 3f;
+        vlg.childAlignment = TextAnchor.MiddleCenter;
+        vlg.childForceExpandWidth = false;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = false;
+        vlg.childControlHeight = false;
+
+        EnsureStatRow(sectionGo.transform, "DamageRow", "DAMAGE", "0", font, fontMaterial);
+        EnsureStatRow(sectionGo.transform, "AttackSpeedRow", "ATK SPEED", "0/s", font, fontMaterial);
+        EnsureStatRow(sectionGo.transform, "RangeRow", "RANGE", "0m", font, fontMaterial);
+
+        return sectionGo.transform;
+    }
+
+    // "LABEL  value"-style row: accent-colored label, white value. Value text
+    // is a placeholder; StructureActionPanelUI.Refresh() overwrites it at
+    // runtime with the installed tower's actual stat (or "-" when empty).
+    private static void EnsureStatRow(Transform parent, string rowName, string labelText, string initialValue, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject rowGo = EnsureChild(parent, rowName, typeof(HorizontalLayoutGroup));
+        RectTransform rowRect = rowGo.GetComponent<RectTransform>();
+        rowRect.sizeDelta = new Vector2(140f, 16f);
+
+        HorizontalLayoutGroup hlg = rowGo.GetComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 8f;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = false;
+
+        GameObject labelGo = EnsureChild(rowGo.transform, "Label", typeof(TextMeshProUGUI));
+        RectTransform labelRect = labelGo.GetComponent<RectTransform>();
+        labelRect.sizeDelta = new Vector2(70f, 16f);
+
+        TextMeshProUGUI labelTmp = labelGo.GetComponent<TextMeshProUGUI>();
+        labelTmp.font = font;
+        labelTmp.fontSharedMaterial = fontMaterial;
+        labelTmp.fontSize = 11f;
+        labelTmp.alignment = TextAlignmentOptions.MidlineLeft;
+        labelTmp.color = AccentColor;
+        labelTmp.text = labelText;
+
+        GameObject valueGo = EnsureChild(rowGo.transform, "ValueText", typeof(TextMeshProUGUI));
+        RectTransform valueRect = valueGo.GetComponent<RectTransform>();
+        valueRect.sizeDelta = new Vector2(60f, 16f);
+
+        TextMeshProUGUI valueTmp = valueGo.GetComponent<TextMeshProUGUI>();
+        valueTmp.font = font;
+        valueTmp.fontSharedMaterial = fontMaterial;
+        valueTmp.fontSize = 11f;
+        valueTmp.alignment = TextAlignmentOptions.MidlineLeft;
+        valueTmp.color = Color.white;
+        valueTmp.text = initialValue; // set at runtime by StructureActionPanelUI.Refresh()
+    }
+
+    // Tower-only evolve button, sibling to UpgradeButton/RepairActionRoot
+    // inside DayActionsRoot's HorizontalLayoutGroup. Styled to match
+    // UpgradeButton (same sprite/size) rather than reusing
+    // BuildButtonCostLayout, since Evolve has no Wood/Scrap cost to show -
+    // it's gated on tower tier, not resources.
+    private static Transform EnsureEvolveButton(Transform dayActionsRoot, Transform upgradeButton, TMP_FontAsset font, Material fontMaterial)
+    {
+        GameObject evolveGo = EnsureChild(dayActionsRoot, "EvolveButton", typeof(Image), typeof(Button));
+
+        RectTransform evolveRect = evolveGo.GetComponent<RectTransform>();
+        RectTransform upgradeRect = upgradeButton.GetComponent<RectTransform>();
+        evolveRect.anchorMin = upgradeRect.anchorMin;
+        evolveRect.anchorMax = upgradeRect.anchorMax;
+        evolveRect.pivot = upgradeRect.pivot;
+        evolveRect.sizeDelta = upgradeRect.sizeDelta;
+        evolveRect.anchoredPosition = Vector2.zero; // DayActionsRoot's HorizontalLayoutGroup repositions this
+
+        Image upgradeImage = upgradeButton.GetComponent<Image>();
+        Image evolveImage = evolveGo.GetComponent<Image>();
+        evolveImage.sprite = upgradeImage.sprite;
+        evolveImage.type = upgradeImage.type;
+        evolveImage.color = Color.white;
+
+        Button evolveButtonComponent = evolveGo.GetComponent<Button>();
+        evolveButtonComponent.targetGraphic = evolveImage;
+
+        GameObject textGo = EnsureChild(evolveGo.transform, "Text (TMP)", typeof(TextMeshProUGUI));
+        FixNonStretchedRect(textGo.GetComponent<RectTransform>(), new Vector2(110f, 20f));
+
+        TextMeshProUGUI tmp = textGo.GetComponent<TextMeshProUGUI>();
+        tmp.font = font;
+        tmp.fontSharedMaterial = fontMaterial;
+        tmp.fontSize = 12.3f;
+        tmp.alignment = TextAlignmentOptions.Center;
+        tmp.color = Color.white;
+        tmp.text = "EVOLVE"; // set at runtime by StructureActionPanelUI.Refresh()
+
+        return evolveGo.transform;
     }
 }
