@@ -86,8 +86,9 @@ public static class StructureActionPanelUIBuilder
 
             StyleBackground(background);
             EnsureAccentBorder(panelRoot, background);
-            EnsureSubtitleText(panelRoot, titleText, font, fontMaterial);
-            EnsureTierBadge(panelRoot, titleText, font, fontMaterial);
+            Transform backgroundBorder = panelRoot.Find("BackgroundBorder");
+            Transform subtitleText = EnsureSubtitleText(so, panelRoot, titleText, font, fontMaterial);
+            Transform tierBadge = EnsureTierBadge(so, panelRoot, font, fontMaterial);
             EnsureKeyLabel(closeButton, "ESC", font, fontMaterial);
 
             RemoveObsoletePlaceholders(so, repairButton);
@@ -98,11 +99,70 @@ public static class StructureActionPanelUIBuilder
 
             Transform upgradeActionRow = BuildButtonCostLayout(upgradeButton, font, fontMaterial);
 
-            Transform statsSection = EnsureStatsSection(panelRoot, dayActionsRoot, font, fontMaterial);
-            Transform evolveButton = EnsureEvolveButton(dayActionsRoot, upgradeButton, font, fontMaterial);
+            Transform statsSection = EnsureStatsSection(so, panelRoot, font, fontMaterial);
+            Transform evolveButton = EnsureEvolveButton(so, panelRoot, upgradeButton, font, fontMaterial);
 
-            WireGeneratedFields(so, panelRoot, repairButton, repairActionRow, upgradeButton, upgradeActionRow, statsSection, evolveButton);
+            // Structural pass: fold everything except Background/
+            // BackgroundBorder/CloseButton into one ContentRoot
+            // (VerticalLayoutGroup) so sections stack by their real height
+            // instead of colliding at hand-picked anchoredPositions - see
+            // class doc comment for why those three stay outside it.
+            Transform contentRoot = EnsureContentRoot(panelRoot, background);
+
+            Transform iconRoot = panelRoot.Find("IconRoot") ?? contentRoot.Find("HeaderRow/IconRoot");
+            if (iconRoot != null)
+            {
+                // Confirmed with design: IconRoot's Canvas/CanvasScaler/
+                // GraphicRaycaster were a stray oversized RectTransform, not
+                // an intentional 3D-preview overlay. Strip them so it's a
+                // plain child Image inside HeaderRow.
+                StripIconRootOverlayComponents(iconRoot);
+            }
+            else
+            {
+                Debug.LogWarning("StructureActionPanelUIBuilder: IconRoot not found - skipping header icon slot.");
+            }
+
+            Transform headerRow = EnsureHeaderRow(contentRoot, iconRoot, titleText, subtitleText, tierBadge);
+
+            hpSection.SetParent(contentRoot, false);
+            statsSection.SetParent(contentRoot, false);
+            evolveButton.SetParent(contentRoot, false);
+            EnsureFullWidthLayoutElement(evolveButton, upgradeButton.GetComponent<RectTransform>().sizeDelta.x);
+            dayActionsRoot.SetParent(contentRoot, false);
+
+            // Bug 3: HpSection/StatsSection/DayActionsRoot still carry their
+            // old flat-layout sizeDelta.y (100, 100 again for
+            // DayActionsRoot) from before this restructure. ContentRoot's
+            // childControlHeight=false means it just stacks children at
+            // whatever height they already report, so those stale values
+            // reserve far more vertical space than the actual content needs.
+            // A ContentSizeFitter makes each section self-report its real
+            // height instead.
+            EnsureVerticalContentSizeFitter(hpSection);
+            EnsureVerticalContentSizeFitter(statsSection);
+            EnsureVerticalContentSizeFitter(dayActionsRoot);
+
+            headerRow.SetSiblingIndex(0);
+            hpSection.SetSiblingIndex(1);
+            statsSection.SetSiblingIndex(2);
+            evolveButton.SetSiblingIndex(3);
+            dayActionsRoot.SetSiblingIndex(4);
+
+            closeButton.SetAsLastSibling(); // always on top, outside ContentRoot's flow
+
+            WireGeneratedFields(so, subtitleText, tierBadge, repairButton, repairActionRow, upgradeButton, upgradeActionRow, statsSection, evolveButton);
+            WireBackgroundSyncFields(so, contentRoot, background, backgroundBorder);
             so.ApplyModifiedProperties();
+
+            // PrefabUtility.LoadPrefabContents runs outside a live scene's
+            // update loop, so LayoutGroups don't get the usual per-frame
+            // deferred rebuild - without forcing one, whatever partial/stale
+            // layout state happened to exist gets baked into the saved
+            // prefab as-is (this is what produced the sizeDelta.x=0 on
+            // HeaderRow/EvolveButton fixed above). Forcing it here once,
+            // synchronously, makes sure what gets saved is converged.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot.GetComponent<RectTransform>());
 
             PrefabUtility.SaveAsPrefabAsset(root, PrefabPath);
             AssetDatabase.SaveAssets();
@@ -136,10 +196,13 @@ public static class StructureActionPanelUIBuilder
     // Phase 1-3 (statsSection, damage/attackSpeed/rangeValueText,
     // evolveButton, evolveButtonText) to the objects this builder just
     // created. Safe to call every run - re-wiring an already-correct
-    // reference is a no-op.
+    // reference is a no-op. Takes subtitleText/tierBadge directly (rather
+    // than Find-ing them under panelRoot) since both now live nested under
+    // ContentRoot/HeaderRow, past what a simple Find by name would reach.
     private static void WireGeneratedFields(
         SerializedObject so,
-        Transform panelRoot,
+        Transform subtitleText,
+        Transform tierBadge,
         Transform repairButton,
         Transform repairActionRow,
         Transform upgradeButton,
@@ -147,8 +210,8 @@ public static class StructureActionPanelUIBuilder
         Transform statsSection,
         Transform evolveButton)
     {
-        SetRef(so, "subtitleText", panelRoot.Find("SubtitleText")?.GetComponent<TextMeshProUGUI>());
-        SetRef(so, "tierBadgeText", panelRoot.Find("TierBadge/TierBadgeFill/TierBadgeText")?.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "subtitleText", subtitleText.GetComponent<TextMeshProUGUI>());
+        SetRef(so, "tierBadgeText", tierBadge.Find("TierBadgeFill/TierBadgeText")?.GetComponent<TextMeshProUGUI>());
 
         SetRef(so, "repairAmountText", repairActionRow.Find("RepairAmountText")?.GetComponent<TextMeshProUGUI>());
         SetRef(so, "repairWoodCountText", repairButton.Find("CostRoot/WoodCost/WoodCountText")?.GetComponent<TextMeshProUGUI>());
@@ -165,6 +228,18 @@ public static class StructureActionPanelUIBuilder
 
         SetRef(so, "evolveButton", evolveButton.GetComponent<Button>());
         SetRef(so, "evolveButtonText", evolveButton.Find("Text (TMP)")?.GetComponent<TextMeshProUGUI>());
+    }
+
+    // Wires the Background-sync SerializeFields (contentRoot, background,
+    // backgroundBorder) StructureActionPanelUI.SyncBackgroundSize() reads at
+    // runtime. Separate from WireGeneratedFields since it's called with
+    // objects that already existed pre-restructure (Background/
+    // BackgroundBorder), not just newly-generated ones.
+    private static void WireBackgroundSyncFields(SerializedObject so, Transform contentRoot, Transform background, Transform backgroundBorder)
+    {
+        SetRef(so, "contentRoot", contentRoot.GetComponent<RectTransform>());
+        SetRef(so, "background", background.GetComponent<RectTransform>());
+        SetRef(so, "backgroundBorder", backgroundBorder != null ? backgroundBorder.GetComponent<RectTransform>() : null);
     }
 
     private static GameObject EnsureChild(Transform parent, string name, params System.Type[] components)
@@ -228,17 +303,30 @@ public static class StructureActionPanelUIBuilder
         borderImage.raycastTarget = false;
     }
 
-    private static void EnsureSubtitleText(Transform panelRoot, Transform titleText, TMP_FontAsset font, Material fontMaterial)
+    // Reparent-safe: locates an already-created SubtitleText via the
+    // subtitleText SerializeField (an object reference, so it resolves
+    // regardless of where HeaderRow/TitleStack has since moved it) instead
+    // of Find-ing it by a fixed parent. Only falls back to creating fresh
+    // under fallbackParent on a true first run. Position is no longer
+    // computed relative to titleText - once inside TitleStack
+    // (VerticalLayoutGroup), that's governed by the stack instead.
+    private static Transform EnsureSubtitleText(SerializedObject so, Transform fallbackParent, Transform titleText, TMP_FontAsset font, Material fontMaterial)
     {
-        RectTransform titleRect = titleText.GetComponent<RectTransform>();
-        GameObject go = EnsureChild(panelRoot, "SubtitleText", typeof(TextMeshProUGUI));
+        TextMeshProUGUI existing = GetRef<TextMeshProUGUI>(so, "subtitleText");
+        GameObject go;
+        if (existing != null)
+        {
+            go = existing.gameObject;
+        }
+        else
+        {
+            go = new GameObject("SubtitleText", typeof(TextMeshProUGUI));
+            go.transform.SetParent(fallbackParent, false);
+        }
 
+        RectTransform titleRect = titleText.GetComponent<RectTransform>();
         RectTransform subRect = go.GetComponent<RectTransform>();
-        subRect.anchorMin = titleRect.anchorMin;
-        subRect.anchorMax = titleRect.anchorMax;
-        subRect.pivot = titleRect.pivot;
         subRect.sizeDelta = new Vector2(titleRect.sizeDelta.x + 40f, 14f);
-        subRect.anchoredPosition = titleRect.anchoredPosition + new Vector2(0f, -16f);
 
         TextMeshProUGUI tmp = go.GetComponent<TextMeshProUGUI>();
         tmp.font = font;
@@ -247,19 +335,34 @@ public static class StructureActionPanelUIBuilder
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = AccentColor;
         tmp.text = string.Empty; // set at runtime by StructureActionPanelUI.RefreshFence()
+
+        return go.transform;
     }
 
-    private static void EnsureTierBadge(Transform panelRoot, Transform titleText, TMP_FontAsset font, Material fontMaterial)
+    // Reparent-safe like EnsureSubtitleText above: derives the existing
+    // TierBadge root by walking up from the tierBadgeText SerializeField
+    // (TierBadgeText -> TierBadgeFill -> TierBadge) rather than Find-ing it
+    // by a fixed parent, so it resolves regardless of HeaderRow having
+    // already moved it. Position is no longer computed relative to
+    // titleText - once inside HeaderRow, the HorizontalLayoutGroup places it.
+    private static Transform EnsureTierBadge(SerializedObject so, Transform fallbackParent, TMP_FontAsset font, Material fontMaterial)
     {
-        RectTransform titleRect = titleText.GetComponent<RectTransform>();
+        TextMeshProUGUI existingText = GetRef<TextMeshProUGUI>(so, "tierBadgeText");
+        Transform existingRoot = existingText != null ? existingText.transform.parent?.parent : null;
 
-        GameObject badgeGo = EnsureChild(panelRoot, "TierBadge", typeof(Image));
+        GameObject badgeGo;
+        if (existingRoot != null && existingRoot.name == "TierBadge")
+        {
+            badgeGo = existingRoot.gameObject;
+        }
+        else
+        {
+            badgeGo = new GameObject("TierBadge", typeof(Image));
+            badgeGo.transform.SetParent(fallbackParent, false);
+        }
+
         RectTransform badgeRect = badgeGo.GetComponent<RectTransform>();
-        badgeRect.anchorMin = titleRect.anchorMin;
-        badgeRect.anchorMax = titleRect.anchorMax;
-        badgeRect.pivot = new Vector2(0f, 0.5f);
         badgeRect.sizeDelta = new Vector2(28f, 16f);
-        badgeRect.anchoredPosition = titleRect.anchoredPosition + new Vector2((titleRect.sizeDelta.x / 2f) + 8f, 0f);
 
         Image badgeImage = badgeGo.GetComponent<Image>();
         badgeImage.color = AccentColor;
@@ -291,6 +394,8 @@ public static class StructureActionPanelUIBuilder
         tmp.alignment = TextAlignmentOptions.Center;
         tmp.color = Color.white;
         tmp.text = string.Empty; // set at runtime by StructureActionPanelUI.RefreshFence()
+
+        return badgeGo.transform;
     }
 
     // Small keycap-style label docked to the left edge of a button:
@@ -483,22 +588,37 @@ public static class StructureActionPanelUIBuilder
         tmp.text = "0"; // set at runtime by StructureActionPanelUI.RefreshFence()
     }
 
-    // Tower-only stats block (Damage/Atk Speed/Range), placed directly above
-    // DayActionsRoot. Fence hides this whole section (RefreshFence sets
-    // statsSection inactive) since a Fence has no attack stats.
-    private static Transform EnsureStatsSection(Transform panelRoot, Transform dayActionsRoot, TMP_FontAsset font, Material fontMaterial)
+    // Tower-only stats block (Damage/Atk Speed/Range). Reparent-safe like
+    // EnsureSubtitleText: locates an already-created StatsSection via the
+    // statsSection SerializeField instead of Find-ing it under a fixed
+    // parent, so re-running after Build() has moved it into ContentRoot
+    // doesn't spawn a duplicate. Fence hides this whole section
+    // (RefreshFence sets statsSection inactive) since a Fence has no attack
+    // stats. No longer self-positions relative to DayActionsRoot - once
+    // inside ContentRoot, stacking order is Build()'s job.
+    private static Transform EnsureStatsSection(SerializedObject so, Transform fallbackParent, TMP_FontAsset font, Material fontMaterial)
     {
-        GameObject sectionGo = EnsureChild(panelRoot, "StatsSection", typeof(VerticalLayoutGroup));
-        // Always re-anchored directly above DayActionsRoot rather than
-        // relative to HpSection - keeps this idempotent regardless of
-        // exactly where HpSection sits in the sibling order.
-        sectionGo.transform.SetSiblingIndex(dayActionsRoot.GetSiblingIndex());
+        GameObject existing = GetRef<GameObject>(so, "statsSection");
+        Transform sectionTransform;
+        if (existing != null)
+        {
+            sectionTransform = existing.transform;
+            if (sectionTransform.GetComponent<VerticalLayoutGroup>() == null)
+            {
+                sectionTransform.gameObject.AddComponent<VerticalLayoutGroup>();
+            }
+        }
+        else
+        {
+            GameObject sectionGo = new GameObject("StatsSection", typeof(VerticalLayoutGroup));
+            sectionGo.transform.SetParent(fallbackParent, false);
+            sectionTransform = sectionGo.transform;
+        }
 
-        RectTransform sectionRect = sectionGo.GetComponent<RectTransform>();
+        RectTransform sectionRect = sectionTransform.GetComponent<RectTransform>();
         FixNonStretchedRect(sectionRect, new Vector2(150f, 58f));
-        sectionRect.anchoredPosition = new Vector2(0f, 14f);
 
-        VerticalLayoutGroup vlg = sectionGo.GetComponent<VerticalLayoutGroup>();
+        VerticalLayoutGroup vlg = sectionTransform.GetComponent<VerticalLayoutGroup>();
         vlg.spacing = 3f;
         vlg.childAlignment = TextAnchor.MiddleCenter;
         vlg.childForceExpandWidth = false;
@@ -506,11 +626,11 @@ public static class StructureActionPanelUIBuilder
         vlg.childControlWidth = false;
         vlg.childControlHeight = false;
 
-        EnsureStatRow(sectionGo.transform, "DamageRow", "DAMAGE", "0", font, fontMaterial);
-        EnsureStatRow(sectionGo.transform, "AttackSpeedRow", "ATK SPEED", "0/s", font, fontMaterial);
-        EnsureStatRow(sectionGo.transform, "RangeRow", "RANGE", "0m", font, fontMaterial);
+        EnsureStatRow(sectionTransform, "DamageRow", "DAMAGE", "0", font, fontMaterial);
+        EnsureStatRow(sectionTransform, "AttackSpeedRow", "ATK SPEED", "0/s", font, fontMaterial);
+        EnsureStatRow(sectionTransform, "RangeRow", "RANGE", "0m", font, fontMaterial);
 
-        return sectionGo.transform;
+        return sectionTransform;
     }
 
     // "LABEL  value"-style row: accent-colored label, white value. Value text
@@ -555,33 +675,50 @@ public static class StructureActionPanelUIBuilder
         valueTmp.text = initialValue; // set at runtime by StructureActionPanelUI.Refresh()
     }
 
-    // Tower-only evolve button, sibling to UpgradeButton/RepairActionRoot
-    // inside DayActionsRoot's HorizontalLayoutGroup. Styled to match
-    // UpgradeButton (same sprite/size) rather than reusing
+    // Tower-only evolve button, placed as its own ContentRoot row above
+    // DayActionsRoot (see EnsureFullWidthLayoutElement / Build()). Styled to
+    // match UpgradeButton (same sprite/size) rather than reusing
     // BuildButtonCostLayout, since Evolve has no Wood/Scrap cost to show -
-    // it's gated on tower tier, not resources.
-    private static Transform EnsureEvolveButton(Transform dayActionsRoot, Transform upgradeButton, TMP_FontAsset font, Material fontMaterial)
+    // it's gated on tower tier, not resources. Reparent-safe like
+    // EnsureStatsSection: locates an already-created button via the
+    // evolveButton SerializeField instead of Find-ing it under a fixed
+    // parent, so re-running after Build() has moved it doesn't duplicate it.
+    private static Transform EnsureEvolveButton(SerializedObject so, Transform fallbackParent, Transform upgradeButton, TMP_FontAsset font, Material fontMaterial)
     {
-        GameObject evolveGo = EnsureChild(dayActionsRoot, "EvolveButton", typeof(Image), typeof(Button));
+        Button existingButton = GetRef<Button>(so, "evolveButton");
+        Transform evolveTransform;
+        if (existingButton != null)
+        {
+            evolveTransform = existingButton.transform;
+        }
+        else
+        {
+            GameObject evolveGo = new GameObject("EvolveButton", typeof(Image), typeof(Button));
+            evolveGo.transform.SetParent(fallbackParent, false);
+            evolveTransform = evolveGo.transform;
+        }
 
-        RectTransform evolveRect = evolveGo.GetComponent<RectTransform>();
+        // Only borrow UpgradeButton's *size* here, not its anchorMin/Max/
+        // pivot - those were tuned for UpgradeButton's old DayActionsRoot
+        // context. Copying them onto EvolveButton left it with a corner
+        // anchor ContentRoot's layout couldn't reliably size from (measured
+        // sizeDelta.x collapsing to 0 on the last run). FixNonStretchedRect
+        // gives it the same neutral center anchor as every other
+        // ContentRoot-level child.
+        RectTransform evolveRect = evolveTransform.GetComponent<RectTransform>();
         RectTransform upgradeRect = upgradeButton.GetComponent<RectTransform>();
-        evolveRect.anchorMin = upgradeRect.anchorMin;
-        evolveRect.anchorMax = upgradeRect.anchorMax;
-        evolveRect.pivot = upgradeRect.pivot;
-        evolveRect.sizeDelta = upgradeRect.sizeDelta;
-        evolveRect.anchoredPosition = Vector2.zero; // DayActionsRoot's HorizontalLayoutGroup repositions this
+        FixNonStretchedRect(evolveRect, upgradeRect.sizeDelta);
 
         Image upgradeImage = upgradeButton.GetComponent<Image>();
-        Image evolveImage = evolveGo.GetComponent<Image>();
+        Image evolveImage = evolveTransform.GetComponent<Image>();
         evolveImage.sprite = upgradeImage.sprite;
         evolveImage.type = upgradeImage.type;
         evolveImage.color = Color.white;
 
-        Button evolveButtonComponent = evolveGo.GetComponent<Button>();
+        Button evolveButtonComponent = evolveTransform.GetComponent<Button>();
         evolveButtonComponent.targetGraphic = evolveImage;
 
-        GameObject textGo = EnsureChild(evolveGo.transform, "Text (TMP)", typeof(TextMeshProUGUI));
+        GameObject textGo = EnsureChild(evolveTransform, "Text (TMP)", typeof(TextMeshProUGUI));
         FixNonStretchedRect(textGo.GetComponent<RectTransform>(), new Vector2(110f, 20f));
 
         TextMeshProUGUI tmp = textGo.GetComponent<TextMeshProUGUI>();
@@ -592,6 +729,197 @@ public static class StructureActionPanelUIBuilder
         tmp.color = Color.white;
         tmp.text = "EVOLVE"; // set at runtime by StructureActionPanelUI.Refresh()
 
-        return evolveGo.transform;
+        return evolveTransform;
+    }
+
+    // Single flex container for all StructureActionPanel body content.
+    // Anchored to exactly cover Background's box so ContentRoot's own
+    // padding reads as the panel's inner margin. Everything except
+    // Background/BackgroundBorder/CloseButton lives inside this, so
+    // sections stack by their real height instead of colliding at
+    // hand-picked anchoredPositions (the StatsSection/HpSection overlap
+    // bug this exists to fix).
+    // ContentSizeFitter (Vertical Fit = Preferred Size) makes ContentRoot's
+    // own height track its stacked content instead of staying pinned to
+    // Background's original 200 forever. StructureActionPanelUI.
+    // SyncBackgroundSize() reads the result back at runtime and resizes
+    // Background/BackgroundBorder to match - see that method for why this
+    // can't just be done here once at build time (Fence vs Tower show a
+    // different number of sections, so the "right" height is only known at
+    // runtime once a slot is selected).
+    private static Transform EnsureContentRoot(Transform panelRoot, Transform background)
+    {
+        GameObject contentGo = EnsureChild(panelRoot, "ContentRoot", typeof(VerticalLayoutGroup));
+
+        RectTransform bgRect = background.GetComponent<RectTransform>();
+        RectTransform contentRect = contentGo.GetComponent<RectTransform>();
+        contentRect.anchorMin = bgRect.anchorMin;
+        contentRect.anchorMax = bgRect.anchorMax;
+        contentRect.pivot = bgRect.pivot;
+        contentRect.anchoredPosition = bgRect.anchoredPosition;
+        contentRect.sizeDelta = bgRect.sizeDelta;
+
+        VerticalLayoutGroup vlg = contentGo.GetComponent<VerticalLayoutGroup>();
+        vlg.padding = new RectOffset(16, 16, 16, 16);
+        vlg.spacing = 12f;
+        vlg.childAlignment = TextAnchor.UpperCenter;
+        vlg.childForceExpandWidth = true;
+        vlg.childForceExpandHeight = false;
+        vlg.childControlWidth = true;
+        vlg.childControlHeight = false;
+
+        ContentSizeFitter fitter = contentGo.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = contentGo.AddComponent<ContentSizeFitter>();
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+
+        return contentGo.transform;
+    }
+
+    // Icon (fixed 64x64) + Title/Subtitle stack + TierBadge, left to right.
+    // Reparents pre-existing objects in place (SetParent(.., false)) rather
+    // than recreating them, so titleText/subtitleText/tierBadgeText
+    // SerializeField references stay valid across rebuilds.
+    private static Transform EnsureHeaderRow(Transform contentRoot, Transform iconRoot, Transform titleText, Transform subtitleText, Transform tierBadge)
+    {
+        GameObject headerGo = EnsureChild(contentRoot, "HeaderRow", typeof(HorizontalLayoutGroup));
+        RectTransform headerRect = headerGo.GetComponent<RectTransform>();
+        headerRect.sizeDelta = new Vector2(300f, 64f);
+
+        HorizontalLayoutGroup hlg = headerGo.GetComponent<HorizontalLayoutGroup>();
+        hlg.spacing = 10f;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = false;
+        hlg.childControlWidth = false;
+        hlg.childControlHeight = false;
+
+        if (iconRoot != null)
+        {
+            iconRoot.SetParent(headerGo.transform, false);
+            iconRoot.SetSiblingIndex(0);
+            FixNonStretchedRect(iconRoot.GetComponent<RectTransform>(), new Vector2(64f, 64f));
+            // IconRoot itself has no Image/Graphic (that's its "Img" child),
+            // so it has nothing to report a preferred size through -
+            // without this, HeaderRow's HorizontalLayoutGroup has no
+            // reliable size to lay it out with.
+            EnsureFixedSizeLayoutElement(iconRoot, 64f, 64f);
+        }
+
+        GameObject stackGo = EnsureChild(headerGo.transform, "TitleStack", typeof(VerticalLayoutGroup));
+        stackGo.transform.SetSiblingIndex(iconRoot != null ? 1 : 0);
+        RectTransform stackRect = stackGo.GetComponent<RectTransform>();
+        stackRect.sizeDelta = new Vector2(150f, 44f);
+
+        VerticalLayoutGroup stackVlg = stackGo.GetComponent<VerticalLayoutGroup>();
+        stackVlg.spacing = 2f;
+        stackVlg.childAlignment = TextAnchor.MiddleLeft;
+        stackVlg.childForceExpandWidth = false;
+        stackVlg.childForceExpandHeight = false;
+        stackVlg.childControlWidth = false;
+        stackVlg.childControlHeight = false;
+
+        titleText.SetParent(stackGo.transform, false);
+        titleText.SetSiblingIndex(0);
+        subtitleText.SetParent(stackGo.transform, false);
+        subtitleText.SetSiblingIndex(1);
+
+        tierBadge.SetParent(headerGo.transform, false);
+        tierBadge.SetSiblingIndex(headerGo.transform.childCount - 1);
+
+        return headerGo.transform;
+    }
+
+    // Confirmed with design: IconRoot's own Canvas/CanvasScaler/
+    // GraphicRaycaster were a stray oversized RectTransform (sizeDelta
+    // 1090x613), not an intentional 3D-preview overlay. Strips them so it
+    // renders as a plain child Image inside HeaderRow. Safe to call every
+    // run - no-ops once already stripped.
+    // Order matters: CanvasScaler and GraphicRaycaster both carry
+    // [RequireComponent(typeof(Canvas))], so destroying Canvas first makes
+    // Unity silently refuse that destroy (Canvas stays, only the other two
+    // go) - confirmed this actually happened on the prior run, which is why
+    // IconRoot kept rendering as a detached Screen Space - Overlay canvas.
+    // Destroying the dependents before the dependency avoids that.
+    private static void StripIconRootOverlayComponents(Transform iconRoot)
+    {
+        CanvasScaler scaler = iconRoot.GetComponent<CanvasScaler>();
+        if (scaler != null)
+        {
+            Object.DestroyImmediate(scaler);
+        }
+
+        GraphicRaycaster raycaster = iconRoot.GetComponent<GraphicRaycaster>();
+        if (raycaster != null)
+        {
+            Object.DestroyImmediate(raycaster);
+        }
+
+        Canvas canvas = iconRoot.GetComponent<Canvas>();
+        if (canvas != null)
+        {
+            Object.DestroyImmediate(canvas);
+        }
+    }
+
+    // EvolveButton sits directly in ContentRoot (childControlWidth=true
+    // already stretches it), but a LayoutElement makes the full-width
+    // intent explicit and gives the layout pass a concrete non-zero
+    // preferredWidth to converge on instead of falling back to the
+    // Image/Button's own (unreliable in this headless build context)
+    // reported size - see EnsureEvolveButton's comment on the sizeDelta.x=0
+    // this caused before.
+    private static void EnsureFullWidthLayoutElement(Transform target, float preferredWidth)
+    {
+        LayoutElement layoutElement = target.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = target.gameObject.AddComponent<LayoutElement>();
+        }
+        layoutElement.minWidth = -1f;
+        layoutElement.preferredWidth = preferredWidth;
+        layoutElement.flexibleWidth = 1f;
+    }
+
+    // IconRoot has no Graphic/ILayoutElement of its own (its "Img" child
+    // does), so without this HeaderRow's HorizontalLayoutGroup has nothing
+    // reliable to size it by. Fixed, non-flexible slot - unlike
+    // EnsureFullWidthLayoutElement, this should never stretch.
+    private static void EnsureFixedSizeLayoutElement(Transform target, float width, float height)
+    {
+        LayoutElement layoutElement = target.GetComponent<LayoutElement>();
+        if (layoutElement == null)
+        {
+            layoutElement = target.gameObject.AddComponent<LayoutElement>();
+        }
+        layoutElement.minWidth = width;
+        layoutElement.preferredWidth = width;
+        layoutElement.flexibleWidth = 0f;
+        layoutElement.minHeight = height;
+        layoutElement.preferredHeight = height;
+        layoutElement.flexibleHeight = 0f;
+    }
+
+    // Makes a ContentRoot section self-report its real height instead of
+    // perpetuating a stale hand-picked sizeDelta.y from before this
+    // restructure (ContentRoot's childControlHeight=false just stacks
+    // children at whatever height they already have). Only effective on
+    // sections that themselves have a LayoutGroup to compute a preferred
+    // height from (StatsSection, DayActionsRoot) - HpSection's children are
+    // still manually anchoredPosition-placed with no LayoutGroup of their
+    // own, so this is currently a no-op there. Flagged as a known follow-up
+    // rather than guessing a manual height for it.
+    private static void EnsureVerticalContentSizeFitter(Transform target)
+    {
+        ContentSizeFitter fitter = target.GetComponent<ContentSizeFitter>();
+        if (fitter == null)
+        {
+            fitter = target.gameObject.AddComponent<ContentSizeFitter>();
+        }
+        fitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+        fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
     }
 }

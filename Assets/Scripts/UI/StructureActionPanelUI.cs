@@ -36,6 +36,22 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private Button evolveButton;
     [SerializeField] private TextMeshProUGUI evolveButtonText;
 
+    [Header("Background Sync")]
+    [SerializeField] private RectTransform contentRoot;
+    [SerializeField] private RectTransform background;
+    [SerializeField] private RectTransform backgroundBorder;
+
+    // Extra height reserved below ContentRoot's computed content height
+    // when resizing Background - keeps a visible margin instead of the
+    // background hugging the last row exactly.
+    private const float BackgroundHeightMargin = 16f;
+
+    // Matches StructureActionPanelUIBuilder.BorderThickness*2 (the amount
+    // EnsureAccentBorder grows BackgroundBorder past Background on each
+    // axis) - duplicated here because that constant lives in an Editor-only
+    // assembly this runtime script can't reference.
+    private const float BackgroundBorderExtraHeight = 4f;
+
     [Header("Input")]
     [SerializeField] private KeyCode closeKey = KeyCode.Escape;
 
@@ -335,6 +351,58 @@ public class StructureActionPanelUI : MonoBehaviour
         {
             repairButton.interactable = needsRepair;
         }
+
+        SyncBackgroundSize();
+    }
+
+    // ContentRoot has a ContentSizeFitter (set by StructureActionPanelUIBuilder)
+    // that tracks its stacked content's real height - Fence and Tower show a
+    // different number of sections, so the "right" panel height can only be
+    // known here, after a selection's content is actually laid out. Forces a
+    // synchronous rebuild (deferred/per-frame layout isn't guaranteed to have
+    // run yet within the same Refresh() call that just changed visibility/
+    // text) then stretches Background/BackgroundBorder to match.
+    private void SyncBackgroundSize()
+    {
+        if (contentRoot == null || background == null)
+        {
+            return;
+        }
+
+        LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot);
+        float targetHeight = contentRoot.rect.height + BackgroundHeightMargin;
+
+        Vector2 backgroundSize = background.sizeDelta;
+        backgroundSize.y = targetHeight;
+        background.sizeDelta = backgroundSize;
+
+        if (backgroundBorder != null)
+        {
+            Vector2 borderSize = backgroundBorder.sizeDelta;
+            borderSize.y = targetHeight + BackgroundBorderExtraHeight;
+            backgroundBorder.sizeDelta = borderSize;
+        }
+
+        // ContentRoot stretch-anchors to panelRoot (not to Background), so its real
+        // rect height is panelRoot.height + its own sizeDelta.y offset. Without also
+        // growing panelRoot here, ContentRoot's actual content overflows past
+        // Background/BackgroundBorder's box (confirmed: ~10-15px overflow on the
+        // fully-expanded Tower evolve state) and CloseButton - anchored to
+        // panelRoot's corner - ends up misaligned relative to the visible content.
+        RectTransform panelRootRect = panelRoot != null ? panelRoot.GetComponent<RectTransform>() : null;
+        if (panelRootRect != null)
+        {
+            Vector2 rootSize = panelRootRect.sizeDelta;
+            rootSize.y = targetHeight;
+            panelRootRect.sizeDelta = rootSize;
+
+            // Growing panelRoot invalidates the ContentSizeFitter offset just baked
+            // into ContentRoot.sizeDelta (it was computed against the old, smaller
+            // parent height) - rebuild once more so it re-settles against the new
+            // parent height before this frame renders, instead of a one-frame
+            // overflow flash until Unity's normal deferred layout pass catches up.
+            LayoutRebuilder.ForceRebuildLayoutImmediate(contentRoot);
+        }
     }
 
     private void RefreshFence()
@@ -395,6 +463,8 @@ public class StructureActionPanelUI : MonoBehaviour
         }
         if (repairWoodCountText != null) repairWoodCountText.text = selectedFenceSlot.WoodRepairCost.ToString();
         if (repairScrapCountText != null) repairScrapCountText.text = selectedFenceSlot.ScrapRepairCost.ToString();
+
+        SyncBackgroundSize();
     }
 
     private bool IsSelectionValid()
