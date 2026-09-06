@@ -8,7 +8,8 @@ public class GameManager : MonoBehaviour
     {
         Unknown,
         Day,
-        Night
+        Night,
+        GameOver
     }
 
     public static GameManager Instance { get; private set; }
@@ -44,6 +45,7 @@ public class GameManager : MonoBehaviour
     private DayTimeManager boundDayTimeManager;
     private ResourceManager cachedResourceManager;
     private SimpleZombieSpawner cachedNightSpawner;
+    private BaseCore boundBaseCore;
     private GamePhase currentPhase = GamePhase.Unknown;
     private RunRuntimeState currentRunState;
     private bool hasInitializedRunState;
@@ -56,6 +58,7 @@ public class GameManager : MonoBehaviour
     public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
     public int CurrentDay => currentDay;
     public bool IsDay => currentPhase == GamePhase.Day;
+    public bool IsGameOver => currentPhase == GamePhase.GameOver;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void LogTransition(string message)
@@ -90,6 +93,7 @@ public class GameManager : MonoBehaviour
         }
 
         ResolveDayTimeManager();
+        ResolveBaseCore();
     }
 
     private void Start()
@@ -109,6 +113,12 @@ public class GameManager : MonoBehaviour
         {
             boundDayTimeManager.OnDayEnded -= HandleDayEnded;
             boundDayTimeManager = null;
+        }
+
+        if (boundBaseCore != null)
+        {
+            boundBaseCore.OnBaseDestroyed -= HandleBaseDestroyed;
+            boundBaseCore = null;
         }
     }
 
@@ -205,6 +215,7 @@ public class GameManager : MonoBehaviour
         currentPhase = GamePhase.Night;
 
         ResolveDayTimeManager();
+        ResolveBaseCore();
         if (boundDayTimeManager != null)
         {
             boundDayTimeManager.Pause();
@@ -325,6 +336,77 @@ public class GameManager : MonoBehaviour
     private void HandleDayEnded()
     {
         TransitionToNight();
+    }
+
+    /// <summary>Resolves and subscribes to the single persistent BaseCore once. Same retry-safe pattern as
+    /// ResolveDayTimeManager: single scene means the instance never changes, so this is a no-op after the
+    /// first successful call.</summary>
+    private void ResolveBaseCore()
+    {
+        if (boundBaseCore != null)
+        {
+            return;
+        }
+
+        BaseCore core = FindFirstObjectByType<BaseCore>();
+        if (core == null)
+        {
+            Debug.Log("[GameManager] BaseCore not found; will retry on next phase transition.");
+            return;
+        }
+
+        boundBaseCore = core;
+        boundBaseCore.OnBaseDestroyed += HandleBaseDestroyed;
+        Debug.Log("[GameManager] Bound BaseCore.");
+    }
+
+    private void HandleBaseDestroyed()
+    {
+        if (currentPhase == GamePhase.GameOver)
+        {
+            return;
+        }
+
+        LogTransition("BaseCore destroyed. Entering GameOver.");
+        currentPhase = GamePhase.GameOver;
+        Time.timeScale = 0f;
+        OnPhaseChanged?.Invoke(GamePhase.GameOver);
+    }
+
+    /// <summary>Called from the GameOver screen's Continue action. Returns to the start of the same
+    /// (not incremented) day: night content is torn down, the base is restored to full HP, and the day
+    /// timer restarts.</summary>
+    public void RetryCurrentDay()
+    {
+        if (currentPhase != GamePhase.GameOver)
+        {
+            return;
+        }
+
+        LogTransition($"RetryCurrentDay(): restarting Day {currentDay}.");
+        Time.timeScale = 1f;
+
+        if (nightRoot != null)
+        {
+            nightRoot.SetActive(false);
+        }
+
+        Zombie[] remainingZombies = FindObjectsByType<Zombie>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < remainingZombies.Length; i++)
+        {
+            Destroy(remainingZombies[i].gameObject);
+        }
+
+        if (boundBaseCore != null)
+        {
+            boundBaseCore.ResetToFull();
+        }
+
+        currentPhase = GamePhase.Day;
+        ResolveDayTimeManager();
+        AfterEnterDayScene();
+        CloseNightOnlyPanels();
+        OnPhaseChanged?.Invoke(GamePhase.Day);
     }
 
     private void AfterEnterDayScene()

@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 public class BaseCore : MonoBehaviour, IStructureHpSource
@@ -10,6 +11,7 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
 
     private float currentHp;
     private bool hasLoggedDestroyed;
+    private bool hasNotifiedDestroyed;
 
     public float MaxHp => maxHp;
     public float CurrentHp => currentHp;
@@ -17,11 +19,15 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
     public Collider AttackCollider => attackCollider;
     public Transform HpAnchorTransform => transform;
 
+    /// <summary>Fires once when CurrentHp reaches 0. Single-shot, not re-raised until ResetToFull().</summary>
+    public event Action OnBaseDestroyed;
+
     private void Awake()
     {
         maxHp = Mathf.Max(1f, maxHp);
         currentHp = maxHp;
         hasLoggedDestroyed = false;
+        hasNotifiedDestroyed = false;
     }
 
 #if UNITY_EDITOR
@@ -43,12 +49,29 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
 
         Debug.Log($"[BaseCore] Damaged: {amount}. HP: {oldHp:0.##} -> {currentHp:0.##}/{maxHp:0.##}", this);
 
-        if (currentHp > 0f || hasLoggedDestroyed)
+        if (currentHp > 0f)
         {
             return;
         }
 
-        hasLoggedDestroyed = true;
-        Debug.Log("BaseCore destroyed - Game Over", this);
+        if (!hasLoggedDestroyed)
+        {
+            hasLoggedDestroyed = true;
+            Debug.Log("BaseCore destroyed - Game Over", this);
+        }
+
+        if (!hasNotifiedDestroyed)
+        {
+            hasNotifiedDestroyed = true;
+            OnBaseDestroyed?.Invoke();
+        }
+    }
+
+    /// <summary>Restores full HP and re-arms the destroyed notification for a day retry.</summary>
+    public void ResetToFull()
+    {
+        currentHp = maxHp;
+        hasLoggedDestroyed = false;
+        hasNotifiedDestroyed = false;
     }
 }
