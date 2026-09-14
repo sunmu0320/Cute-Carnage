@@ -1,7 +1,8 @@
 # SESSION HANDOFF
 
 ## Status
-IN PROGRESS
+DONE (this session's scope) — user confirmed the click-selection
+stuck-white fix (`cd095cb`) resolves the bug in live Play mode.
 
 ## Current Goal
 Fix visual bugs in the shared Fence/Tower `StructureActionPanel` UI
@@ -138,10 +139,10 @@ friendly-tesla-d02f3f`.
   calls `EventSystem.current.SetSelectedGameObject(null)`, and it now
   runs at the end of `Refresh()` (tower branch) and `RefreshFence()`
   as well as from `Open()` — so it re-syncs after every Repair/Upgrade
-  click, not just on panel open. **Not yet verified by the user** —
-  this is the first thing to check when resuming: pull `cd095cb` and
-  re-run the same test (click Repair/Upgrade, confirm it returns to
-  its real color without needing an extra click elsewhere).
+  click, not just on panel open. **VERIFIED by the user in live Play
+  mode** — clicking Repair/Upgrade no longer sticks on the near-white
+  tint, and hover-in/hover-out still works normally afterward. This
+  closes out the stuck-hover/stuck-selection bug entirely.
 - Known separate/backlog items (not this session's scope, don't fix
   without being asked): `repairActionRoot` unwired (see Important
   Decisions); Fence UI can't distinguish Damaged vs Destroyed
@@ -149,19 +150,12 @@ friendly-tesla-d02f3f`.
   hardcoded (per CLAUDE.md's own backlog notes).
 
 ## Next Steps
-1. Check whether the user has replied with their Play-mode test result
-   for commit `cd095cb` (click-selection stuck-white fix). If yes,
-   verify their report against expectations above and close out or
-   iterate. If no reply yet and resuming cold, ask them to pull
-   `claude/friendly-tesla-d02f3f` and re-test: open the Fence/Tower
-   panel, click Repair or Upgrade, confirm the button returns to its
-   real (non-white) color without needing to click elsewhere first,
-   and that hover-in/hover-out still works normally afterward.
-2. Once confirmed fixed, ask the user if they want the
-   `repairActionRoot` wiring gap fixed (flagged but deferred).
-3. No other queued work — this session's scope (Repair button
-   visibility/alignment/color-state bugs) is otherwise complete
-   pending step 1's confirmation.
+1. This session's scope (Repair button visibility/alignment/color-
+   state bugs) is complete and user-verified. Nothing queued unless
+   the user asks for it.
+2. Optional, still deferred: ask the user if they want the
+   `repairActionRoot` wiring gap fixed (see Important Decisions /
+   Unresolved Issues — it's a separate minor gap, not blocking).
 
 ## Verification
 - Repair button width/positioning: **PASSED** — user confirmed via
@@ -174,9 +168,8 @@ friendly-tesla-d02f3f`.
   FAILED** — user tested, confirmed opening the panel over a
   stationary cursor works, but clicking Repair/Upgrade still got
   stuck white (a second, different cause — see Unresolved Issues).
-- Stuck-white-after-click fix (`cd095cb`): **NOT YET VERIFIED** —
-  pushed, user needs to pull `claude/friendly-tesla-d02f3f` and
-  re-test clicking Repair/Upgrade specifically.
+- Stuck-white-after-click fix (`cd095cb`): **PASSED** — user pulled,
+  tested Repair/Upgrade click in Play mode, confirmed fixed.
 - Tower stats binding (Damage/AtkSpeed/Range): **PASSED** (code/asset
   inspection only — user has not separately confirmed in Play mode,
   but this was a pre-existing correct implementation, not a change
