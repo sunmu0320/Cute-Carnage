@@ -124,21 +124,24 @@ Working tree is clean; branch is up to date with `origin/claude/
 friendly-tesla-d02f3f`.
 
 ## Unresolved Issues
-- **Not yet verified**: whether `2beebf5`'s `ResetButtonHoverState()`
-  actually fixes the stuck-white-hover bug in the user's live game.
-  The user was asked to `git pull origin claude/friendly-tesla-d02f3f`
-  on their local Windows machine and test in Play mode: (1) panel
-  shows correct color immediately even when the mouse is already
-  hovering a button when it opens, (2) hover-in/hover-out still
-  visually works afterward. **Their test result has not come back
-  yet** — this is the first thing to check when resuming.
-- If the hover fix doesn't fully resolve it, next things to try:
-  also call `EventSystem.current.SetSelectedGameObject(null)`; verify
-  `PointerEventData` construction isn't throwing silently; consider
-  whether `Refresh()` (called on every repair/upgrade click, not just
-  `Open()`) should also call `ResetButtonHoverState()` if the same
-  stuck-tint symptom shows up after an in-panel action rather than
-  only on open.
+- **User tested `2beebf5` and reported it only partially fixed the
+  bug** (screenshots + description): opening the panel worked, but
+  clicking Repair/Upgrade left that button stuck on the near-white
+  tint — moving the mouse off and back on did NOT clear it; only
+  clicking elsewhere fixed it. Root cause found: mouse-down click
+  makes Unity's EventSystem *select* the clicked button
+  (`currentSelectedGameObject`), independent of hover, and
+  `Selectable`'s Selected-state tint is the same near-white as
+  Highlighted. `ResetButtonHoverState()` was previously only called
+  from `Open()`, so it never ran after a click.
+- **Fix pushed as `cd095cb`**: `ResetButtonHoverState()` now also
+  calls `EventSystem.current.SetSelectedGameObject(null)`, and it now
+  runs at the end of `Refresh()` (tower branch) and `RefreshFence()`
+  as well as from `Open()` — so it re-syncs after every Repair/Upgrade
+  click, not just on panel open. **Not yet verified by the user** —
+  this is the first thing to check when resuming: pull `cd095cb` and
+  re-run the same test (click Repair/Upgrade, confirm it returns to
+  its real color without needing an extra click elsewhere).
 - Known separate/backlog items (not this session's scope, don't fix
   without being asked): `repairActionRoot` unwired (see Important
   Decisions); Fence UI can't distinguish Damaged vs Destroyed
@@ -147,11 +150,14 @@ friendly-tesla-d02f3f`.
 
 ## Next Steps
 1. Check whether the user has replied with their Play-mode test result
-   for commit `2beebf5` (stuck-hover fix). If yes, verify their report
-   against expectations above and close out or iterate per Unresolved
-   Issues. If no reply yet and resuming cold, ask them to run the test
-   described there.
-2. Once hover-tint is confirmed fixed, ask the user if they want the
+   for commit `cd095cb` (click-selection stuck-white fix). If yes,
+   verify their report against expectations above and close out or
+   iterate. If no reply yet and resuming cold, ask them to pull
+   `claude/friendly-tesla-d02f3f` and re-test: open the Fence/Tower
+   panel, click Repair or Upgrade, confirm the button returns to its
+   real (non-white) color without needing to click elsewhere first,
+   and that hover-in/hover-out still works normally afterward.
+2. Once confirmed fixed, ask the user if they want the
    `repairActionRoot` wiring gap fixed (flagged but deferred).
 3. No other queued work — this session's scope (Repair button
    visibility/alignment/color-state bugs) is otherwise complete
@@ -164,9 +170,13 @@ friendly-tesla-d02f3f`.
   correctly sized and colored side by side.
 - RepairButton no longer invisible against background: **PASSED** —
   confirmed visually in user's screenshots after `0f8c68a`.
-- Stuck-white-hover-on-panel-open fix (`2beebf5`): **NOT YET
-  VERIFIED** — pushed, user asked to pull and test, no report back in
-  this session.
+- Stuck-white-hover-on-panel-open fix (`2beebf5`): **PARTIALLY
+  FAILED** — user tested, confirmed opening the panel over a
+  stationary cursor works, but clicking Repair/Upgrade still got
+  stuck white (a second, different cause — see Unresolved Issues).
+- Stuck-white-after-click fix (`cd095cb`): **NOT YET VERIFIED** —
+  pushed, user needs to pull `claude/friendly-tesla-d02f3f` and
+  re-test clicking Repair/Upgrade specifically.
 - Tower stats binding (Damage/AtkSpeed/Range): **PASSED** (code/asset
   inspection only — user has not separately confirmed in Play mode,
   but this was a pre-existing correct implementation, not a change
