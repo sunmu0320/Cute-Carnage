@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class StructureActionPanelUI : MonoBehaviour
@@ -139,6 +140,7 @@ public class StructureActionPanelUI : MonoBehaviour
         }
 
         Refresh();
+        ResetButtonHoverState();
     }
 
     public void Open(FenceSlot fenceSlot, PlayerInteractor interactor)
@@ -158,6 +160,31 @@ public class StructureActionPanelUI : MonoBehaviour
         }
 
         Refresh();
+        ResetButtonHoverState();
+    }
+
+    // A button that becomes interactable directly under an already-
+    // stationary cursor (this panel opening on top of it, no mouse
+    // movement involved) gets its Color Tint stuck on Highlighted: the
+    // EventSystem's raycast picks it up and fires OnPointerEnter once
+    // panelRoot activates, but nothing fires OnPointerExit until the
+    // cursor actually moves off and back on - so it never settles back to
+    // Normal/Disabled on its own. Forcing an explicit exit here re-syncs
+    // every button to its real current state; if the cursor genuinely is
+    // still over one, the next frame's raycast re-enters it normally, so
+    // live hover feedback keeps working afterward.
+    private void ResetButtonHoverState()
+    {
+        if (EventSystem.current == null)
+        {
+            return;
+        }
+
+        PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
+        if (upgradeButton != null) upgradeButton.OnPointerExit(pointerEventData);
+        if (repairButton != null) repairButton.OnPointerExit(pointerEventData);
+        if (evolveButton != null) evolveButton.OnPointerExit(pointerEventData);
+        if (closeButton != null) closeButton.OnPointerExit(pointerEventData);
     }
 
     public void Close()
