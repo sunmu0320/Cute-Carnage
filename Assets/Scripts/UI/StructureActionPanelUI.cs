@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 public class StructureActionPanelUI : MonoBehaviour
@@ -158,6 +159,44 @@ public class StructureActionPanelUI : MonoBehaviour
         }
 
         Refresh();
+    }
+
+    // Two separate causes pin a button's Color Tint on its Highlighted/
+    // white look after it should have returned to Normal:
+    // 1) A button that becomes interactable directly under an already-
+    //    stationary cursor (this panel opening on top of it, no mouse
+    //    movement involved) fires OnPointerEnter once panelRoot activates,
+    //    but nothing fires OnPointerExit until the cursor actually moves
+    //    off and back on. Forcing an explicit exit here re-syncs it to its
+    //    real current state; if the cursor genuinely is still over it, the
+    //    next frame's raycast re-enters normally, so live hover feedback
+    //    keeps working afterward.
+    // 2) Clicking a button (Repair/Upgrade) makes the EventSystem select
+    //    it (mouse-down selection, independent of hover), so Selectable's
+    //    state stays "Selected" - which uses the same near-white tint as
+    //    Highlighted - even after the cursor leaves and returns. Moving
+    //    the mouse away only fixes (1); it never clears the selection, so
+    //    without also clearing it here the button stays stuck until the
+    //    player clicks something else entirely. Clearing the selected
+    //    object after every click-triggered Refresh() (not just on Open())
+    //    is what actually resolves that case.
+    private void ResetButtonHoverState()
+    {
+        if (EventSystem.current == null)
+        {
+            return;
+        }
+
+        if (EventSystem.current.currentSelectedGameObject != null)
+        {
+            EventSystem.current.SetSelectedGameObject(null);
+        }
+
+        PointerEventData pointerEventData = new PointerEventData(EventSystem.current);
+        if (upgradeButton != null) upgradeButton.OnPointerExit(pointerEventData);
+        if (repairButton != null) repairButton.OnPointerExit(pointerEventData);
+        if (evolveButton != null) evolveButton.OnPointerExit(pointerEventData);
+        if (closeButton != null) closeButton.OnPointerExit(pointerEventData);
     }
 
     public void Close()
@@ -353,6 +392,7 @@ public class StructureActionPanelUI : MonoBehaviour
         }
 
         SyncBackgroundSize();
+        ResetButtonHoverState();
     }
 
     // ContentRoot has a ContentSizeFitter (set by StructureActionPanelUIBuilder)
@@ -465,6 +505,7 @@ public class StructureActionPanelUI : MonoBehaviour
         if (repairScrapCountText != null) repairScrapCountText.text = selectedFenceSlot.ScrapRepairCost.ToString();
 
         SyncBackgroundSize();
+        ResetButtonHoverState();
     }
 
     private bool IsSelectionValid()

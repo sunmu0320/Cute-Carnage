@@ -94,7 +94,13 @@ public static class StructureActionPanelUIBuilder
             RemoveObsoletePlaceholders(so, repairButton);
             so.ApplyModifiedProperties();
 
-            Transform repairActionRow = BuildButtonCostLayout(repairButton, font, fontMaterial);
+            // Repair's row needs room for KeyLabel(20) + spacing(6) +
+            // Text(74) + spacing(6) + RepairAmountText(50) = 156, unlike
+            // Upgrade's KeyLabel+Text-only row (100) - see EnsureActionRow's
+            // width param doc for why this must be passed explicitly rather
+            // than left at the 100 default.
+            const float RepairActionRowWidth = 156f;
+            Transform repairActionRow = BuildButtonCostLayout(repairButton, font, fontMaterial, RepairActionRowWidth);
             EnsureRepairAmountText(repairActionRow, font, fontMaterial);
 
             Transform upgradeActionRow = BuildButtonCostLayout(upgradeButton, font, fontMaterial);
@@ -455,9 +461,9 @@ public static class StructureActionPanelUIBuilder
     // it, and stacks the two with a VerticalLayoutGroup on the button itself.
     // Returns the ActionRow so callers can append button-specific extras
     // (e.g. RepairAmountText) after KeyLabel + Text(TMP).
-    private static Transform BuildButtonCostLayout(Transform button, TMP_FontAsset font, Material fontMaterial)
+    private static Transform BuildButtonCostLayout(Transform button, TMP_FontAsset font, Material fontMaterial, float actionRowWidth = 100f)
     {
-        Transform actionRow = EnsureActionRow(button);
+        Transform actionRow = EnsureActionRow(button, actionRowWidth);
         Transform costRoot = EnsureCostRoot(button, font, fontMaterial);
 
         actionRow.SetSiblingIndex(0);
@@ -484,11 +490,17 @@ public static class StructureActionPanelUIBuilder
     // UpgradeButton currently doesn't (Install's KeyLabel was never ported
     // over when InstallButton was removed). Sibling order is forced to
     // [KeyLabel, Text (TMP)] every run so the keycap always reads first.
-    private static Transform EnsureActionRow(Transform button)
+    // width must cover every child this row will end up holding (KeyLabel +
+    // Text, plus RepairAmountText for the Repair button) - ActionRow's own
+    // HorizontalLayoutGroup has childControlWidth=false, so it never grows
+    // itself to fit; a too-narrow width here leaves later children
+    // overflowing past both ActionRow's and the button's own edge instead of
+    // being clipped or wrapped.
+    private static Transform EnsureActionRow(Transform button, float width = 100f)
     {
         GameObject rowGo = EnsureChild(button, "ActionRow", typeof(HorizontalLayoutGroup));
         RectTransform rowRect = rowGo.GetComponent<RectTransform>();
-        rowRect.sizeDelta = new Vector2(100f, 20f);
+        rowRect.sizeDelta = new Vector2(width, 20f);
 
         HorizontalLayoutGroup hlg = rowGo.GetComponent<HorizontalLayoutGroup>();
         hlg.spacing = 6f;
