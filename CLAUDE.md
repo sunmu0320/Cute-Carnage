@@ -21,7 +21,11 @@
 7. Night은 오직 마지막으로 설정된 웨이브가 전부 스폰되고, 스폰된 좀비가
    전부 죽었을 때만 끝난다. 이를 조기 종료시키는 별도 타이머를
    추가하지 말 것 — `SimpleZombieSpawner`가 Day 전환을 요청하는
-   유일한 주체다.
+   유일한 주체다. **단, 예외 한 가지(승인됨):** `BaseCore`가 파괴되어
+   `GameManager`가 `GamePhase.GameOver`로 전환된 뒤 플레이어가
+   Continue를 눌러 `RetryCurrentDay()`가 호출되는 경우는 Night 클리어
+   조기종료가 아니라 패배 후 같은 Day 재시도이므로 Day로 직접 전환한다.
+   이 경로 외에 Day 전환을 추가로 만들지 말 것.
 
 ## 현재 아키텍처 (확정)
 
@@ -38,9 +42,14 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 "진행 중인 작업"이 아니므로 최우선으로 읽을 필요는 없다.
 
 **알려진 확정 gap (구현 필요, 방향은 이미 설계 문서에 있음):**
-- `BaseCore.TakeDamage()`가 HP 0 도달 시 `Debug.Log`만 남기고 실제
-  게임오버 처리/이벤트가 없음. Day 기반 재시도 체크포인트를 만들기
-  전에 반드시 먼저 해결해야 함.
+- ~~`BaseCore.TakeDamage()`가 HP 0 도달 시 `Debug.Log`만 남기고 실제
+  게임오버 처리/이벤트가 없음~~ — **Reported implemented (재확인 필요,
+  아직 플레이테스트 안 됨).** `BaseCore.OnBaseDestroyed` 이벤트,
+  `GameManager.GamePhase.GameOver`/`RetryCurrentDay()`(같은 Day 재시도,
+  Time.timeScale=0 + 플레이어 이동/상호작용 잠금 + Day/Night 패널
+  닫기), `GameOverPanelUI` 스크립트로 구현됨. `GameOverPanelUI`는 아직
+  씬/프리팹에 실제 배치·연결이 안 됐고, 유니티 에디터에서 플레이테스트
+  전이므로 Verified 아님.
 - `TowerSlot.EnsureCurrentTowerReference()`의 반경 기반 타워 자동 채택
   로직이 단일 씬 모델에서는 죽은 코드일 가능성이 있으나 미확인 —
   건드리기 전에 pre-placed tower 존재 여부부터 확인할 것.

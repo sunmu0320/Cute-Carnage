@@ -370,7 +370,28 @@ public class GameManager : MonoBehaviour
         LogTransition("BaseCore destroyed. Entering GameOver.");
         currentPhase = GamePhase.GameOver;
         Time.timeScale = 0f;
+        SetPlayerInputLocked(true);
+        CloseDayOnlyPanels();
+        CloseNightOnlyPanels();
         OnPhaseChanged?.Invoke(GamePhase.GameOver);
+    }
+
+    /// <summary>Locks/unlocks player movement and interaction for the GameOver freeze. UI buttons (Continue,
+    /// future Settings) are unaffected since Unity's EventSystem handles clicks independently of these
+    /// components and of Time.timeScale.</summary>
+    private void SetPlayerInputLocked(bool locked)
+    {
+        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
+        if (playerMovement != null)
+        {
+            playerMovement.SetMovementLocked(locked);
+        }
+
+        PlayerInteractor playerInteractor = FindFirstObjectByType<PlayerInteractor>();
+        if (playerInteractor != null)
+        {
+            playerInteractor.enabled = !locked;
+        }
     }
 
     /// <summary>Called from the GameOver screen's Continue action. Returns to the start of the same
@@ -385,6 +406,7 @@ public class GameManager : MonoBehaviour
 
         LogTransition($"RetryCurrentDay(): restarting Day {currentDay}.");
         Time.timeScale = 1f;
+        SetPlayerInputLocked(false);
 
         if (nightRoot != null)
         {
