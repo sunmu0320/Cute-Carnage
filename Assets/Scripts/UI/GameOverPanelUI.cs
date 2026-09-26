@@ -2,15 +2,18 @@ using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>Shows/hides on GameManager.OnPhaseChanged (single-shot, no per-frame state polling).
-/// While visible, clicking the full-screen background or pressing any key triggers the retry action.</summary>
+/// While visible, clicking the full-screen background or pressing any key triggers the retry action,
+/// after a short delay so the key/click that caused GameOver can't also dismiss it.</summary>
 public class GameOverPanelUI : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button backgroundButton;
+    [SerializeField, Min(0f)] private float continueDelaySeconds = 2f;
 
-    private int shownAtFrame = -1;
+    private float shownAtUnscaledTime = -1f;
 
     private bool IsVisible => panelRoot != null && panelRoot.activeSelf;
+    private bool CanContinueNow => IsVisible && Time.unscaledTime - shownAtUnscaledTime >= continueDelaySeconds;
 
     private void Awake()
     {
@@ -54,13 +57,6 @@ public class GameOverPanelUI : MonoBehaviour
             return;
         }
 
-        // Ignore the same key press that triggered GameOver this frame (e.g. the debug
-        // damage/destroy key) - otherwise it doubles as an instant "any key to continue".
-        if (Time.frameCount == shownAtFrame)
-        {
-            return;
-        }
-
         if (Input.anyKeyDown)
         {
             HandleContinueClicked();
@@ -74,6 +70,11 @@ public class GameOverPanelUI : MonoBehaviour
 
     private void HandleContinueClicked()
     {
+        if (!CanContinueNow)
+        {
+            return;
+        }
+
         if (GameManager.Instance != null)
         {
             GameManager.Instance.RetryCurrentDay();
@@ -89,7 +90,7 @@ public class GameOverPanelUI : MonoBehaviour
 
         if (visible)
         {
-            shownAtFrame = Time.frameCount;
+            shownAtUnscaledTime = Time.unscaledTime;
         }
     }
 }
