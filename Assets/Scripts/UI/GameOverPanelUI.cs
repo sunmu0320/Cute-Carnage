@@ -1,21 +1,17 @@
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Shows/hides on GameManager.OnPhaseChanged (single-shot, no per-frame polling).
-/// Continue button and the full-screen background button both trigger the same retry action.</summary>
+/// <summary>Shows/hides on GameManager.OnPhaseChanged (single-shot, no per-frame state polling).
+/// While visible, clicking the full-screen background or pressing any key triggers the retry action.</summary>
 public class GameOverPanelUI : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
-    [SerializeField] private Button continueButton;
     [SerializeField] private Button backgroundButton;
+
+    private bool IsVisible => panelRoot != null && panelRoot.activeSelf;
 
     private void Awake()
     {
-        if (continueButton != null)
-        {
-            continueButton.onClick.AddListener(HandleContinueClicked);
-        }
-
         if (backgroundButton != null)
         {
             backgroundButton.onClick.AddListener(HandleContinueClicked);
@@ -43,14 +39,22 @@ public class GameOverPanelUI : MonoBehaviour
             GameManager.Instance.OnPhaseChanged -= HandlePhaseChanged;
         }
 
-        if (continueButton != null)
-        {
-            continueButton.onClick.RemoveListener(HandleContinueClicked);
-        }
-
         if (backgroundButton != null)
         {
             backgroundButton.onClick.RemoveListener(HandleContinueClicked);
+        }
+    }
+
+    private void Update()
+    {
+        if (!IsVisible)
+        {
+            return;
+        }
+
+        if (Input.anyKeyDown)
+        {
+            HandleContinueClicked();
         }
     }
 
