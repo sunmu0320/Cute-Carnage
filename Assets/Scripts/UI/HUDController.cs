@@ -62,7 +62,6 @@ public class HUDController : MonoBehaviour
     private bool dayCacheValid;
     private int lastDay;
     private bool lastDayIsDay;
-    private bool lastDayIsGameOver;
     private bool dayTimerSecondsCacheValid;
     private int lastDayTimerSeconds;
     private bool dayTimerFillCacheValid;
@@ -269,27 +268,26 @@ public class HUDController : MonoBehaviour
         }
 
         // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
+        // Keeps showing the actual DAY/NIGHT label through GameOver too - the GameOver panel already
+        // shows its own "Game Over" text, so this shouldn't duplicate it.
         if (GameManager.Instance != null)
         {
             int currentDay = GameManager.Instance.CurrentDay;
             bool isDay = GameManager.Instance.IsDay;
-            bool isGameOver = GameManager.Instance.IsGameOver;
-            if (!dayCacheValid || lastDay != currentDay || lastDayIsDay != isDay || lastDayIsGameOver != isGameOver)
-                SetTextOrIgnore(dayText, isDay ? $"DAY {currentDay}" : isGameOver ? "GAME OVER" : $"NIGHT {currentDay}");
+            if (!dayCacheValid || lastDay != currentDay || lastDayIsDay != isDay)
+                SetTextOrIgnore(dayText, isDay ? $"DAY {currentDay}" : $"NIGHT {currentDay}");
 
             lastDay = currentDay;
             lastDayIsDay = isDay;
-            lastDayIsGameOver = isGameOver;
             dayCacheValid = true;
         }
         else
         {
-            if (!dayCacheValid || lastDay != 1 || !lastDayIsDay || lastDayIsGameOver)
+            if (!dayCacheValid || lastDay != 1 || !lastDayIsDay)
                 SetTextOrIgnore(dayText, GetFallbackDayText());
 
             lastDay = 1;
             lastDayIsDay = true;
-            lastDayIsGameOver = false;
             dayCacheValid = true;
         }
 
