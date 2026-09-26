@@ -369,16 +369,22 @@ public class GameManager : MonoBehaviour
 
         LogTransition("BaseCore destroyed. Entering GameOver.");
         currentPhase = GamePhase.GameOver;
-        Time.timeScale = 0f;
         SetPlayerInputLocked(true);
+        SetZombiesFrozen(true);
+        if (cachedNightSpawner != null)
+        {
+            cachedNightSpawner.SetPaused(true);
+        }
+
         CloseDayOnlyPanels();
         CloseNightOnlyPanels();
         OnPhaseChanged?.Invoke(GamePhase.GameOver);
     }
 
-    /// <summary>Locks/unlocks player movement and interaction for the GameOver freeze. UI buttons (Continue,
-    /// future Settings) are unaffected since Unity's EventSystem handles clicks independently of these
-    /// components and of Time.timeScale.</summary>
+    /// <summary>Locks/unlocks player movement, interaction, and food consumption for the GameOver freeze.
+    /// Time.timeScale is left untouched so zombies stay alive (idling, not frozen mid-frame) and ambient
+    /// environment content (wind sway, particles, etc.) keeps playing. UI buttons (Continue, future Settings)
+    /// are unaffected since Unity's EventSystem handles clicks independently of these components.</summary>
     private void SetPlayerInputLocked(bool locked)
     {
         PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
@@ -391,6 +397,23 @@ public class GameManager : MonoBehaviour
         if (playerInteractor != null)
         {
             playerInteractor.enabled = !locked;
+        }
+
+        PlayerConsume playerConsume = FindFirstObjectByType<PlayerConsume>();
+        if (playerConsume != null)
+        {
+            playerConsume.enabled = !locked;
+        }
+    }
+
+    /// <summary>Stops zombies moving/attacking/re-targeting without disabling them, so they stay alive and
+    /// visibly idle in place instead of freezing mid-animation.</summary>
+    private void SetZombiesFrozen(bool frozen)
+    {
+        Zombie[] zombies = FindObjectsByType<Zombie>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < zombies.Length; i++)
+        {
+            zombies[i].SetFrozen(frozen);
         }
     }
 
@@ -405,7 +428,6 @@ public class GameManager : MonoBehaviour
         }
 
         LogTransition($"RetryCurrentDay(): restarting Day {currentDay}.");
-        Time.timeScale = 1f;
         SetPlayerInputLocked(false);
 
         if (nightRoot != null)

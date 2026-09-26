@@ -60,6 +60,7 @@ public class SimpleZombieSpawner : MonoBehaviour
     private bool warnedMissingBaseCore;
     private bool warnedInvalidSpawnRadiusOrder;
     private bool warnedMissingWaves;
+    private bool isPaused;
 
     private void Awake()
     {
@@ -86,8 +87,19 @@ public class SimpleZombieSpawner : MonoBehaviour
             this);
     }
 
+    /// <summary>Freezes wave progression/spawning in place (e.g. GameOver) without resetting any state.</summary>
+    public void SetPaused(bool paused)
+    {
+        isPaused = paused;
+    }
+
     private void Update()
     {
+        if (isPaused)
+        {
+            return;
+        }
+
         switch (waveState)
         {
             case WaveState.InitialDelay:
@@ -112,6 +124,7 @@ public class SimpleZombieSpawner : MonoBehaviour
     /// hasTriggeredDayTransition stays true and waveState stays Complete/Stopped from the previous night.</summary>
     public void ResetForNewNight()
     {
+        isPaused = false;
         hasTriggeredDayTransition = false;
         currentWaveIndex = 0;
         totalZombiesSpawned = 0;
