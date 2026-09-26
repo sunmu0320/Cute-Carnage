@@ -8,6 +8,8 @@ public class GameOverPanelUI : MonoBehaviour
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button backgroundButton;
 
+    private int shownAtFrame = -1;
+
     private bool IsVisible => panelRoot != null && panelRoot.activeSelf;
 
     private void Awake()
@@ -52,6 +54,13 @@ public class GameOverPanelUI : MonoBehaviour
             return;
         }
 
+        // Ignore the same key press that triggered GameOver this frame (e.g. the debug
+        // damage/destroy key) - otherwise it doubles as an instant "any key to continue".
+        if (Time.frameCount == shownAtFrame)
+        {
+            return;
+        }
+
         if (Input.anyKeyDown)
         {
             HandleContinueClicked();
@@ -76,6 +85,11 @@ public class GameOverPanelUI : MonoBehaviour
         if (panelRoot != null)
         {
             panelRoot.SetActive(visible);
+        }
+
+        if (visible)
+        {
+            shownAtFrame = Time.frameCount;
         }
     }
 }
