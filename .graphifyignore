@@ -1,13 +1,13 @@
 # graphify ignore list (gitignore syntax) — draft, confirm before first extract.
-# Unanchored patterns so they match whether graphify reads this file from the
-# project root or from the scanned Assets/ directory.
+# Always extract from the project root (`graphify extract . --code-only --out .`).
+# Scanning Assets/ instead makes the git hooks write graphify-out/ inside Assets/.
 
 # --- Third-party / Asset Store code (not ours) ---
 TextMesh Pro/
 Plugins/
-Art/RPGPP_LT/
-Art/Nature/Lowpoly_Demos/
-Art/Nature/Welcome_Screen/
+Assets/Art/RPGPP_LT/
+Assets/Art/Nature/Lowpoly_Demos/
+Assets/Art/Nature/Welcome_Screen/
 
 # --- Tool / backup / scratch folders ---
 AI Toolkit/
@@ -23,3 +23,12 @@ obj/
 Logs/
 UserSettings/
 graphify-out/
+
+# --- Non-Assets config picked up by a root scan ---
+Packages/
+ProjectSettings/
+.claude/
+GeneratedAssets/
+*.csproj
+*.sln
+*.slnx

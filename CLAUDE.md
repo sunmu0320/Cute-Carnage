@@ -94,8 +94,9 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 - `graphify extract`는 항상 `--code-only`로 실행한다. 문서/이미지 분석(LLM 모드)이
   필요해 보이면 실행하지 말고 먼저 사용자에게 묻는다.
 - 그래프 출력은 반드시 프로젝트 루트의 `graphify-out/`에 둔다 (`Assets/` 안에 생기면
-  Unity가 에셋으로 import함). 제외 목록은 `Assets/.graphifyignore` — graphify는 스캔
-  대상 폴더에서 읽으며, 루트의 `.graphifyignore`는 적용되지 않는다.
+  Unity가 에셋으로 import함). 추출은 항상 루트에서 `graphify extract . --code-only --out .`
+  로 한다 — `Assets`를 스캔 루트로 쓰면 git 훅이 `Assets/graphify-out/`에 결과를 쓴다.
+  제외 목록은 루트의 `.graphifyignore` (스캔 루트 폴더의 파일만 읽힘).
 
 ## Backlog (정리 후보, 아직 미착수)
 
