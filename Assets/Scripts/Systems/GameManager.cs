@@ -206,7 +206,7 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToNight()
     {
-        if (currentPhase == GamePhase.Night)
+        if (currentPhase == GamePhase.Night || currentPhase == GamePhase.GameOver)
         {
             return;
         }
@@ -238,7 +238,7 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToDay()
     {
-        if (currentPhase == GamePhase.Day)
+        if (currentPhase == GamePhase.Day || currentPhase == GamePhase.GameOver)
         {
             return;
         }
@@ -374,6 +374,11 @@ public class GameManager : MonoBehaviour
         if (cachedNightSpawner != null)
         {
             cachedNightSpawner.SetPaused(true);
+        }
+
+        if (boundDayTimeManager != null)
+        {
+            boundDayTimeManager.Pause();
         }
 
         CloseDayOnlyPanels();
