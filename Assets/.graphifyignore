@@ -1,0 +1,25 @@
+# graphify ignore list (gitignore syntax) — draft, confirm before first extract.
+# Unanchored patterns so they match whether graphify reads this file from the
+# project root or from the scanned Assets/ directory.
+
+# --- Third-party / Asset Store code (not ours) ---
+TextMesh Pro/
+Plugins/
+Art/RPGPP_LT/
+Art/Nature/Lowpoly_Demos/
+Art/Nature/Welcome_Screen/
+
+# --- Tool / backup / scratch folders ---
+AI Toolkit/
+Backups_Zombie/
+*.bak
+
+# --- Unity-generated / non-code ---
+*.meta
+Library/
+Temp/
+Obj/
+obj/
+Logs/
+UserSettings/
+graphify-out/
