@@ -43,13 +43,28 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 
 **알려진 확정 gap (구현 필요, 방향은 이미 설계 문서에 있음):**
 - ~~`BaseCore.TakeDamage()`가 HP 0 도달 시 `Debug.Log`만 남기고 실제
-  게임오버 처리/이벤트가 없음~~ — **Reported implemented (재확인 필요,
-  아직 플레이테스트 안 됨).** `BaseCore.OnBaseDestroyed` 이벤트,
-  `GameManager.GamePhase.GameOver`/`RetryCurrentDay()`(같은 Day 재시도,
-  Time.timeScale=0 + 플레이어 이동/상호작용 잠금 + Day/Night 패널
-  닫기), `GameOverPanelUI` 스크립트로 구현됨. `GameOverPanelUI`는 아직
-  씬/프리팹에 실제 배치·연결이 안 됐고, 유니티 에디터에서 플레이테스트
-  전이므로 Verified 아님.
+  게임오버 처리/이벤트가 없음~~, ~~플레이어 사망 시 아무 처리 없음~~ —
+  **Reported implemented (재확인 필요, 아직 전체 플레이테스트 안 됨).**
+  - 베이스 파괴(`BaseCore.OnBaseDestroyed`)와 플레이어 사망
+    (`PlayerHealth.onDeath`, 예전엔 구독자 0명이었음) 둘 다
+    `GameManager.EnterGameOver()`로 합류 → `GamePhase.GameOver`.
+    원인별로 파괴/사망 직후 즉시 정지(플레이어 이동·상호작용·자동전투·
+    음식섭취·Hunger 드레인 잠금, 좀비 `SetFrozen`으로 idle 정지,
+    스포너/Day타이머 정지, Day/Night 패널 닫기)하고, 2~2.5초 뒤에
+    `GameOverPanelUI`가 뜸(원인별 타이틀 "BASE DESTROYED"/"YOU DIED").
+    `Time.timeScale`은 건드리지 않아 좀비 애니메이션·환경은 계속 재생됨.
+  - 재시도(`RetryCurrentDay()`)는 "Day 시작 시점으로 완전 복원" —
+    `GameManager`가 매 Day 시작마다(`Start()`/`TransitionToDay()`)
+    BaseCore HP, 자원(Wood/Scrap/Food), 플레이어 HP/Hunger, 모든
+    Fence/Tower 슬롯의 설치 여부+HP를 PersistentId 기준으로 스냅샷
+    (`DayCheckpoint`)해두고, Continue 시 전부 복원. 이 스냅샷/복원
+    경로는 여러 시스템(`FenceSlot.RestoreFenceInternal`,
+    `TowerSlot.RestoreTowerInternal` 등 새 메서드)에 걸쳐 있어 유니티
+    에디터에서 실제 플레이테스트 전이므로 Verified 아님.
+  - `GameOverPanelUI`는 씬에 배치·연결은 됐으나(Panel Root/Background
+    Button/Continue Hint), 새로 추가된 `Title Text` 필드는 아직 씬에
+    연결 안 됐을 수 있음 — 연결 안 해도 에러는 안 나고 그냥 타이틀
+    텍스트만 안 바뀜.
 - `TowerSlot.EnsureCurrentTowerReference()`의 반경 기반 타워 자동 채택
   로직이 단일 씬 모델에서는 죽은 코드일 가능성이 있으나 미확인 —
   건드리기 전에 pre-placed tower 존재 여부부터 확인할 것.
