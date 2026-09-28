@@ -804,6 +804,12 @@ public class Zombie : MonoBehaviour
 
     public void AnimationEvent_ApplyAttackHit()
     {
+        if (isFrozen)
+        {
+            ClearPendingAttack();
+            return;
+        }
+
         if (!attackHitAvailable)
         {
             return;

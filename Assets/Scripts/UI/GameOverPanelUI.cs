@@ -3,11 +3,13 @@ using UnityEngine.UI;
 
 /// <summary>Shows/hides on GameManager.OnPhaseChanged (single-shot, no per-frame state polling).
 /// While visible, clicking the full-screen background or pressing any key triggers the retry action,
-/// after a short delay so the key/click that caused GameOver can't also dismiss it.</summary>
+/// after a short delay so the key/click that caused GameOver can't also dismiss it. The "click to
+/// continue" hint only appears once that delay has passed, so it never invites a click that won't work.</summary>
 public class GameOverPanelUI : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button backgroundButton;
+    [SerializeField] private GameObject continueHint;
     [SerializeField, Min(0f)] private float continueDelaySeconds = 2f;
 
     private float shownAtUnscaledTime = -1f;
@@ -57,6 +59,11 @@ public class GameOverPanelUI : MonoBehaviour
             return;
         }
 
+        if (continueHint != null && !continueHint.activeSelf && CanContinueNow)
+        {
+            continueHint.SetActive(true);
+        }
+
         if (Input.anyKeyDown)
         {
             HandleContinueClicked();
@@ -86,6 +93,11 @@ public class GameOverPanelUI : MonoBehaviour
         if (panelRoot != null)
         {
             panelRoot.SetActive(visible);
+        }
+
+        if (continueHint != null)
+        {
+            continueHint.SetActive(false);
         }
 
         if (visible)

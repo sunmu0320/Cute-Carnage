@@ -381,11 +381,11 @@ public class GameManager : MonoBehaviour
         OnPhaseChanged?.Invoke(GamePhase.GameOver);
     }
 
-    /// <summary>Locks/unlocks player movement, interaction, food consumption, and hunger drain for the
-    /// GameOver freeze. Time.timeScale is left untouched so zombies stay alive (idling, not frozen mid-frame)
-    /// and ambient environment content (wind sway, particles, etc.) keeps playing. UI buttons (Continue,
-    /// future Settings) are unaffected since Unity's EventSystem handles clicks independently of these
-    /// components.</summary>
+    /// <summary>Locks/unlocks player movement, interaction, auto-attack, food consumption, and hunger drain
+    /// for the GameOver freeze. Time.timeScale is left untouched so zombies stay alive (idling, not frozen
+    /// mid-frame) and ambient environment content (wind sway, particles, etc.) keeps playing. UI buttons
+    /// (Continue, future Settings) are unaffected since Unity's EventSystem handles clicks independently of
+    /// these components.</summary>
     private void SetPlayerInputLocked(bool locked)
     {
         PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
@@ -404,6 +404,12 @@ public class GameManager : MonoBehaviour
         if (playerConsume != null)
         {
             playerConsume.enabled = !locked;
+        }
+
+        PlayerAutoCombat playerAutoCombat = FindFirstObjectByType<PlayerAutoCombat>();
+        if (playerAutoCombat != null)
+        {
+            playerAutoCombat.enabled = !locked;
         }
 
         HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
