@@ -44,16 +44,17 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 **알려진 확정 gap (구현 필요, 방향은 이미 설계 문서에 있음):**
 - ~~`BaseCore.TakeDamage()`가 HP 0 도달 시 `Debug.Log`만 남기고 실제
   게임오버 처리/이벤트가 없음~~, ~~플레이어 사망 시 아무 처리 없음~~ —
-  **Reported implemented (재확인 필요, 아직 전체 플레이테스트 안 됨).**
-  - 베이스 파괴(`BaseCore.OnBaseDestroyed`)와 플레이어 사망
-    (`PlayerHealth.onDeath`, 예전엔 구독자 0명이었음) 둘 다
-    `GameManager.EnterGameOver()`로 합류 → `GamePhase.GameOver`.
-    원인별로 파괴/사망 직후 즉시 정지(플레이어 이동·상호작용·자동전투·
-    음식섭취·Hunger 드레인 잠금, 좀비 `SetFrozen`으로 idle 정지,
-    스포너/Day타이머 정지, Day/Night 패널 닫기)하고, 2~2.5초 뒤에
-    `GameOverPanelUI`가 뜸(원인별 타이틀 "BASE DESTROYED"/"YOU DIED").
-    `Time.timeScale`은 건드리지 않아 좀비 애니메이션·환경은 계속 재생됨.
+  베이스 파괴(`BaseCore.OnBaseDestroyed`)와 플레이어 사망
+  (`PlayerHealth.onDeath`, 예전엔 구독자 0명이었음) 둘 다
+  `GameManager.EnterGameOver()`로 합류 → `GamePhase.GameOver`,
+  원인별로 파괴/사망 직후 즉시 정지(플레이어 이동·상호작용·자동전투·
+  음식섭취·Hunger 드레인 잠금, 좀비 `SetFrozen`으로 idle 정지,
+  스포너/Day타이머 정지, Day/Night 패널 닫기) 후 2~2.5초 뒤에
+  `GameOverPanelUI`가 원인별 타이틀("BASE DESTROYED"/"YOU DIED")로 뜸 —
+  **Verified.** 베이스 파괴/플레이어 사망 둘 다 실제 플레이테스트로
+  타이틀 정확히 뜨는 것 확인됨.
   - 재시도(`RetryCurrentDay()`)는 "Day 시작 시점으로 완전 복원" —
+    **Reported implemented (Fence/Tower 복원은 아직 플레이테스트 미확인).**
     `GameManager`가 매 Day 시작마다(`Start()`/`TransitionToDay()`)
     BaseCore HP, 자원(Wood/Scrap/Food), 플레이어 HP/Hunger, 모든
     Fence/Tower 슬롯의 설치 여부+HP를 PersistentId 기준으로 스냅샷
