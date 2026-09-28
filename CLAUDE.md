@@ -81,6 +81,21 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
    과거 작업물.** 우선 문서 아님. 필요한 내용은 이미 위 세 문서에
    반영되어 있으므로, 위 세 문서와 내용이 충돌하면 위 세 문서를 따를 것.
 
+## graphify (코드 지식 그래프) 사용 규칙
+
+- graphify 그래프(`graphify-out/graph.json`)는 **탐색용**이다. 코드 구조 질문은
+  `graphify query "..."`, `graphify explain`, `graphify affected`로 먼저 조회하되,
+  코드를 수정하기 전에는 실제 파일을 반드시 읽는다.
+- Inspector 연결, UnityEvent, SendMessage/Invoke 문자열 호출, 애니메이션 이벤트,
+  Resources/Addressables 로드는 그래프에 나오지 않는다. 영향 범위를 분석할 때는
+  해당 클래스명과 메서드명으로 `.unity`, `.prefab`, `.asset` 파일을 grep해서 보완한다.
+- 커밋하지 않은 큰 변경 뒤에는 `graphify update .`로 그래프를 갱신한다. 대량 삭제
+  후라서 갱신이 거부되면 `--force`를 쓴다.
+- `graphify extract`는 항상 `--code-only`로 실행한다. 문서/이미지 분석(LLM 모드)이
+  필요해 보이면 실행하지 말고 먼저 사용자에게 묻는다.
+- 그래프 출력은 반드시 프로젝트 루트의 `graphify-out/`에 둔다 (`Assets/` 안에 생기면
+  Unity가 에셋으로 import함). 제외 목록은 루트의 `.graphifyignore`.
+
 ## Backlog (정리 후보, 아직 미착수)
 
 - `HUDController.ResolveMissingSources()` (Assets/Scripts/UI/HUDController.cs)
