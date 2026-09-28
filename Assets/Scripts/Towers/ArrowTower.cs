@@ -140,6 +140,24 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         return true;
     }
 
+    /// <summary>Sets CurrentHp directly (clamped to [0, MaxHp]), for day-checkpoint restore.</summary>
+    public void SetCurrentHp(float hp)
+    {
+        float clamped = Mathf.Clamp(hp, 0f, MaxHp);
+        if (clamped <= 0f)
+        {
+            SetDestroyed();
+            return;
+        }
+
+        currentHp = clamped;
+        if (isDestroyed)
+        {
+            isDestroyed = false;
+            ApplyDestroyedState();
+        }
+    }
+
     private void SetDestroyed()
     {
         if (isDestroyed)

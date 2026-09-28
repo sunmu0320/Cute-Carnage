@@ -107,6 +107,13 @@ public class HungerSystem : MonoBehaviour
         currentHunger = Mathf.Clamp(currentHunger - amount, 0f, maxHunger);
     }
 
+    /// <summary>Sets CurrentHunger directly (clamped to [0, MaxHunger]), for day-checkpoint restore.</summary>
+    public void SetHunger(float value)
+    {
+        currentHunger = Mathf.Clamp(value, 0f, maxHunger);
+        starvationDamageAccumulator = 0f;
+    }
+
     public void ResetToStartingHunger()
     {
         currentHunger = Mathf.Clamp(startingHunger, 0f, maxHunger);

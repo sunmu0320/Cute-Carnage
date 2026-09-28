@@ -19,7 +19,7 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
     public Collider AttackCollider => attackCollider;
     public Transform HpAnchorTransform => transform;
 
-    /// <summary>Fires once when CurrentHp reaches 0. Single-shot, not re-raised until ResetToFull().</summary>
+    /// <summary>Fires once when CurrentHp reaches 0. Single-shot, not re-raised until SetCurrentHp() above 0.</summary>
     public event Action OnBaseDestroyed;
 
     private void Awake()
@@ -67,11 +67,15 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
         }
     }
 
-    /// <summary>Restores full HP and re-arms the destroyed notification for a day retry.</summary>
-    public void ResetToFull()
+    /// <summary>Sets CurrentHp directly (clamped to [0, MaxHp]). Above 0, re-arms the destroyed notification
+    /// so a later TakeDamage() can trigger OnBaseDestroyed again (day retry / checkpoint restore).</summary>
+    public void SetCurrentHp(float hp)
     {
-        currentHp = maxHp;
-        hasLoggedDestroyed = false;
-        hasNotifiedDestroyed = false;
+        currentHp = Mathf.Clamp(hp, 0f, maxHp);
+        if (currentHp > 0f)
+        {
+            hasLoggedDestroyed = false;
+            hasNotifiedDestroyed = false;
+        }
     }
 }

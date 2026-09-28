@@ -449,6 +449,35 @@ public class TowerSlot : MonoBehaviour, IInteractable
 #endif
     }
 
+    /// <summary>Restores this slot directly to the given occupied/empty state and HP, bypassing resource costs
+    /// (day-checkpoint restore).</summary>
+    public void RestoreTowerInternal(bool hasTowerSnapshot, float hp)
+    {
+        if (!hasTowerSnapshot)
+        {
+            if (currentTower != null)
+            {
+                Destroy(currentTower);
+            }
+
+            currentTower = null;
+            hasTower = false;
+            InvalidateTowerReferenceCache();
+            RefreshSlotVisualState();
+            return;
+        }
+
+        if (!hasTower || currentTower == null)
+        {
+            PlaceTowerInternal(ArrowTowerTowerId);
+        }
+
+        if (TryGetCurrentTowerComponent(out ArrowTower tower))
+        {
+            tower.SetCurrentHp(hp);
+        }
+    }
+
     private GameObject ResolveTowerPrefab(string towerId)
     {
         if (string.IsNullOrWhiteSpace(towerId) || towerId == ArrowTowerTowerId)

@@ -1,15 +1,20 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
 /// <summary>Shows/hides on GameManager.OnPhaseChanged (single-shot, no per-frame state polling).
 /// While visible, clicking the full-screen background or pressing any key triggers the retry action,
 /// after a short delay so the key/click that caused GameOver can't also dismiss it. The "click to
-/// continue" hint only appears once that delay has passed, so it never invites a click that won't work.</summary>
+/// continue" hint only appears once that delay has passed, so it never invites a click that won't work.
+/// The title text reflects GameManager.LastGameOverCause (base destroyed vs. player died).</summary>
 public class GameOverPanelUI : MonoBehaviour
 {
     [SerializeField] private GameObject panelRoot;
     [SerializeField] private Button backgroundButton;
     [SerializeField] private GameObject continueHint;
+    [SerializeField] private TextMeshProUGUI titleText;
+    [SerializeField] private string baseDestroyedTitle = "BASE DESTROYED";
+    [SerializeField] private string playerDiedTitle = "YOU DIED";
     [SerializeField, Min(0f)] private float continueDelaySeconds = 2f;
 
     private float shownAtUnscaledTime = -1f;
@@ -72,7 +77,25 @@ public class GameOverPanelUI : MonoBehaviour
 
     private void HandlePhaseChanged(GameManager.GamePhase phase)
     {
-        SetVisible(phase == GameManager.GamePhase.GameOver);
+        bool visible = phase == GameManager.GamePhase.GameOver;
+        if (visible)
+        {
+            ApplyTitleForCause();
+        }
+
+        SetVisible(visible);
+    }
+
+    private void ApplyTitleForCause()
+    {
+        if (titleText == null || GameManager.Instance == null)
+        {
+            return;
+        }
+
+        titleText.text = GameManager.Instance.LastGameOverCause == GameManager.GameOverCause.PlayerDied
+            ? playerDiedTitle
+            : baseDestroyedTitle;
     }
 
     private void HandleContinueClicked()
