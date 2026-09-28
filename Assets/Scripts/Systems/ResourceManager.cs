@@ -315,6 +315,13 @@ public class ResourceManager : MonoBehaviour
         return resources[type];
     }
 
+    /// <summary>Sets the amount directly (clamped to >= 0), for day-checkpoint restore.</summary>
+    public void SetAmount(ResourceType type, int amount)
+    {
+        InitializeIfNeeded();
+        resources[type] = Mathf.Max(0, amount);
+    }
+
     private void InitializeIfNeeded()
     {
         if (resources.Count > 0)

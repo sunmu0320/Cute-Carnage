@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -8,7 +10,15 @@ public class GameManager : MonoBehaviour
     {
         Unknown,
         Day,
-        Night
+        Night,
+        GameOver
+    }
+
+    public enum GameOverCause
+    {
+        None,
+        BaseDestroyed,
+        PlayerDied
     }
 
     public static GameManager Instance { get; private set; }
@@ -20,6 +30,15 @@ public class GameManager : MonoBehaviour
     [Tooltip("Container holding night-only content (currently: the zombie spawner). Toggled active/inactive on phase transitions.")]
     [SerializeField]
     private GameObject nightRoot;
+
+    [Header("GameOver Timing")]
+    [Tooltip("Delay between BaseCore being destroyed and the GameOver panel appearing.")]
+    [SerializeField]
+    private float baseDestroyedPanelDelaySeconds = 2f;
+
+    [Tooltip("Delay between the player dying and the GameOver panel appearing (leaves room for a death animation).")]
+    [SerializeField]
+    private float playerDiedPanelDelaySeconds = 2.5f;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Regression Debug Tools")]
@@ -44,6 +63,10 @@ public class GameManager : MonoBehaviour
     private DayTimeManager boundDayTimeManager;
     private ResourceManager cachedResourceManager;
     private SimpleZombieSpawner cachedNightSpawner;
+    private BaseCore boundBaseCore;
+    private PlayerHealth boundPlayerHealth;
+    private DayCheckpoint lastDayCheckpoint;
+    private Coroutine gameOverPanelDelayCoroutine;
     private GamePhase currentPhase = GamePhase.Unknown;
     private RunRuntimeState currentRunState;
     private bool hasInitializedRunState;
@@ -56,6 +79,8 @@ public class GameManager : MonoBehaviour
     public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
     public int CurrentDay => currentDay;
     public bool IsDay => currentPhase == GamePhase.Day;
+    public bool IsGameOver => currentPhase == GamePhase.GameOver;
+    public GameOverCause LastGameOverCause { get; private set; } = GameOverCause.None;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     private void LogTransition(string message)
@@ -90,11 +115,14 @@ public class GameManager : MonoBehaviour
         }
 
         ResolveDayTimeManager();
+        ResolveBaseCore();
+        ResolvePlayerHealth();
     }
 
     private void Start()
     {
         AfterEnterDayScene();
+        CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
     }
 
@@ -109,6 +137,18 @@ public class GameManager : MonoBehaviour
         {
             boundDayTimeManager.OnDayEnded -= HandleDayEnded;
             boundDayTimeManager = null;
+        }
+
+        if (boundBaseCore != null)
+        {
+            boundBaseCore.OnBaseDestroyed -= HandleBaseDestroyed;
+            boundBaseCore = null;
+        }
+
+        if (boundPlayerHealth != null)
+        {
+            boundPlayerHealth.onDeath.RemoveListener(HandlePlayerDied);
+            boundPlayerHealth = null;
         }
     }
 
@@ -196,7 +236,7 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToNight()
     {
-        if (currentPhase == GamePhase.Night)
+        if (currentPhase == GamePhase.Night || currentPhase == GamePhase.GameOver)
         {
             return;
         }
@@ -205,6 +245,8 @@ public class GameManager : MonoBehaviour
         currentPhase = GamePhase.Night;
 
         ResolveDayTimeManager();
+        ResolveBaseCore();
+        ResolvePlayerHealth();
         if (boundDayTimeManager != null)
         {
             boundDayTimeManager.Pause();
@@ -227,7 +269,7 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToDay()
     {
-        if (currentPhase == GamePhase.Day)
+        if (currentPhase == GamePhase.Day || currentPhase == GamePhase.GameOver)
         {
             return;
         }
@@ -257,6 +299,7 @@ public class GameManager : MonoBehaviour
         ResolveDayTimeManager();
         AfterEnterDayScene();
         CloseNightOnlyPanels();
+        CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
     }
 
@@ -325,6 +368,319 @@ public class GameManager : MonoBehaviour
     private void HandleDayEnded()
     {
         TransitionToNight();
+    }
+
+    /// <summary>Resolves and subscribes to the single persistent BaseCore once. Same retry-safe pattern as
+    /// ResolveDayTimeManager: single scene means the instance never changes, so this is a no-op after the
+    /// first successful call.</summary>
+    private void ResolveBaseCore()
+    {
+        if (boundBaseCore != null)
+        {
+            return;
+        }
+
+        BaseCore core = FindFirstObjectByType<BaseCore>();
+        if (core == null)
+        {
+            Debug.Log("[GameManager] BaseCore not found; will retry on next phase transition.");
+            return;
+        }
+
+        boundBaseCore = core;
+        boundBaseCore.OnBaseDestroyed += HandleBaseDestroyed;
+        Debug.Log("[GameManager] Bound BaseCore.");
+    }
+
+    /// <summary>Resolves and subscribes to the single persistent PlayerHealth once. Same retry-safe pattern as
+    /// ResolveBaseCore.</summary>
+    private void ResolvePlayerHealth()
+    {
+        if (boundPlayerHealth != null)
+        {
+            return;
+        }
+
+        PlayerHealth health = FindFirstObjectByType<PlayerHealth>();
+        if (health == null)
+        {
+            Debug.Log("[GameManager] PlayerHealth not found; will retry on next phase transition.");
+            return;
+        }
+
+        boundPlayerHealth = health;
+        boundPlayerHealth.onDeath.AddListener(HandlePlayerDied);
+        Debug.Log("[GameManager] Bound PlayerHealth.");
+    }
+
+    private void HandleBaseDestroyed()
+    {
+        EnterGameOver(GameOverCause.BaseDestroyed, baseDestroyedPanelDelaySeconds);
+    }
+
+    private void HandlePlayerDied()
+    {
+        EnterGameOver(GameOverCause.PlayerDied, playerDiedPanelDelaySeconds);
+    }
+
+    /// <summary>Freezes the game immediately (player input, zombies, spawner, day timer, open panels), then
+    /// shows the GameOver panel after panelDelaySeconds - long enough for a death/destruction beat (e.g. a
+    /// future death animation) to read before the UI covers the screen.</summary>
+    private void EnterGameOver(GameOverCause cause, float panelDelaySeconds)
+    {
+        if (currentPhase == GamePhase.GameOver)
+        {
+            return;
+        }
+
+        LogTransition($"Entering GameOver. cause={cause}.");
+        currentPhase = GamePhase.GameOver;
+        LastGameOverCause = cause;
+        SetPlayerInputLocked(true);
+        SetZombiesFrozen(true);
+        if (cachedNightSpawner != null)
+        {
+            cachedNightSpawner.SetPaused(true);
+        }
+
+        if (boundDayTimeManager != null)
+        {
+            boundDayTimeManager.Pause();
+        }
+
+        CloseDayOnlyPanels();
+        CloseNightOnlyPanels();
+
+        if (gameOverPanelDelayCoroutine != null)
+        {
+            StopCoroutine(gameOverPanelDelayCoroutine);
+        }
+
+        gameOverPanelDelayCoroutine = StartCoroutine(ShowGameOverPanelAfterDelay(panelDelaySeconds));
+    }
+
+    private IEnumerator ShowGameOverPanelAfterDelay(float delaySeconds)
+    {
+        yield return new WaitForSecondsRealtime(delaySeconds);
+        gameOverPanelDelayCoroutine = null;
+        OnPhaseChanged?.Invoke(GamePhase.GameOver);
+    }
+
+    /// <summary>Locks/unlocks player movement, interaction, auto-attack, food consumption, and hunger drain
+    /// for the GameOver freeze. Time.timeScale is left untouched so zombies stay alive (idling, not frozen
+    /// mid-frame) and ambient environment content (wind sway, particles, etc.) keeps playing. UI buttons
+    /// (Continue, future Settings) are unaffected since Unity's EventSystem handles clicks independently of
+    /// these components.</summary>
+    private void SetPlayerInputLocked(bool locked)
+    {
+        PlayerMovement playerMovement = FindFirstObjectByType<PlayerMovement>();
+        if (playerMovement != null)
+        {
+            playerMovement.SetMovementLocked(locked);
+        }
+
+        PlayerInteractor playerInteractor = FindFirstObjectByType<PlayerInteractor>();
+        if (playerInteractor != null)
+        {
+            playerInteractor.enabled = !locked;
+        }
+
+        PlayerConsume playerConsume = FindFirstObjectByType<PlayerConsume>();
+        if (playerConsume != null)
+        {
+            playerConsume.enabled = !locked;
+        }
+
+        PlayerAutoCombat playerAutoCombat = FindFirstObjectByType<PlayerAutoCombat>();
+        if (playerAutoCombat != null)
+        {
+            playerAutoCombat.enabled = !locked;
+        }
+
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (hungerSystem != null)
+        {
+            hungerSystem.SetActiveDrain(!locked);
+        }
+    }
+
+    /// <summary>Stops zombies moving/attacking/re-targeting without disabling them, so they stay alive and
+    /// visibly idle in place instead of freezing mid-animation.</summary>
+    private void SetZombiesFrozen(bool frozen)
+    {
+        Zombie[] zombies = FindObjectsByType<Zombie>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < zombies.Length; i++)
+        {
+            zombies[i].SetFrozen(frozen);
+        }
+    }
+
+    /// <summary>Called from the GameOver screen's Continue action. Fully reverts to the checkpoint captured
+    /// at the start of the current Day: night content is torn down and BaseCore HP, resources, player
+    /// HP/Hunger, and every Fence/Tower slot are restored to that snapshot before the day timer restarts.</summary>
+    public void RetryCurrentDay()
+    {
+        if (currentPhase != GamePhase.GameOver)
+        {
+            return;
+        }
+
+        LogTransition($"RetryCurrentDay(): restoring Day {currentDay} checkpoint.");
+        SetPlayerInputLocked(false);
+
+        if (nightRoot != null)
+        {
+            nightRoot.SetActive(false);
+        }
+
+        Zombie[] remainingZombies = FindObjectsByType<Zombie>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < remainingZombies.Length; i++)
+        {
+            Destroy(remainingZombies[i].gameObject);
+        }
+
+        RestoreDayCheckpoint();
+
+        currentPhase = GamePhase.Day;
+        ResolveDayTimeManager();
+        AfterEnterDayScene();
+        CloseNightOnlyPanels();
+        OnPhaseChanged?.Invoke(GamePhase.Day);
+    }
+
+    /// <summary>Snapshots everything RetryCurrentDay() restores: BaseCore HP, resources, player HP/Hunger,
+    /// and every Fence/Tower slot's occupied state + HP, keyed by PersistentId. Called at the start of each
+    /// Day (Start()/TransitionToDay()) - not from RetryCurrentDay() itself, so repeated retries of the same
+    /// day always return to the same original snapshot.</summary>
+    private void CaptureDayCheckpoint()
+    {
+        DayCheckpoint checkpoint = new DayCheckpoint();
+
+        if (boundBaseCore != null)
+        {
+            checkpoint.baseCoreHp = boundBaseCore.CurrentHp;
+        }
+
+        ResourceManager resourceManager = GetOrFindResourceManager();
+        if (resourceManager != null)
+        {
+            checkpoint.resourceState = resourceManager.CaptureRuntimeState();
+        }
+
+        if (boundPlayerHealth != null)
+        {
+            checkpoint.playerHp = boundPlayerHealth.CurrentHealth;
+        }
+
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (hungerSystem != null)
+        {
+            checkpoint.playerHunger = hungerSystem.CurrentHunger;
+        }
+
+        FenceSlot[] fenceSlots = FindObjectsByType<FenceSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < fenceSlots.Length; i++)
+        {
+            FenceSlot slot = fenceSlots[i];
+            string id = slot.PersistentSlotId;
+            if (string.IsNullOrEmpty(id))
+            {
+                continue;
+            }
+
+            FenceSegment fence = slot.CurrentFence;
+            checkpoint.fenceSlots[id] = new FenceCheckpoint
+            {
+                hasFence = slot.HasFence,
+                fenceData = fence != null ? fence.Data : null,
+                currentHp = fence != null ? fence.CurrentHp : 0f
+            };
+        }
+
+        TowerSlot[] towerSlots = FindObjectsByType<TowerSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < towerSlots.Length; i++)
+        {
+            TowerSlot slot = towerSlots[i];
+            string id = slot.PersistentSlotId;
+            if (string.IsNullOrEmpty(id))
+            {
+                continue;
+            }
+
+            ArrowTower tower = slot.CurrentTower;
+            checkpoint.towerSlots[id] = new TowerCheckpoint
+            {
+                hasTower = slot.HasTower,
+                currentHp = tower != null ? tower.CurrentHp : 0f
+            };
+        }
+
+        lastDayCheckpoint = checkpoint;
+        LogTransition(
+            $"Captured day checkpoint for Day {currentDay}: baseHp={checkpoint.baseCoreHp:0.#}, " +
+            $"wood={checkpoint.resourceState.wood} scrap={checkpoint.resourceState.scrap} food={checkpoint.resourceState.food}, " +
+            $"fenceSlots={checkpoint.fenceSlots.Count}, towerSlots={checkpoint.towerSlots.Count}.");
+    }
+
+    /// <summary>Restores the checkpoint captured by CaptureDayCheckpoint(). No-op if none was ever captured.</summary>
+    private void RestoreDayCheckpoint()
+    {
+        if (lastDayCheckpoint == null)
+        {
+            return;
+        }
+
+        if (boundBaseCore != null)
+        {
+            boundBaseCore.SetCurrentHp(lastDayCheckpoint.baseCoreHp);
+        }
+
+        ResourceManager resourceManager = GetOrFindResourceManager();
+        if (resourceManager != null)
+        {
+            resourceManager.SetAmount(ResourceType.Wood, lastDayCheckpoint.resourceState.wood);
+            resourceManager.SetAmount(ResourceType.Scrap, lastDayCheckpoint.resourceState.scrap);
+            resourceManager.SetAmount(ResourceType.Food, lastDayCheckpoint.resourceState.food);
+        }
+
+        if (boundPlayerHealth != null)
+        {
+            boundPlayerHealth.SetHealth(Mathf.RoundToInt(lastDayCheckpoint.playerHp));
+        }
+
+        HungerSystem hungerSystem = FindFirstObjectByType<HungerSystem>();
+        if (hungerSystem != null)
+        {
+            hungerSystem.SetHunger(lastDayCheckpoint.playerHunger);
+        }
+
+        FenceSlot[] fenceSlots = FindObjectsByType<FenceSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < fenceSlots.Length; i++)
+        {
+            FenceSlot slot = fenceSlots[i];
+            string id = slot.PersistentSlotId;
+            if (string.IsNullOrEmpty(id) || !lastDayCheckpoint.fenceSlots.TryGetValue(id, out FenceCheckpoint snapshot))
+            {
+                continue;
+            }
+
+            slot.RestoreFenceInternal(snapshot.hasFence ? snapshot.fenceData : null, snapshot.currentHp);
+        }
+
+        TowerSlot[] towerSlots = FindObjectsByType<TowerSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        for (int i = 0; i < towerSlots.Length; i++)
+        {
+            TowerSlot slot = towerSlots[i];
+            string id = slot.PersistentSlotId;
+            if (string.IsNullOrEmpty(id) || !lastDayCheckpoint.towerSlots.TryGetValue(id, out TowerCheckpoint snapshot))
+            {
+                continue;
+            }
+
+            slot.RestoreTowerInternal(snapshot.hasTower, snapshot.currentHp);
+        }
+
+        LogTransition($"Restored day checkpoint: baseHp={lastDayCheckpoint.baseCoreHp:0.#}.");
     }
 
     private void AfterEnterDayScene()

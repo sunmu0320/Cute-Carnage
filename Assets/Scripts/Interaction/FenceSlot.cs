@@ -422,6 +422,37 @@ public class FenceSlot : MonoBehaviour, IInteractable
         return true;
     }
 
+    /// <summary>Restores this slot directly to the given fence tier and HP, bypassing resource costs
+    /// (day-checkpoint restore). Passing null data clears the slot to empty.</summary>
+    public void RestoreFenceInternal(FenceData data, float hp)
+    {
+        if (installedFence != null)
+        {
+            Destroy(installedFence);
+            installedFence = null;
+            installedFenceSegment = null;
+        }
+
+        if (data == null || data.FencePrefab == null)
+        {
+            RefreshSlotVisualState();
+            return;
+        }
+
+        Transform origin = SpawnPoint;
+        GameObject spawnedFence = Instantiate(data.FencePrefab, origin.position, origin.rotation);
+        installedFence = spawnedFence;
+        installedFenceSegment = null;
+
+        FenceSegment segment = CurrentFence;
+        if (segment != null)
+        {
+            segment.SetCurrentHp(hp);
+        }
+
+        RefreshSlotVisualState();
+    }
+
     private int UpgradeWoodCostForInstalledFence()
     {
         FenceSegment fence = CurrentFence;

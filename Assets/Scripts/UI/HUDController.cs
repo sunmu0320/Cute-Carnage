@@ -268,6 +268,8 @@ public class HUDController : MonoBehaviour
         }
 
         // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
+        // Keeps showing the actual DAY/NIGHT label through GameOver too - the GameOver panel already
+        // shows its own "Game Over" text, so this shouldn't duplicate it.
         if (GameManager.Instance != null)
         {
             int currentDay = GameManager.Instance.CurrentDay;

@@ -81,6 +81,7 @@ public class Zombie : MonoBehaviour
 
     private float currentHp;
     private bool hasDied;
+    private bool isFrozen;
     private string lastFrontTargetLogKey;
 
     // Cached from ZombieData
@@ -91,6 +92,13 @@ public class Zombie : MonoBehaviour
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
     public bool IsDead => currentHp <= 0f;
+
+    /// <summary>Stops movement/attacking/re-targeting while frozen (e.g. GameOver) without disabling the
+    /// component or its Animator, so the zombie stays alive and visibly idles in place.</summary>
+    public void SetFrozen(bool frozen)
+    {
+        isFrozen = frozen;
+    }
 
     private void OnEnable()
     {
@@ -170,6 +178,11 @@ public class Zombie : MonoBehaviour
         if (Input.GetKeyDown(debugDamageKey))
         {
             TakeDamage(debugDamageAmount);
+        }
+
+        if (isFrozen)
+        {
+            return;
         }
 
         RefreshTargetIfNeeded();
@@ -791,6 +804,12 @@ public class Zombie : MonoBehaviour
 
     public void AnimationEvent_ApplyAttackHit()
     {
+        if (isFrozen)
+        {
+            ClearPendingAttack();
+            return;
+        }
+
         if (!attackHitAvailable)
         {
             return;

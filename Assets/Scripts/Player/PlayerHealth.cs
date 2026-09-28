@@ -99,7 +99,8 @@ public class PlayerHealth : MonoBehaviour
         NotifyHealthChanged();
     }
 
-    private void SetHealth(int newHealth)
+    /// <summary>Sets CurrentHealth directly (clamped to [0, MaxHealth]), for day-checkpoint restore.</summary>
+    public void SetHealth(int newHealth)
     {
         int previousHealth = currentHealth;
         currentHealth = Mathf.Clamp(newHealth, 0, maxHealth);
