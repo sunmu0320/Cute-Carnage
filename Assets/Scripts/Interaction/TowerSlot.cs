@@ -73,11 +73,15 @@ public class TowerSlot : MonoBehaviour, IInteractable
     public string PersistentSlotId => persistentId != null ? persistentId.Id : string.Empty;
     public string PersistentId => PersistentSlotId;
 
-    /// <summary>Fixed at 1 - no multi-tier Tower data exists yet. Mirrors FenceSlot.CurrentTierNumber's shape for future parity.</summary>
-    public int CurrentTierNumber => 1;
+    /// <summary>One-based tier number: the installed tower's tier, or the starting tower type's tier while empty.</summary>
+    public int CurrentTierNumber => ActiveTowerData != null ? ActiveTowerData.TierNumber : 1;
 
-    /// <summary>Always null (treated as Max Tier) - no T2+ TowerData exists yet. Mirrors FenceSlot.NextTierData's shape for future parity.</summary>
-    public TowerData NextTierData => null;
+    /// <summary>Next tier's data for the installed tower; null while empty or at Max Tier.</summary>
+    public TowerData NextTierData => hasTower && ActiveTowerData != null ? ActiveTowerData.NextTower : null;
+
+    /// <summary>Unified Upgrade button cost: install cost while empty, otherwise the installed tier's upgrade cost.</summary>
+    public int UpgradeWoodCost => !hasTower ? WoodBuildCost : ActiveTowerData != null ? Mathf.Max(0, ActiveTowerData.UpgradeWoodCost) : 0;
+    public int UpgradeScrapCost => !hasTower ? ScrapBuildCost : ActiveTowerData != null ? Mathf.Max(0, ActiveTowerData.UpgradeScrapCost) : 0;
 
     /// <summary>The built tower's own data once placed, otherwise this slot's starting data. Repair values should track the installed tower.</summary>
     private TowerData ActiveTowerData
@@ -341,6 +345,14 @@ public class TowerSlot : MonoBehaviour, IInteractable
             $"[TowerSlot] Build success slot id='{PersistentId}'. Spent wood={reqWood} scrap={reqScrap}. After {resourceManager.GetDebugSummary()}",
             this);
         return true;
+    }
+
+    /// <summary>Unified Upgrade button entry point. Empty: installs T1 immediately (same as TryBuildTower).
+    /// Installed: T1->T2+ must go through TowerUpgradeConfirmPanel (approved design, not built yet - no T2
+    /// TowerData exists either), so this returns false for that case.</summary>
+    public bool TryUpgradeTower(PlayerInteractor interactor)
+    {
+        return !hasTower && TryBuildTower(interactor);
     }
 
     public bool TryRepairTower(PlayerInteractor interactor)

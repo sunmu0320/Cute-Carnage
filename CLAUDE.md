@@ -54,14 +54,14 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   **Verified.** 베이스 파괴/플레이어 사망 둘 다 실제 플레이테스트로
   타이틀 정확히 뜨는 것 확인됨.
   - 재시도(`RetryCurrentDay()`)는 "Day 시작 시점으로 완전 복원" —
-    **Reported implemented (Fence/Tower 복원은 아직 플레이테스트 미확인).**
+    **Verified.** 자원/Hunger/Fence/Tower 전부 전날 Day 시작 상태로
+    복원되는 것 플레이테스트로 확인됨.
     `GameManager`가 매 Day 시작마다(`Start()`/`TransitionToDay()`)
     BaseCore HP, 자원(Wood/Scrap/Food), 플레이어 HP/Hunger, 모든
     Fence/Tower 슬롯의 설치 여부+HP를 PersistentId 기준으로 스냅샷
     (`DayCheckpoint`)해두고, Continue 시 전부 복원. 이 스냅샷/복원
     경로는 여러 시스템(`FenceSlot.RestoreFenceInternal`,
-    `TowerSlot.RestoreTowerInternal` 등 새 메서드)에 걸쳐 있어 유니티
-    에디터에서 실제 플레이테스트 전이므로 Verified 아님.
+    `TowerSlot.RestoreTowerInternal` 등 새 메서드)에 걸쳐 있음.
   - `GameOverPanelUI`는 씬에 배치·연결은 됐으나(Panel Root/Background
     Button/Continue Hint), 새로 추가된 `Title Text` 필드는 아직 씬에
     연결 안 됐을 수 있음 — 연결 안 해도 에러는 안 나고 그냥 타이틀
@@ -69,8 +69,14 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 - `TowerSlot.EnsureCurrentTowerReference()`의 반경 기반 타워 자동 채택
   로직이 단일 씬 모델에서는 죽은 코드일 가능성이 있으나 미확인 —
   건드리기 전에 pre-placed tower 존재 여부부터 확인할 것.
-- Fence UI가 Damaged/Destroyed를 구분하지 못함 (`needsRepair`만 존재),
-  Fence Upgrade 버튼은 `interactable = false`로 하드코딩됨.
+- Fence UI가 Damaged/Destroyed를 구분하지 못함 (`needsRepair`만 존재).
+- `StructureActionPanelUI` (Day 패널) — Fence/Tower 둘 다 단일 Upgrade
+  버튼(Empty면 INSTALL)으로 설치/업그레이드, Repair 버튼, 핫키 E=Upgrade,
+  R=Repair (패널 연 프레임은 무시) — **Verified.** Tower 설치(Empty→T1)는
+  즉시 실행. Tower T1→T2+는 `TowerUpgradeConfirmPanel` 확인 팝업을 거쳐야
+  함 — **Approved design, 미구현** (T2 `TowerData`도 아직 없음, 지금은
+  T1이 Max Tier라 Upgrade 비활성). `DayTimeTester.resetKey`(R)가 Repair
+  핫키와 충돌 — Inspector에서 키 변경 필요.
 
 ## 참고 문서 (우선순위 순)
 

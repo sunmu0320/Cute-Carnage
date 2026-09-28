@@ -11,9 +11,6 @@ public class StructureActionPanelUI : MonoBehaviour
     [SerializeField] private Image hpFill;
     [SerializeField] private TextMeshProUGUI hpText;
     [SerializeField] private GameObject dayActionsRoot;
-    [SerializeField] private Button installButton;
-    [SerializeField] private TextMeshProUGUI installButtonText;
-    [SerializeField] private TextMeshProUGUI installCostText;
     [SerializeField] private Button upgradeButton;
     [SerializeField] private TextMeshProUGUI upgradeButtonText;
     [SerializeField] private GameObject repairActionRoot;
@@ -55,6 +52,13 @@ public class StructureActionPanelUI : MonoBehaviour
 
     [Header("Input")]
     [SerializeField] private KeyCode closeKey = KeyCode.Escape;
+    [SerializeField] private KeyCode upgradeKey = KeyCode.E;
+    [SerializeField] private KeyCode repairKey = KeyCode.R;
+
+    // The E press that opened this panel (PlayerInteractor.Interact) is still
+    // GetKeyDown this frame - ignore hotkeys on the open frame so it doesn't
+    // also count as an instant Upgrade/Install.
+    private int openedFrame = -1;
 
     private TowerSlot selectedTowerSlot;
     private FenceSlot selectedFenceSlot;
@@ -120,7 +124,28 @@ public class StructureActionPanelUI : MonoBehaviour
         if (Input.GetKeyDown(closeKey) || !IsSelectionValid())
         {
             Close();
+            return;
         }
+
+        if (Time.frameCount == openedFrame)
+        {
+            return;
+        }
+
+        // Same gates as clicking: only fire when the button itself is shown and interactable.
+        if (Input.GetKeyDown(upgradeKey) && IsButtonUsable(upgradeButton))
+        {
+            HandleUpgradeClicked();
+        }
+        else if (Input.GetKeyDown(repairKey) && IsButtonUsable(repairButton))
+        {
+            HandleRepairClicked();
+        }
+    }
+
+    private static bool IsButtonUsable(Button button)
+    {
+        return button != null && button.interactable && button.gameObject.activeInHierarchy;
     }
 
     public void Open(TowerSlot towerSlot, PlayerInteractor interactor)
@@ -133,6 +158,7 @@ public class StructureActionPanelUI : MonoBehaviour
         selectedTowerSlot = towerSlot;
         selectedFenceSlot = null;
         selectedInteractor = interactor;
+        openedFrame = Time.frameCount;
 
         if (panelRoot != null)
         {
@@ -152,6 +178,7 @@ public class StructureActionPanelUI : MonoBehaviour
         selectedTowerSlot = null;
         selectedFenceSlot = fenceSlot;
         selectedInteractor = interactor;
+        openedFrame = Time.frameCount;
 
         if (panelRoot != null)
         {
@@ -219,10 +246,9 @@ public class StructureActionPanelUI : MonoBehaviour
             return;
         }
 
-        // Tower has no Upgrade logic yet (Phase 1-B); upgradeButton stays
-        // non-interactable for Tower selections in Refresh(), so this is a
-        // no-op for that case rather than something reachable via UI.
-        bool upgraded = selectedFenceSlot != null && selectedFenceSlot.TryUpgradeFence(selectedInteractor);
+        bool upgraded = selectedTowerSlot != null
+            ? selectedTowerSlot.TryUpgradeTower(selectedInteractor)
+            : selectedFenceSlot != null && selectedFenceSlot.TryUpgradeFence(selectedInteractor);
         if (upgraded)
         {
             Refresh();
@@ -356,30 +382,33 @@ public class StructureActionPanelUI : MonoBehaviour
             dayActionsRoot.SetActive(true);
         }
 
-        if (installButton != null)
-        {
-            installButton.gameObject.SetActive(isEmpty);
-            installButton.interactable = isEmpty;
-        }
+        ResourceManager resourceManager = selectedInteractor != null ? selectedInteractor.ResourceManager : null;
+        int upgradeWood = selectedTowerSlot.UpgradeWoodCost;
+        int upgradeScrap = selectedTowerSlot.UpgradeScrapCost;
+        bool canAffordUpgrade = resourceManager != null
+            && resourceManager.HasResource(ResourceType.Wood, upgradeWood)
+            && resourceManager.HasResource(ResourceType.Scrap, upgradeScrap);
 
-        if (installButtonText != null)
-        {
-            installButtonText.text = "Install";
-        }
+        if (tierBadgeText != null) tierBadgeText.text = isEmpty ? "—" : $"T{selectedTowerSlot.CurrentTierNumber}";
 
-        if (installCostText != null)
-        {
-            installCostText.gameObject.SetActive(isEmpty);
-            installCostText.text = $"Wood: {selectedTowerSlot.WoodBuildCost}  Scrap: {selectedTowerSlot.ScrapBuildCost}";
-        }
-
+        // Installed towers stay non-interactable here: T1->T2+ goes through
+        // TowerUpgradeConfirmPanel (approved, not built), and no T2 data exists
+        // yet anyway - TowerSlot.TryUpgradeTower only handles the Empty case.
         if (upgradeButton != null)
         {
             upgradeButton.gameObject.SetActive(true);
-            upgradeButton.interactable = false;
+            upgradeButton.interactable = isEmpty && canAffordUpgrade;
         }
+        if (upgradeButtonText != null) upgradeButtonText.text = isEmpty ? "INSTALL" : "UPGRADE";
+        if (upgradeWoodCountText != null) upgradeWoodCountText.text = upgradeWood.ToString();
+        if (upgradeScrapCountText != null) upgradeScrapCountText.text = upgradeScrap.ToString();
 
         bool needsRepair = hasValidTower && tower.CurrentHp < tower.MaxHp - 0.01f;
+        int repairWood = selectedTowerSlot.WoodRepairCost;
+        int repairScrap = selectedTowerSlot.ScrapRepairCost;
+        bool canAffordRepair = resourceManager != null
+            && resourceManager.HasResource(ResourceType.Wood, repairWood)
+            && resourceManager.HasResource(ResourceType.Scrap, repairScrap);
 
         if (repairActionRoot != null)
         {
@@ -388,8 +417,11 @@ public class StructureActionPanelUI : MonoBehaviour
 
         if (repairButton != null)
         {
-            repairButton.interactable = needsRepair;
+            repairButton.interactable = needsRepair && canAffordRepair;
         }
+        if (repairAmountText != null) repairAmountText.text = $"+{Mathf.RoundToInt(selectedTowerSlot.RepairAmountPerStep)} HP";
+        if (repairWoodCountText != null) repairWoodCountText.text = repairWood.ToString();
+        if (repairScrapCountText != null) repairScrapCountText.text = repairScrap.ToString();
 
         SyncBackgroundSize();
         ResetButtonHoverState();

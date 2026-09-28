@@ -374,6 +374,10 @@ public class PlayerInteractor : MonoBehaviour
         if (!Input.GetKeyDown(interactionKey))
             return;
 
+        // While StructureActionPanel is open, E is its Upgrade hotkey - don't re-open it.
+        if (structureActionPanelUI != null && structureActionPanelUI.IsOpen)
+            return;
+
         if (currentInteractable == null)
             return;
 
