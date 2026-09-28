@@ -32,3 +32,6 @@ GeneratedAssets/
 *.csproj
 *.sln
 *.slnx
+
+# --- Docs: hook rebuilds ignore --code-only and would index headings ---
+*.md
