@@ -75,8 +75,8 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   R=Repair (패널 연 프레임은 무시) — **Verified.** Tower 설치(Empty→T1)는
   즉시 실행. Tower T1→T2+는 `TowerUpgradeConfirmPanel` 확인 팝업을 거쳐야
   함 — **Approved design, 미구현** (T2 `TowerData`도 아직 없음, 지금은
-  T1이 Max Tier라 Upgrade 비활성). `DayTimeTester.resetKey`(R)가 Repair
-  핫키와 충돌 — Inspector에서 키 변경 필요.
+  T1이 Max Tier라 Upgrade 비활성). `DayTimeTester.resetKey`는 R 충돌을
+  피해 `0`(Alpha0)으로 변경됨.
 
 ## 참고 문서 (우선순위 순)
 

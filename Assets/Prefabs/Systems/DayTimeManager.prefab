@@ -92,6 +92,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::DayTimeTester
   dayTimeManager: {fileID: 253738684062174910}
-  resetKey: 114
+  resetKey: 48
   pauseKey: 112
   resumeKey: 121

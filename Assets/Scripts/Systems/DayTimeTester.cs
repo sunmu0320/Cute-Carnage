@@ -7,7 +7,7 @@ public class DayTimeTester : MonoBehaviour
 
     [Header("Optional keys (Play Mode)")]
     [SerializeField]
-    private KeyCode resetKey = KeyCode.R;
+    private KeyCode resetKey = KeyCode.Alpha0;
 
     [SerializeField]
     private KeyCode pauseKey = KeyCode.P;
