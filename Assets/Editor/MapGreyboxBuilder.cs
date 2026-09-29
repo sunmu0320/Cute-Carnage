@@ -373,6 +373,254 @@ public static class MapGreyboxBuilder
         Debug.Log($"[MapGreyboxBuilder] North forest built: {placed.Count} trees. Wood nodes/river/waterfall are later steps.");
     }
 
+    // ---------------------------------------------------------------- Step 5: River, waterfall, bridges, cliff rim
+
+    // River is impassable (invisible blockers); only the two bridges cross it. Terrain stays flat for now.
+    // Route (world x, z): NW waterfall pool -> west edge of forest -> between meadow and forest (z≈85)
+    // -> between base and factory (x≈75) -> SE lake. The south village is not touched.
+    private const float RiverWidth = 12f;
+    private const float WaterY = 0.04f;
+    private const float BlockerHeight = 3f;
+    private const float BlockerChunk = 4f;      // blockers are laid in chunks so bridges can leave a gap.
+    private const float BridgeGapHalf = 5.5f;   // chunks within this distance of a bridge centre are skipped.
+    private const float BridgeLength = 18f;     // river width + 3m of bank each side.
+    private const float BridgeWidth = 8f;       // road is 7m.
+    private const int CliffSeed = 4321;
+
+    private static readonly Vector2[] RiverPath =
+    {
+        new Vector2(-170f, 214f), new Vector2(-150f, 180f), new Vector2(-128f, 140f), new Vector2(-100f, 100f),
+        new Vector2(-60f, 86f), new Vector2(0f, 85f), new Vector2(50f, 85f), new Vector2(72f, 68f),
+        new Vector2(75f, 0f), new Vector2(75f, -50f), new Vector2(105f, -95f), new Vector2(145f, -135f),
+    };
+    private static readonly Vector3 WaterfallPool = new Vector3(-170f, 0f, 214f);
+    private const float PoolDiameter = 16f;
+    private static readonly Vector3 Lake = new Vector3(145f, 0f, -135f);
+    private const float LakeDiameter = 52f;
+
+    // Where Road_To_North (x=-2) and Road_To_East (z=28) cross the river; forward = road direction.
+    private static readonly (Vector3 center, Vector3 forward)[] Bridges =
+    {
+        (new Vector3(-2f, 0f, 85f), Vector3.forward),
+        (new Vector3(73.8f, 0f, 28f), Vector3.right),
+    };
+
+    [MenuItem("Tools/Map/5. Build River + Waterfall + Cliffs")]
+    private static void BuildRiverAndCliffs()
+    {
+        Transform blockout = GameObject.Find("Map_Blockout")?.transform;
+        Transform boundary = blockout != null ? blockout.Find("Boundary") : null;
+        Material roadMat = LoadMat("Mat_Graybox_Road");
+        Material propMat = LoadMat("Mat_Graybox_Boundary");
+        Material villageMat = LoadMat("Mat_Graybox_Village");
+        if (boundary == null || roadMat == null || propMat == null || villageMat == null)
+        {
+            Debug.LogError("[MapGreyboxBuilder] Missing Map_Blockout/Boundary or graybox materials. Nothing built.");
+            return;
+        }
+        if (blockout.Find("Terrain_Features") != null)
+        {
+            Debug.Log("[MapGreyboxBuilder] Terrain_Features already exists, skipped.");
+            return;
+        }
+
+        Material waterMat = GetOrCreateWaterMaterial(roadMat);
+        Undo.SetCurrentGroupName("Build River + Waterfall + Cliffs");
+
+        Transform features = CreateGroup("Terrain_Features", blockout);
+        Transform river = CreateGroup("River", features);
+        Transform water = CreateGroup("Water", river);
+        Transform blockers = CreateGroup("Blockers", river);
+        Transform bridges = CreateGroup("Bridges", features);
+        Transform waterfall = CreateGroup("Waterfall", features);
+        Transform cliffs = CreateGroup("Cliffs", features);
+
+        RemoveTreesInRiver(blockout);
+
+        // River surface: strips per segment + discs at bends so corners have no gaps.
+        for (int i = 0; i < RiverPath.Length - 1; i++)
+        {
+            Vector3 a = ToWorld(RiverPath[i]);
+            Vector3 b = ToWorld(RiverPath[i + 1]);
+            Strip($"River_{i}", water, waterMat, a, b, RiverWidth, WaterY);
+            Disc($"Bend_{i}", water, waterMat, a, RiverWidth, WaterY);
+            LayBlockers(blockers, i, a, b);
+        }
+        Disc("Lake", water, waterMat, Lake, LakeDiameter, WaterY);
+        Disc("WaterfallPool", water, waterMat, WaterfallPool, PoolDiameter, WaterY);
+        RoundBlocker("Lake_Blocker", blockers, Lake, LakeDiameter);
+        RoundBlocker("WaterfallPool_Blocker", blockers, WaterfallPool, PoolDiameter);
+
+        // Bridges: walkable deck above the water + railings (the gap in the blockers is what lets you cross).
+        for (int i = 0; i < Bridges.Length; i++)
+        {
+            (Vector3 center, Vector3 forward) = Bridges[i];
+            Transform bridge = CreateGroup($"Bridge_{i}", bridges);
+            Vector3 half = forward * (BridgeLength * 0.5f);
+            Strip("Deck", bridge, villageMat, center - half, center + half, BridgeWidth, 0.06f);
+            Vector3 side = Vector3.Cross(Vector3.up, forward) * (BridgeWidth * 0.5f);
+            float yaw = Quaternion.LookRotation(forward).eulerAngles.y;
+            foreach (int sign in new[] { -1, 1 })
+            {
+                Vector3 p = center + side * sign;
+                Box(sign < 0 ? "Railing_L" : "Railing_R", bridge, propMat, p.x, p.z, 0.3f, BridgeLength, 1f, yaw);
+            }
+        }
+
+        // Waterfall: cliff block in the NW corner, a vertical water face, pool below (already added above).
+        Box("WaterfallCliff", waterfall, propMat, -172f, 227f, 26f, 6f, 14f);
+        GameObject fall = CreatePrimitive(PrimitiveType.Cube, "WaterfallFace", waterfall, waterMat, keepCollider: false);
+        fall.transform.position = new Vector3(-170f, 7f, 223.8f);
+        fall.transform.localScale = new Vector3(8f, 14f, 0.3f);
+
+        BuildCliffRim(cliffs, boundary, propMat);
+
+        Debug.Log("[MapGreyboxBuilder] River, waterfall, 2 bridges and cliff rim built. Height sculpting/water shader are polish steps.");
+    }
+
+    private static Vector3 ToWorld(Vector2 p) => new Vector3(p.x, 0f, p.y);
+
+    private static Material GetOrCreateWaterMaterial(Material template)
+    {
+        const string path = MaterialDir + "Mat_Graybox_Water.mat";
+        Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+        if (mat == null)
+        {
+            mat = new Material(template) { color = new Color(0.2f, 0.45f, 0.75f) }; // same shader as the other graybox mats.
+            AssetDatabase.CreateAsset(mat, path);
+        }
+        return mat;
+    }
+
+    private static void RemoveTreesInRiver(Transform blockout)
+    {
+        Transform trees = blockout.Find("Zone_North_Forest/Forest/Trees");
+        if (trees == null)
+        {
+            return;
+        }
+
+        float riverClear = RiverWidth * 0.5f + 2.5f;
+        int removed = 0;
+        for (int i = trees.childCount - 1; i >= 0; i--)
+        {
+            Transform tree = trees.GetChild(i);
+            Vector3 p = tree.position;
+            p.y = 0f;
+            bool inRiver = (p - WaterfallPool).magnitude < PoolDiameter * 0.5f + 2.5f;
+            for (int s = 0; s < RiverPath.Length - 1 && !inRiver; s++)
+            {
+                inRiver = DistanceToSegment(p, ToWorld(RiverPath[s]), ToWorld(RiverPath[s + 1])) < riverClear;
+            }
+            if (inRiver)
+            {
+                Undo.DestroyObjectImmediate(tree.gameObject);
+                removed++;
+            }
+        }
+        Debug.Log($"[MapGreyboxBuilder] Removed {removed} forest trees inside the river corridor.");
+    }
+
+    // Invisible walls along one river segment, skipping chunks at bridges.
+    private static void LayBlockers(Transform parent, int segment, Vector3 a, Vector3 b)
+    {
+        Vector3 dir = b - a;
+        int chunks = Mathf.Max(1, Mathf.CeilToInt(dir.magnitude / BlockerChunk));
+        float chunkLength = dir.magnitude / chunks;
+        Quaternion rot = Quaternion.LookRotation(dir);
+        for (int c = 0; c < chunks; c++)
+        {
+            Vector3 mid = a + dir * ((c + 0.5f) / chunks);
+            bool atBridge = System.Array.Exists(Bridges, br => (br.center - mid).magnitude < BridgeGapHalf);
+            if (atBridge)
+            {
+                continue;
+            }
+
+            GameObject go = CreatePrimitive(PrimitiveType.Cube, $"Blocker_{segment}_{c}", parent, null, keepCollider: true);
+            Object.DestroyImmediate(go.GetComponent<MeshRenderer>());
+            go.transform.SetPositionAndRotation(mid + Vector3.up * (BlockerHeight * 0.5f), rot);
+            go.transform.localScale = new Vector3(RiverWidth, BlockerHeight, chunkLength + 0.5f); // slight overlap between chunks.
+        }
+    }
+
+    private static void RoundBlocker(string name, Transform parent, Vector3 center, float diameter)
+    {
+        GameObject go = CreatePrimitive(PrimitiveType.Cylinder, name, parent, null, keepCollider: false);
+        Object.DestroyImmediate(go.GetComponent<MeshRenderer>());
+        go.AddComponent<MeshCollider>().convex = true; // capsule collider would turn a flat wide cylinder into a sphere.
+        go.transform.position = center + Vector3.up * (BlockerHeight * 0.5f);
+        go.transform.localScale = new Vector3(diameter, BlockerHeight * 0.5f, diameter);
+    }
+
+    // Flat walkable disc (no collider).
+    private static void Disc(string name, Transform parent, Material mat, Vector3 center, float diameter, float y)
+    {
+        GameObject go = CreatePrimitive(PrimitiveType.Cylinder, name, parent, mat, keepCollider: false);
+        go.transform.position = new Vector3(center.x, y, center.z);
+        go.transform.localScale = new Vector3(diameter, 0.005f, diameter);
+    }
+
+    // Rock blocks just inside the boundary walls. South edge stays low so it never hides the player from the camera.
+    // A rock is skipped if it would overlap anything already built (mall warehouse, factory tanks, waterfall, lake...).
+    private static void BuildCliffRim(Transform parent, Transform boundary, Material mat)
+    {
+        Physics.SyncTransforms();
+        var rng = new System.Random(CliffSeed);
+        float Rand(float min, float max) => Mathf.Lerp(min, max, (float)rng.NextDouble());
+
+        const float minX = -202f, maxX = 198f, minZ = -172f, maxZ = 229.6f, inset = 5f, step = 9f;
+        var edges = new List<(Vector3 from, Vector3 to, float minH, float maxH)>
+        {
+            (new Vector3(minX + inset, 0f, minZ), new Vector3(minX + inset, 0f, maxZ), 6f, 12f),   // west
+            (new Vector3(maxX - inset, 0f, minZ), new Vector3(maxX - inset, 0f, maxZ), 6f, 12f),   // east
+            (new Vector3(minX, 0f, maxZ - inset), new Vector3(maxX, 0f, maxZ - inset), 8f, 14f),   // north
+            (new Vector3(minX, 0f, minZ + inset), new Vector3(maxX, 0f, minZ + inset), 2f, 3.5f),  // south (low)
+        };
+
+        int placed = 0, skipped = 0;
+        foreach ((Vector3 from, Vector3 to, float minH, float maxH) in edges)
+        {
+            int count = Mathf.CeilToInt((to - from).magnitude / step);
+            for (int i = 0; i <= count; i++)
+            {
+                Vector3 p = Vector3.Lerp(from, to, i / (float)count);
+                float size = Rand(7f, 12f);
+                float height = Rand(minH, maxH);
+                float yaw = Rand(0f, 90f);
+
+                // Lifted a little off y=0 so the flat terrain collider doesn't count as an overlap.
+                Vector3 checkCenter = new Vector3(p.x, height * 0.5f + 0.2f, p.z);
+                Vector3 checkHalf = new Vector3(size * 0.5f, height * 0.5f - 0.2f, size * 0.5f);
+                bool blocked = false;
+                foreach (Collider hit in Physics.OverlapBox(checkCenter, checkHalf, Quaternion.Euler(0f, yaw, 0f), ~0, QueryTriggerInteraction.Ignore))
+                {
+                    if (!hit.transform.IsChildOf(boundary) && hit.transform.parent?.name != "Trees")
+                    {
+                        blocked = true;
+                        break;
+                    }
+                }
+                if (blocked)
+                {
+                    skipped++;
+                    continue;
+                }
+
+                Box($"Cliff_{placed}", parent, mat, p.x, p.z, size, size, height, yaw);
+                placed++;
+            }
+        }
+        Debug.Log($"[MapGreyboxBuilder] Cliff rim: {placed} rocks, {skipped} skipped to avoid overlapping existing structures.");
+    }
+
+    private static float DistanceToSegment(Vector3 p, Vector3 from, Vector3 to)
+    {
+        Vector3 seg = to - from;
+        float t = Mathf.Clamp01(Vector3.Dot(p - from, seg) / seg.sqrMagnitude);
+        return (p - (from + seg * t)).magnitude;
+    }
+
     private static bool IsForestBlocked(Vector3 p, List<(Vector3 from, Vector3 to)> keepClear)
     {
         foreach ((Vector3 center, float radius) in Clearings)
@@ -385,16 +633,7 @@ public static class MapGreyboxBuilder
 
         // Keep trees clear of road/trails (road half-width + a trunk's width of margin).
         float clearance = RoadWidth * 0.5f + 3f;
-        foreach ((Vector3 from, Vector3 to) in keepClear)
-        {
-            Vector3 seg = to - from;
-            float t = Mathf.Clamp01(Vector3.Dot(p - from, seg) / seg.sqrMagnitude);
-            if ((p - (from + seg * t)).sqrMagnitude < clearance * clearance)
-            {
-                return true;
-            }
-        }
-        return false;
+        return keepClear.Exists(s => DistanceToSegment(p, s.from, s.to) < clearance);
     }
 
     // ---------------------------------------------------------------- helpers
