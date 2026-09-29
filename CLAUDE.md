@@ -62,6 +62,8 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
     (`DayCheckpoint`)해두고, Continue 시 전부 복원. 이 스냅샷/복원
     경로는 여러 시스템(`FenceSlot.RestoreFenceInternal`,
     `TowerSlot.RestoreTowerInternal` 등 새 메서드)에 걸쳐 있음.
+    복원 후 플레이어는 `GameManager.playerRespawnPoint`(HomeBase 프리팹
+    child `RespawnPoint`)로 이동(Rigidbody 위치 직접 설정) — **Verified.**
   - `GameOverPanelUI`는 씬에 배치·연결은 됐으나(Panel Root/Background
     Button/Continue Hint), 새로 추가된 `Title Text` 필드는 아직 씬에
     연결 안 됐을 수 있음 — 연결 안 해도 에러는 안 나고 그냥 타이틀

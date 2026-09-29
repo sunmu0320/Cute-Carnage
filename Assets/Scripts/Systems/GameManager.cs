@@ -40,6 +40,11 @@ public class GameManager : MonoBehaviour
     [SerializeField]
     private float playerDiedPanelDelaySeconds = 2.5f;
 
+    [Header("Respawn")]
+    [Tooltip("Where the player is placed (position + facing) when retrying the day after GameOver. Leave empty to keep the player where they were.")]
+    [SerializeField]
+    private Transform playerRespawnPoint;
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
     [Header("Regression Debug Tools")]
     [SerializeField]
@@ -540,12 +545,44 @@ public class GameManager : MonoBehaviour
         }
 
         RestoreDayCheckpoint();
+        RespawnPlayer();
 
         currentPhase = GamePhase.Day;
         ResolveDayTimeManager();
         AfterEnterDayScene();
         CloseNightOnlyPanels();
         OnPhaseChanged?.Invoke(GamePhase.Day);
+    }
+
+    /// <summary>Teleports the player to playerRespawnPoint. PlayerMovement drives a Rigidbody via MovePosition,
+    /// so the Rigidbody's position is set directly (and velocity cleared) - moving only the Transform would
+    /// be overwritten on the next physics step.</summary>
+    private void RespawnPlayer()
+    {
+        if (playerRespawnPoint == null)
+        {
+            Debug.LogWarning("[GameManager] playerRespawnPoint is not assigned; player stays where they died.", this);
+            return;
+        }
+
+        PlayerMovement player = FindFirstObjectByType<PlayerMovement>();
+        if (player == null)
+        {
+            return;
+        }
+
+        Vector3 position = playerRespawnPoint.position;
+        Quaternion rotation = Quaternion.Euler(0f, playerRespawnPoint.eulerAngles.y, 0f);
+        player.transform.SetPositionAndRotation(position, rotation);
+
+        Rigidbody rb = player.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.position = position;
+            rb.rotation = rotation;
+            rb.linearVelocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
     }
 
     /// <summary>Snapshots everything RetryCurrentDay() restores: BaseCore HP, resources, player HP/Hunger,
