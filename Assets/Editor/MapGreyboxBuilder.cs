@@ -449,6 +449,180 @@ public static class MapGreyboxBuilder
         Debug.Log($"[MapGreyboxBuilder] Terrain from reference built: {decks.Count} bridges. Save the scene AND the project (terrain data is an asset).");
     }
 
+    // ---------------------------------------------------------------- Step 6: Paint terrain layers
+
+    // Rule-based splat painting over the playable map; later rules paint over earlier ones.
+    // Texels the user already hand-painted (base layer < 95%) are kept as they were — which also means a second run
+    // keeps everything from the first run (effectively a no-op). To repaint, restore the pre-paint alphamap first.
+    // Greybox ground planes (roads, plaza, trails, factory yard, parking) are deactivated, not deleted:
+    // bridge detection in step 5 still reads their transforms.
+    private const int PaintResolution = 1024; // ~1m per texel on the 1000m terrain
+    private const string LayerDir = "Assets/Texture/";
+
+    [MenuItem("Tools/Map/6. Paint Terrain")]
+    private static void PaintTerrain()
+    {
+        Transform blockout = GameObject.Find("Map_Blockout")?.transform;
+        Terrain terrain = GameObject.Find("Terrain")?.GetComponent<Terrain>();
+        TerrainMask mask = TerrainMask.Load();
+        if (blockout == null || terrain == null || mask == null)
+        {
+            Debug.LogError("[MapGreyboxBuilder] Missing Map_Blockout, 'Terrain' or terrain mask. Nothing painted.");
+            return;
+        }
+
+        TerrainData data = terrain.terrainData;
+        int grass = LayerIndex(data, "TL_Grass"), light = LayerIndex(data, "TL_LightGrass"), dirt = LayerIndex(data, "TL_Dirt"),
+            gravel = LayerIndex(data, "TL_Gravel"), road = LayerIndex(data, "TL_Road"), wet = LayerIndex(data, "TL_WetDirt");
+        if (Mathf.Min(grass, Mathf.Min(light, Mathf.Min(dirt, Mathf.Min(gravel, Mathf.Min(road, wet))))) < 0)
+        {
+            Debug.LogError("[MapGreyboxBuilder] Terrain is missing one of the TL_* layers from Assets/Texture. Nothing painted.");
+            return;
+        }
+
+        Undo.SetCurrentGroupName("Paint Terrain");
+        Undo.RegisterCompleteObjectUndo(data, "Paint Terrain");
+
+        int oldRes = data.alphamapResolution;
+        float[,,] old = data.GetAlphamaps(0, 0, oldRes, oldRes);
+        if (data.alphamapResolution != PaintResolution)
+        {
+            data.alphamapResolution = PaintResolution;
+        }
+        int res = data.alphamapResolution, layers = data.alphamapLayers;
+
+        var strips = FindPathStrips(blockout);
+        Transform plaza = blockout.Find("Roads/Hub_Plaza");
+        Vector3 plazaCenter = plaza != null ? plaza.position : Vector3.zero;
+        float plazaRadius = plaza != null ? plaza.lossyScale.x * 0.5f : 0f;
+
+        Vector3 origin = terrain.transform.position, size = data.size;
+        var map = new float[res, res, layers];
+        var w = new float[layers];
+        int kept = 0;
+        for (int z = 0; z < res; z++)
+        {
+            for (int x = 0; x < res; x++)
+            {
+                float u = x / (float)(res - 1), v = z / (float)(res - 1);
+                var p = new Vector3(origin.x + u * size.x, 0f, origin.z + v * size.z);
+
+                // Keep hand painting (bilinear from the old map, so an upscale doesn't go blocky).
+                float fx = u * (oldRes - 1), fz = v * (oldRes - 1);
+                int x0 = Mathf.Min((int)fx, oldRes - 2), z0 = Mathf.Min((int)fz, oldRes - 2);
+                float tx = fx - x0, tz = fz - z0;
+                float OldAt(int k) => Mathf.Lerp(Mathf.Lerp(old[z0, x0, k], old[z0, x0 + 1, k], tx), Mathf.Lerp(old[z0 + 1, x0, k], old[z0 + 1, x0 + 1, k], tx), tz);
+                if (OldAt(0) < 0.95f)
+                {
+                    for (int k = 0; k < layers; k++) map[z, x, k] = OldAt(k);
+                    kept++;
+                    continue;
+                }
+
+                System.Array.Clear(w, 0, layers);
+                w[0] = 1f;
+                float n = Mathf.PerlinNoise(p.x * 0.035f + 100f, p.z * 0.035f + 100f);
+                Blend(w, light, Mathf.SmoothStep(0f, 0.6f, (n - 0.45f) * 2.5f));
+
+                if (mask.Outside(p))
+                {
+                    Blend(w, grass, 0.8f);
+                    Blend(w, dirt, 0.3f * n);
+                }
+                else
+                {
+                    // Forest floor fades in over ~25m around z≈95 with a noisy edge (no straight seam).
+                    float forest = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(85f, 110f, p.z + (n - 0.5f) * 24f));
+                    Blend(w, grass, 0.6f * forest);
+                    Blend(w, dirt, Mathf.Clamp01((n - 0.3f) * 1.2f) * forest);
+                }
+
+                float steep = data.GetSteepness(u, v);
+                Blend(w, gravel, Mathf.InverseLerp(20f, 40f, steep));
+
+                Blend(w, gravel, RectFade(p, 104f, -30f, 192f, 46f, 2f));      // factory yard
+                Blend(w, road, RectFade(p, -125f, 3f, -97f, 53f, 1.5f));       // mall parking
+                Blend(w, road, RectFade(p, -185f, 5.5f, -125f, 50.5f, 0.5f));  // under the mall
+
+                if (plaza != null)
+                {
+                    float d = Vector3.Distance(new Vector3(p.x, 0f, p.z), new Vector3(plazaCenter.x, 0f, plazaCenter.z));
+                    Blend(w, dirt, 1f - Mathf.InverseLerp(plazaRadius - 2f, plazaRadius + 1f, d));
+                }
+
+                foreach ((string name, Vector3 c, Vector3 f, float length, float width) in strips)
+                {
+                    float d = DistanceToSegment(p, c - f * (length * 0.5f), c + f * (length * 0.5f));
+                    bool isRoad = name.StartsWith("Road_To_");
+                    float half = width * 0.5f;
+                    if (isRoad)
+                    {
+                        Blend(w, dirt, 1f - Mathf.InverseLerp(half, half + 1.5f, d));  // shoulder
+                        Blend(w, road, 1f - Mathf.InverseLerp(half - 0.5f, half, d));
+                    }
+                    else
+                    {
+                        Blend(w, dirt, 1f - Mathf.InverseLerp(half - 0.5f, half + 1f, d));
+                    }
+                }
+
+                float toWater = mask.Water(p) ? 0f : mask.DistanceToWater(p);
+                Blend(w, wet, 1f - Mathf.InverseLerp(1f, 3f, toWater));
+
+                for (int k = 0; k < layers; k++) map[z, x, k] = w[k];
+            }
+        }
+        data.SetAlphamaps(0, 0, map);
+        EditorUtility.SetDirty(data);
+
+        HideGreyboxGround(blockout);
+        Debug.Log($"[MapGreyboxBuilder] Terrain painted at {res}x{res} ({size.x / res:0.##}m/texel); {kept} hand-painted texels kept.");
+    }
+
+    // Lerps all weights toward `layer` by `amount` (keeps the sum at 1).
+    private static void Blend(float[] w, int layer, float amount)
+    {
+        amount = Mathf.Clamp01(amount);
+        if (amount <= 0f) return;
+        for (int k = 0; k < w.Length; k++) w[k] *= 1f - amount;
+        w[layer] += amount;
+    }
+
+    // 1 inside the rectangle, fading to 0 over `fade` metres outside it.
+    private static float RectFade(Vector3 p, float x0, float z0, float x1, float z1, float fade)
+    {
+        float dx = Mathf.Max(x0 - p.x, 0f, p.x - x1), dz = Mathf.Max(z0 - p.z, 0f, p.z - z1);
+        return 1f - Mathf.Clamp01(Mathf.Sqrt(dx * dx + dz * dz) / fade);
+    }
+
+    private static int LayerIndex(TerrainData data, string layerName)
+    {
+        TerrainLayer[] all = data.terrainLayers;
+        for (int i = 0; i < all.Length; i++)
+        {
+            if (all[i] != null && AssetDatabase.GetAssetPath(all[i]) == LayerDir + layerName + ".terrainlayer") return i;
+        }
+        return -1;
+    }
+
+    private static void HideGreyboxGround(Transform blockout)
+    {
+        var planes = new List<GameObject>();
+        foreach (Transform parent in new[] { blockout.Find("Roads"), blockout.Find("Zone_North_Forest/Forest/Trails") })
+        {
+            if (parent == null) continue;
+            foreach (Transform s in parent) planes.Add(s.gameObject);
+        }
+        planes.Add(blockout.Find("Zone_East_RuinedFactory/Factory_Compound/Yard")?.gameObject);
+        planes.Add(blockout.Find("Zone_West_MallStore/Outside/ParkingLot")?.gameObject);
+        foreach (GameObject go in planes)
+        {
+            if (go == null || !go.activeSelf) continue;
+            Undo.RecordObject(go, "Paint Terrain");
+            go.SetActive(false);
+        }
+    }
+
     private static void ClearChildren(Transform parent)
     {
         for (int i = parent.childCount - 1; i >= 0; i--)
