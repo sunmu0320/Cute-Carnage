@@ -85,9 +85,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 16950499603908746}
   interactionAnchor: {fileID: 488890863785559981}
@@ -694,14 +692,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 2887842504731663537}
   interactionAnchor: {fileID: 2456280393300106599}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 8982338362165960668}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -824,14 +817,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 734375730393401455}
   interactionAnchor: {fileID: 86979432994939948}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 721888172413574448}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -1207,9 +1195,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3263973201047827062}
   interactionAnchor: {fileID: 7363297105280826117}
@@ -1513,9 +1499,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 2906875407087752745}
   interactionAnchor: {fileID: 3786854903041719646}
@@ -1554,6 +1538,7 @@ Transform:
   - {fileID: 2597496803684385542}
   - {fileID: 4593602144867191255}
   - {fileID: 3693512338602067621}
+  - {fileID: 6367273638937050248}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &8540525659585063794
@@ -1730,13 +1715,42 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 3817037820149996076}
   interactionAnchor: {fileID: 1720339537200395164}
   slotMarker: {fileID: 8109037625088358741}
+--- !u!1 &3501722418658959960
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6367273638937050248}
+  m_Layer: 0
+  m_Name: RespawnPoint
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6367273638937050248
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3501722418658959960}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 1, z: 0, w: 0}
+  m_LocalPosition: {x: 0, y: -2.08, z: -7.56}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1993102315632055921}
+  m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
 --- !u!1 &3576254475509287362
 GameObject:
   m_ObjectHideFlags: 0
@@ -1853,9 +1867,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 8841363007189048747}
   interactionAnchor: {fileID: 3247085840846144081}
@@ -2159,9 +2171,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 4888092855421987856}
   interactionAnchor: {fileID: 783738889706829566}
@@ -2467,14 +2477,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 9035053185050919021}
   interactionAnchor: {fileID: 3529643295884171834}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 2454051725759148332}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -2747,9 +2752,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 1929532501730564856}
   interactionAnchor: {fileID: 2793075597817765391}
@@ -3021,14 +3024,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 6972282551470652582}
   interactionAnchor: {fileID: 1416349073266492900}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 7600880761629182826}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -3453,9 +3451,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 1758212661639148992}
   interactionAnchor: {fileID: 4778400866953495754}
@@ -3544,14 +3540,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 5112762134518971459}
   interactionAnchor: {fileID: 6056018154508485258}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 7146328627055297665}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -3644,9 +3635,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 2197924868614936809}
   interactionAnchor: {fileID: 4254336143921343158}
@@ -3828,14 +3817,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::TowerSlot
   hasTower: 0
-  towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   spawnPoint: {fileID: 4736340782372451819}
   interactionAnchor: {fileID: 4947682089382783719}
-  woodBuildCost: 1
-  scrapBuildCost: 1
-  repairAmountPerStep: 20
-  woodRepairCost: 1
-  scrapRepairCost: 0
+  startingTowerData: {fileID: 11400000, guid: 6aea9e1138fb439d813921042e480c23, type: 2}
   slotVisualRoot: {fileID: 1545051615082265934}
   slotMarker: {fileID: 0}
   towerReferenceSearchRadius: 2
@@ -3928,9 +3912,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::FenceSlot
   isUnlocked: 1
   installedFence: {fileID: 0}
-  fencePrefab: {fileID: 925577397612135249, guid: e671ef50170a22449bf92485ea561c07, type: 3}
-  woodBuildCost: 1
-  scrapBuildCost: 0
+  startingFenceData: {fileID: 11400000, guid: 99c2b77b495c6e448bc820f1e3c331d0, type: 2}
   resourceCostDebugLogCooldownSeconds: 0.6
   spawnPoint: {fileID: 684447495923856608}
   interactionAnchor: {fileID: 5991215298733549922}
