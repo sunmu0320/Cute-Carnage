@@ -381,6 +381,10 @@ public static class MapGreyboxBuilder
     // - Bridges: wherever a road (Map_Blockout/Roads) or trail (Forest/Trails) crosses water.
     // - Rim rock ring + bank rocks (greybox boxes, prefab swap later).
     // Rerunning replaces Terrain_Features and resets the heightmap. Run steps 3 and 4 first.
+    // NOTE (2026-09-29): the scene was then edited directly and a rerun would undo all of it: river deepened to 2.5m
+    // (terrain base y=-2.5, water y=-1, blockers y -3..3), BankRocks replaced by BankRockWall (Stone1/2 + RPGPP,
+    // 2-3m tall), rim/forest boxes dressed with rock prefabs (boxes kept as invisible colliders), DecorRocks,
+    // grass details, forest trunks swapped for gatherable Tree1-5/NoLeafTree and trees pulled clear of rocks.
     private const float RiverBedDepth = 1f;
     private const float BankSlopeIn = 2f;     // metres from the water edge to full depth
     private const float RimHeight = 8f;

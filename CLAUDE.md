@@ -111,13 +111,22 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 - `HUDController.ResolveMissingSources()` (Assets/Scripts/UI/HUDController.cs)
   — `Update()`에서 ~1초 간격(`nextSourceResolveTime`)으로 self-heal 폴링 중.
   규칙 6 위반. 단일 씬 마이그레이션과 무관하게 별도 작업으로 리팩터할 것.
-- **자원 노드 소진 + 재생성 (Approved design, 미구현 — 플레이어블 맵 완성 후 착수).**
+- **자원 노드 소진 + 재생성 (Approved design, 미구현).**
   현재 `ResourceNode.OnInteract`는 자원만 더하고 사라지지 않음(무한 채집).
-  목표: 채집 시 소진 → 3~5일 뒤 재생성(재방문 루프). `GameManager.OnPhaseChanged`
-  (Day 진입) 시 single-shot으로 체크, `DayCheckpoint`에 노드 상태를 PersistentId
-  기준으로 포함(재시도 시 복원). 착수 시 첫 단계로 씬의 모든 ResourceNode
-  인스턴스에 PersistentId를 일괄 부여(+중복 검사)하는 에디터 메뉴를 만들 것 —
-  프리팹 에셋에 붙이면 모든 인스턴스가 같은 ID를 공유하므로 금지.
+  확정 설계 (2026-09-29):
+  - 맵에 보이는 나무/스크랩/음식은 거의 전부 채집 가능. 숲 나무를 캐서 길이
+    뚫리는 것도 의도된 것 (Day 시간 제한이 채집량을 제한).
+  - **모든 자원은 1회 채집으로 소진** (부분 채집/남은 양 저장 없음).
+  - 재생성까지 3~5일. **재생성 날짜(respawnDay)는 채집하는 순간 한 번만 굴려서
+    저장**하고 이후 다시 굴리지 않음 (재시도 시 결과가 바뀌지 않도록).
+  - 저장은 **delta save**: 캐진 노드만 `PersistentId -> respawnDay`로 기록, 손대지
+    않은 노드는 저장 안 함. 중앙 **registry** 하나가 목록을 관리.
+  - `GameManager.OnPhaseChanged`(Day 진입) 시 single-shot으로 캐진 목록만 훑어
+    날짜 된 노드를 복구. 복구 자리에 플레이어/건물 등이 있으면 미룸.
+  - `DayCheckpoint`에 캐진 목록 사본을 포함(재시도 시 복원).
+  - 착수 시 첫 단계로 씬의 모든 ResourceNode 인스턴스에 PersistentId를 일괄
+    부여(+중복 검사)하는 에디터 메뉴를 만들 것 — 프리팹 에셋에 붙이면 모든
+    인스턴스가 같은 ID를 공유하므로 금지.
 
 ## graphify
 
