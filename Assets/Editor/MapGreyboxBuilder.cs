@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -67,9 +68,7 @@ public static class MapGreyboxBuilder
                 Debug.Log($"[MapGreyboxBuilder] {roadName} stops at '{hit.collider.name}'.");
             }
 
-            GameObject road = CreatePrimitive(PrimitiveType.Plane, roadName, roads, roadMat, keepCollider: false);
-            road.transform.SetPositionAndRotation(start + dir * (length * 0.5f) + Vector3.up * RoadY, Quaternion.LookRotation(dir));
-            road.transform.localScale = new Vector3(RoadWidth / 10f, 1f, length / 10f); // Unity plane is 10x10.
+            Strip(roadName, roads, roadMat, start, start + dir * length, RoadWidth, RoadY);
             Debug.Log($"[MapGreyboxBuilder] {roadName}: {length:0.#}m, width {RoadWidth}m.");
         }
     }
@@ -264,6 +263,140 @@ public static class MapGreyboxBuilder
         Debug.Log("[MapGreyboxBuilder] East factory built. Roof/interior art/collapsed warehouse are later steps.");
     }
 
+    // ---------------------------------------------------------------- Step 4: North forest
+
+    // World-space layout (x, z). Road_To_North ends near (-2, 150).
+    // Forest band x -185..185, z 100..222 (north wall z≈229; factory fence reaches z 95). Open meadow between base and forest.
+    // Trees are solid trunks (dense, blocks movement); trails and clearings are kept free.
+    private const float ForestMinX = -185f, ForestMaxX = 185f, ForestMinZ = 100f, ForestMaxZ = 222f;
+    private const float TreeSpacing = 9f;   // ~400 trees. Lower = denser + heavier scene.
+    private const float TrailWidth = 4f;
+    private const int ForestSeed = 1234;    // fixed seed: rerunning after Ctrl+Z gives the same forest.
+
+    private static readonly Vector3 TrailHub = new Vector3(-2f, 0f, 158f);     // road terminus clearing
+    private static readonly Vector3 LumberCamp = new Vector3(70f, 0f, 150f);   // sawmill + log piles (reference image, top right)
+    private static readonly Vector3 Cabin = new Vector3(-80f, 0f, 178f);       // lone cabin (reference image, top centre-left)
+
+    private static readonly (Vector3 center, float radius)[] Clearings =
+    {
+        (TrailHub, 14f), (LumberCamp, 22f), (Cabin, 15f),
+    };
+
+    [MenuItem("Tools/Map/4. Build North Forest")]
+    private static void BuildNorthForest()
+    {
+        Transform zone = GameObject.Find("Map_Blockout")?.transform.Find("Zone_North_Forest");
+        Material forestMat = LoadMat("Mat_Graybox_Forest");
+        Material roadMat = LoadMat("Mat_Graybox_Road");
+        Material propMat = LoadMat("Mat_Graybox_Boundary");
+        Material villageMat = LoadMat("Mat_Graybox_Village");
+        if (zone == null || forestMat == null || roadMat == null || propMat == null || villageMat == null)
+        {
+            Debug.LogError("[MapGreyboxBuilder] Missing Map_Blockout/Zone_North_Forest or graybox materials. Nothing built.");
+            return;
+        }
+        if (zone.Find("Forest") != null)
+        {
+            Debug.Log("[MapGreyboxBuilder] Forest already exists, skipped.");
+            return;
+        }
+
+        Undo.SetCurrentGroupName("Build North Forest");
+
+        // Old placeholder tree cubes are replaced.
+        for (int i = zone.childCount - 1; i >= 0; i--)
+        {
+            Undo.DestroyObjectImmediate(zone.GetChild(i).gameObject);
+        }
+
+        Transform forest = CreateGroup("Forest", zone);
+        Transform trails = CreateGroup("Trails", forest);
+        Transform trees = CreateGroup("Trees", forest);
+        Transform camp = CreateGroup("LumberCamp", forest);
+        Transform cabin = CreateGroup("Cabin", forest);
+        Transform rocks = CreateGroup("Rocks", forest);
+
+        // Trails branch from the road terminus to the camp and the cabin.
+        (Vector3 from, Vector3 to)[] trailSegments =
+        {
+            (new Vector3(-2f, 0f, 145f), TrailHub),
+            (TrailHub, LumberCamp),
+            (TrailHub, Cabin),
+        };
+        for (int i = 0; i < trailSegments.Length; i++)
+        {
+            Strip($"Trail_{i}", trails, roadMat, trailSegments[i].from, trailSegments[i].to, TrailWidth, 0.02f);
+        }
+
+        // Lumber camp: sawmill shed + log piles (future Wood loot spots).
+        Box("Sawmill", camp, villageMat, 80f, 160f, 12f, 8f, 5f);
+        Box("LogPile_0", camp, propMat, 60f, 142f, 8f, 1.5f, 1.2f);
+        Box("LogPile_1", camp, propMat, 60f, 146f, 8f, 1.5f, 1.2f);
+        Box("LogPile_2", camp, propMat, 72f, 138f, 8f, 1.5f, 1.2f, 20f);
+        Box("Cabin_House", cabin, villageMat, Cabin.x, Cabin.z + 3f, 8f, 10f, 4f);
+
+        // Boulders at clearing edges for cover/landmarks.
+        (float x, float z, float size, float yaw)[] boulders =
+        {
+            (12f, 166f, 3f, 20f), (-14f, 150f, 2.5f, 45f), (88f, 140f, 3.5f, 10f),
+            (52f, 162f, 2.5f, 60f), (-92f, 168f, 3f, 30f), (-66f, 188f, 2.5f, 75f),
+        };
+        for (int i = 0; i < boulders.Length; i++)
+        {
+            Box($"Rock_{i}", rocks, propMat, boulders[i].x, boulders[i].z, boulders[i].size, boulders[i].size, boulders[i].size * 0.7f, boulders[i].yaw);
+        }
+
+        // Scatter trunks with a minimum spacing, skipping clearings, trails and the Road_To_North corridor.
+        var keepClear = new List<(Vector3 from, Vector3 to)>(trailSegments)
+        {
+            (new Vector3(-2f, 0f, ForestMinZ - 10f), new Vector3(-2f, 0f, 150f)),
+        };
+        // ponytail: O(n^2) dart throwing, fine for a few hundred trees; switch to a grid lookup if spacing drops a lot.
+        var rng = new System.Random(ForestSeed);
+        var placed = new List<Vector3>();
+        for (int attempt = 0; attempt < 8000; attempt++)
+        {
+            var p = new Vector3(
+                Mathf.Lerp(ForestMinX, ForestMaxX, (float)rng.NextDouble()), 0f,
+                Mathf.Lerp(ForestMinZ, ForestMaxZ, (float)rng.NextDouble()));
+            if (IsForestBlocked(p, keepClear) || placed.Exists(q => (q - p).sqrMagnitude < TreeSpacing * TreeSpacing))
+            {
+                continue;
+            }
+
+            placed.Add(p);
+            float diameter = Mathf.Lerp(2f, 3.5f, (float)rng.NextDouble());
+            float height = Mathf.Lerp(5f, 8f, (float)rng.NextDouble());
+            Cylinder($"Tree_{placed.Count - 1}", trees, forestMat, p.x, p.z, diameter, height);
+        }
+
+        Debug.Log($"[MapGreyboxBuilder] North forest built: {placed.Count} trees. Wood nodes/river/waterfall are later steps.");
+    }
+
+    private static bool IsForestBlocked(Vector3 p, List<(Vector3 from, Vector3 to)> keepClear)
+    {
+        foreach ((Vector3 center, float radius) in Clearings)
+        {
+            if ((p - center).sqrMagnitude < radius * radius)
+            {
+                return true;
+            }
+        }
+
+        // Keep trees clear of road/trails (road half-width + a trunk's width of margin).
+        float clearance = RoadWidth * 0.5f + 3f;
+        foreach ((Vector3 from, Vector3 to) in keepClear)
+        {
+            Vector3 seg = to - from;
+            float t = Mathf.Clamp01(Vector3.Dot(p - from, seg) / seg.sqrMagnitude);
+            if ((p - (from + seg * t)).sqrMagnitude < clearance * clearance)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ---------------------------------------------------------------- helpers
 
     private static Material LoadMat(string name) => AssetDatabase.LoadAssetAtPath<Material>(MaterialDir + name + ".mat");
@@ -283,6 +416,16 @@ public static class MapGreyboxBuilder
         go.transform.SetPositionAndRotation(new Vector3(x, height * 0.5f, z), Quaternion.Euler(0f, yaw, 0f));
         go.transform.localScale = new Vector3(sizeX, height, sizeZ);
         return go;
+    }
+
+    // Walkable ground strip (road/trail) between two points (no collider).
+    private static void Strip(string name, Transform parent, Material mat, Vector3 from, Vector3 to, float width, float y)
+    {
+        from.y = to.y = 0f;
+        Vector3 dir = to - from;
+        GameObject go = CreatePrimitive(PrimitiveType.Plane, name, parent, mat, keepCollider: false);
+        go.transform.SetPositionAndRotation((from + to) * 0.5f + Vector3.up * y, Quaternion.LookRotation(dir));
+        go.transform.localScale = new Vector3(width / 10f, 1f, dir.magnitude / 10f); // Unity plane is 10x10.
     }
 
     // Upright cylinder standing on the ground (Unity cylinder is 2 units tall, so scale.y = height / 2).
