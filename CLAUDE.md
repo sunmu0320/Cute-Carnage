@@ -111,6 +111,13 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 - `HUDController.ResolveMissingSources()` (Assets/Scripts/UI/HUDController.cs)
   — `Update()`에서 ~1초 간격(`nextSourceResolveTime`)으로 self-heal 폴링 중.
   규칙 6 위반. 단일 씬 마이그레이션과 무관하게 별도 작업으로 리팩터할 것.
+- **자원 노드 소진 + 재생성 (Approved design, 미구현 — 플레이어블 맵 완성 후 착수).**
+  현재 `ResourceNode.OnInteract`는 자원만 더하고 사라지지 않음(무한 채집).
+  목표: 채집 시 소진 → 3~5일 뒤 재생성(재방문 루프). `GameManager.OnPhaseChanged`
+  (Day 진입) 시 single-shot으로 체크, `DayCheckpoint`에 노드 상태를 PersistentId
+  기준으로 포함(재시도 시 복원). 착수 시 첫 단계로 씬의 모든 ResourceNode
+  인스턴스에 PersistentId를 일괄 부여(+중복 검사)하는 에디터 메뉴를 만들 것 —
+  프리팹 에셋에 붙이면 모든 인스턴스가 같은 ID를 공유하므로 금지.
 
 ## graphify
 
