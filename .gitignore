@@ -62,3 +62,8 @@ unity_commands.txt
 
 # graphify (regenerated locally by post-commit hook)
 /graphify-out/
+
+# Claude session notes/tools (never commit)
+SESSION_HANDOFF.md
+.handoffs/
+/Tools/
