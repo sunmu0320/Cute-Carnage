@@ -71,6 +71,7 @@ public class GameManager : MonoBehaviour
     private BaseCore boundBaseCore;
     private PlayerHealth boundPlayerHealth;
     private DayCheckpoint lastDayCheckpoint;
+    private readonly ResourceNodeRegistry resourceNodeRegistry = new ResourceNodeRegistry();
     private Coroutine gameOverPanelDelayCoroutine;
     private GamePhase currentPhase = GamePhase.Unknown;
     private RunRuntimeState currentRunState;
@@ -126,6 +127,7 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        resourceNodeRegistry.BuildLookup();
         AfterEnterDayScene();
         CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
@@ -304,8 +306,14 @@ public class GameManager : MonoBehaviour
         ResolveDayTimeManager();
         AfterEnterDayScene();
         CloseNightOnlyPanels();
+        resourceNodeRegistry.RegrowDue(currentDay);
         CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
+    }
+
+    public void DepleteResourceNode(ResourceNode node)
+    {
+        resourceNodeRegistry.MarkDepleted(node, currentDay);
     }
 
     private void ResetNightSpawnerForNewNight()
@@ -652,11 +660,14 @@ public class GameManager : MonoBehaviour
             };
         }
 
+        checkpoint.depletedResourceNodes = resourceNodeRegistry.CaptureState();
+
         lastDayCheckpoint = checkpoint;
         LogTransition(
             $"Captured day checkpoint for Day {currentDay}: baseHp={checkpoint.baseCoreHp:0.#}, " +
             $"wood={checkpoint.resourceState.wood} scrap={checkpoint.resourceState.scrap} food={checkpoint.resourceState.food}, " +
-            $"fenceSlots={checkpoint.fenceSlots.Count}, towerSlots={checkpoint.towerSlots.Count}.");
+            $"fenceSlots={checkpoint.fenceSlots.Count}, towerSlots={checkpoint.towerSlots.Count}, " +
+            $"depletedNodes={checkpoint.depletedResourceNodes.Count}.");
     }
 
     /// <summary>Restores the checkpoint captured by CaptureDayCheckpoint(). No-op if none was ever captured.</summary>
@@ -716,6 +727,8 @@ public class GameManager : MonoBehaviour
 
             slot.RestoreTowerInternal(snapshot.hasTower, snapshot.currentHp);
         }
+
+        resourceNodeRegistry.RestoreState(lastDayCheckpoint.depletedResourceNodes);
 
         LogTransition($"Restored day checkpoint: baseHp={lastDayCheckpoint.baseCoreHp:0.#}.");
     }

@@ -29,9 +29,25 @@ public class ResourceNode : BaseInteractable
     public Transform GatherBarAnchor => gatherBarAnchor;
     public float GatherDistance => gatherDistance;
 
+    /// <summary>Scene-instance PersistentId used by ResourceNodeRegistry. Empty = node never depletes.</summary>
+    public string PersistentNodeId
+    {
+        get
+        {
+            PersistentId persistentId = GetComponent<PersistentId>();
+            return persistentId != null ? persistentId.Id : null;
+        }
+    }
+
     private void Awake()
     {
         AutoAssignAnchorsIfMissing();
+    }
+
+    // Regrowth and checkpoint restore re-activate a depleted node; clear oneTimeUse so it can be gathered again.
+    private void OnEnable()
+    {
+        ResetUsage();
     }
 
 #if UNITY_EDITOR
@@ -118,5 +134,13 @@ public class ResourceNode : BaseInteractable
         int newTotal = resourceManager.GetAmount(resourceType);
 
         Debug.Log($"[ResourceNode] {gameObject.name} gathered {amount} {resourceType}. New total: {newTotal}");
+
+        if (string.IsNullOrEmpty(PersistentNodeId))
+        {
+            Debug.LogWarning($"[{nameof(ResourceNode)}] {gameObject.name} has no PersistentId; it will not deplete.", this);
+            return;
+        }
+
+        GameManager.Instance.DepleteResourceNode(this);
     }
 }

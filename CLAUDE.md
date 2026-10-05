@@ -111,8 +111,11 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 - `HUDController.ResolveMissingSources()` (Assets/Scripts/UI/HUDController.cs)
   — `Update()`에서 ~1초 간격(`nextSourceResolveTime`)으로 self-heal 폴링 중.
   규칙 6 위반. 단일 씬 마이그레이션과 무관하게 별도 작업으로 리팩터할 것.
-- **자원 노드 소진 + 재생성 (Approved design, 미구현).**
-  현재 `ResourceNode.OnInteract`는 자원만 더하고 사라지지 않음(무한 채집).
+- **자원 노드 소진 + 재생성 — 구현 완료, Verified (2026-10-04 플레이테스트:
+  채집→소진, 3~5일 뒤 재생성, 재생성 노드 재채집, GameOver 재시도 복원).**
+  `ResourceNodeRegistry`(GameManager 소유) + `Tools/Cute Carnage/Assign Resource
+  Node PersistentIds` 메뉴(Day.unity 336개 부여 완료). 새 자원 노드를 배치하면
+  이 메뉴를 다시 실행할 것. 디스크 저장은 아직 없음(메모리 + DayCheckpoint만).
   확정 설계 (2026-09-29):
   - 맵에 보이는 나무/스크랩/음식은 거의 전부 채집 가능. 숲 나무를 캐서 길이
     뚫리는 것도 의도된 것 (Day 시간 제한이 채집량을 제한).

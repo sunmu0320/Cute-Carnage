@@ -65,6 +65,12 @@ public abstract class BaseInteractable : MonoBehaviour, IInteractable
 
     protected abstract void OnInteract(PlayerInteractor interactor);
 
+    /// <summary>Makes a oneTimeUse interactable usable again (e.g. a regrown ResourceNode).</summary>
+    protected void ResetUsage()
+    {
+        hasBeenUsed = false;
+    }
+
     protected Transform ResolveBaseUIAnchor(out string sourceLabel)
     {
         if (uiAnchor != null)
