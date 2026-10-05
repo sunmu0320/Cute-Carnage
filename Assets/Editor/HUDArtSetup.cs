@@ -14,6 +14,7 @@ public static class HUDArtSetup
 {
     private const string ArtDir = "Assets/Art/UI/HUD/";
     private const string HudPrefabPath = "Assets/Prefabs/UI/HUDCanvas.prefab";
+    private const string UiRootPrefabPath = "Assets/Prefabs/UI/UIRoot.prefab";
 
     private const string HeartPng = "Coral Faceted Heart Icon-1.png";
     private const string DrumstickPng = "Golden chicken drumstick icon-3.png";
@@ -24,6 +25,9 @@ public static class HUDArtSetup
     private const string HpFillPng = "Coral health bar fill-7.png";
     private const string HungerFillPng = "Golden hunger fill bar-8.png";
     private const string ResourcesPanelPng = "Three-Slot Resource HUD Panel.png";
+    private const string HomebaseIconPng = "Homebase shield house icon-1.png";
+    private const string HomebaseFramePng = "Empty Homebase Health Gauge Frame-3.png";
+    private const string HomebaseFillPng = "Teal Homebase Gauge Fill-2.png";
     private const string ResourcesPanelPlainPng = "Minimal dark resource panel background-9.png"; // spare, unused
 
     // Sprite rects in texture pixels (origin bottom-left): alpha>8 bbox + 8px (bars/panels) / 12px (icons) padding,
@@ -40,10 +44,19 @@ public static class HUDArtSetup
         { BarFramePng, new Rect(86, 310, 2001, 104) },
         { ResourcesPanelPng, new Rect(59, 265, 2056, 204) },
         { WoodPng, new Rect(100, 172, 1098, 878) },
+        { HomebaseIconPng, new Rect(226, 145, 803, 962) },
+        { HomebaseFramePng, new Rect(29, 280, 2116, 166) },
+        { HomebaseFillPng, new Rect(60, 284, 2026, 165) },
     };
 
-    // Frame: 8px padding + 4px outline + ~10px corner radius.
-    private static readonly Vector4 BarFrameBorder = new Vector4(22, 22, 22, 22);
+    // Sprite borders (texture px). Vitals frame: 8px padding + 4px outline + ~10px corner.
+    // Homebase frame: 8px padding + ~28px corner radius (outline + highlight ~14px).
+    private static readonly Dictionary<string, Vector4> SpriteBorders = new Dictionary<string, Vector4>
+    {
+        { BarFramePng, new Vector4(22, 22, 22, 22) },
+        { HomebaseFramePng, new Vector4(36, 36, 36, 36) },
+    };
+
     private const float BarFramePpuMultiplier = 3f;
 
     // Divider centres of the three-slot panel (x 749.5 / 1421.5 px) as fractions of its sprite rect;
@@ -64,6 +77,15 @@ public static class HUDArtSetup
             {
                 Debug.LogError($"[HUDArtSetup] Missing texture: {path}");
                 continue;
+            }
+
+            SpriteBorders.TryGetValue(entry.Key, out Vector4 border);
+            SpriteMetaData[] existing = importer.spritesheet;
+            if (importer.textureType == TextureImporterType.Sprite
+                && importer.spriteImportMode == SpriteImportMode.Multiple
+                && existing.Length == 1 && existing[0].rect == entry.Value && existing[0].border == border)
+            {
+                continue; // already set up; keep sprite identifiers untouched
             }
 
             importer.textureType = TextureImporterType.Sprite;
@@ -103,7 +125,7 @@ public static class HUDArtSetup
                     rect = entry.Value,
                     alignment = (int)SpriteAlignment.Center,
                     pivot = new Vector2(0.5f, 0.5f),
-                    border = entry.Key == BarFramePng ? BarFrameBorder : Vector4.zero,
+                    border = border,
                 },
             };
 
@@ -167,6 +189,115 @@ public static class HUDArtSetup
         {
             PrefabUtility.UnloadPrefabContents(root);
         }
+    }
+
+    [MenuItem("Tools/Cute Carnage/HUD/3 Build Homebase Health HUD")]
+    public static void BuildHomebaseHud()
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(HudPrefabPath);
+        try
+        {
+            Transform hudRoot = root.transform.Find("HUDRoot");
+            var hud = hudRoot.GetComponent<HUDController>();
+            var so = new SerializedObject(hud);
+            var vitalText = (TextMeshProUGUI)so.FindProperty("hpText").objectReferenceValue;
+
+            const float barW = 450f, barH = 34f, titleGap = 7f, titleH = 20f;
+            RectTransform group = Child(hudRoot, "HomebaseHealthHUD");
+            SetRect(group, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0, 40), new Vector2(barW, barH + titleGap + titleH));
+
+            // Group width == bar width, so the bar itself (not bar + icon) is centred on screen.
+            RectTransform barRoot = Child(group, "BarRoot");
+            SetRect(barRoot, new Vector2(0.5f, 0), new Vector2(0.5f, 0), new Vector2(0.5f, 0), Vector2.zero, new Vector2(barW, barH));
+
+            Image frame = GetOrAdd<Image>(Child(barRoot, "BarBackground"));
+            Stretch(frame.rectTransform);
+            SetupImage(frame, LoadSprite(HomebaseFramePng), Image.Type.Sliced, false);
+            frame.fillCenter = true;
+            frame.pixelsPerUnitMultiplier = 4.5f; // 36px border -> 8 UI px corners, ~3px outline
+            frame.transform.SetSiblingIndex(0);
+
+            Image fill = GetOrAdd<Image>(Child(barRoot, "Fill"));
+            Stretch(fill.rectTransform, 5f);
+            SetupImage(fill, LoadSprite(HomebaseFillPng), Image.Type.Filled, false);
+            fill.fillMethod = Image.FillMethod.Horizontal;
+            fill.fillOrigin = (int)Image.OriginHorizontal.Left;
+            fill.fillAmount = 1f;
+            fill.transform.SetSiblingIndex(1);
+
+            TextMeshProUGUI value = GetOrAddText(Child(barRoot, "ValueText"), vitalText);
+            Stretch(value.rectTransform);
+            StyleText(value, 20f, TextAlignmentOptions.Center);
+            value.text = string.Empty; // real value only once a BaseCore is bound
+            value.transform.SetSiblingIndex(2);
+
+            Image icon = GetOrAdd<Image>(Child(group, "HomebaseIcon"));
+            SetRect(icon.rectTransform, Vector2.zero, Vector2.zero, new Vector2(1, 0.5f), new Vector2(-12, barH * 0.5f), new Vector2(56, 56));
+            SetupImage(icon, LoadSprite(HomebaseIconPng), Image.Type.Simple, true);
+
+            TextMeshProUGUI title = GetOrAddText(Child(group, "TitleText"), vitalText);
+            title.rectTransform.anchorMin = new Vector2(0, 1);
+            title.rectTransform.anchorMax = new Vector2(1, 1);
+            title.rectTransform.pivot = new Vector2(0.5f, 1);
+            title.rectTransform.anchoredPosition = Vector2.zero;
+            title.rectTransform.sizeDelta = new Vector2(0, titleH);
+            StyleText(title, 16f, TextAlignmentOptions.Center);
+            title.text = "HOMEBASE";
+
+            so.FindProperty("baseHpBarRoot").objectReferenceValue = group.gameObject;
+            so.FindProperty("baseHpBarFillImage").objectReferenceValue = fill;
+            so.FindProperty("baseHpText").objectReferenceValue = value;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            PrefabUtility.SaveAsPrefabAsset(root, HudPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+
+        RemoveLegacyBaseHpBarFromUiRoot();
+        Debug.Log("[HUDArtSetup] Homebase health HUD built.");
+    }
+
+    // The old grey-panel Base HP bar was added to HUDCanvas inside UIRoot.prefab and wired via overrides.
+    private static void RemoveLegacyBaseHpBarFromUiRoot()
+    {
+        GameObject root = PrefabUtility.LoadPrefabContents(UiRootPrefabPath);
+        try
+        {
+            var hud = root.GetComponentInChildren<HUDController>(true);
+            Transform legacy = hud.transform.Find("BottomCenterBaseHpBar");
+            if (legacy != null)
+                Object.DestroyImmediate(legacy.gameObject);
+
+            var so = new SerializedObject(hud);
+            foreach (string field in new[] { "baseHpBarRoot", "baseHpBarFillImage", "baseHpText" })
+            {
+                SerializedProperty prop = so.FindProperty(field);
+                if (prop.prefabOverride)
+                    PrefabUtility.RevertPropertyOverride(prop, InteractionMode.AutomatedAction);
+            }
+
+            PrefabUtility.SaveAsPrefabAsset(root, UiRootPrefabPath);
+        }
+        finally
+        {
+            PrefabUtility.UnloadPrefabContents(root);
+        }
+    }
+
+    // New TMP text using the same font/material as the existing vitals text.
+    private static TextMeshProUGUI GetOrAddText(RectTransform rt, TextMeshProUGUI styleSource)
+    {
+        TextMeshProUGUI text = rt.GetComponent<TextMeshProUGUI>();
+        if (text == null)
+        {
+            text = rt.gameObject.AddComponent<TextMeshProUGUI>();
+            text.font = styleSource.font;
+            text.fontSharedMaterial = styleSource.fontSharedMaterial;
+        }
+
+        return text;
     }
 
     private static Image BuildVitalRow(RectTransform vitals, string rowName, float y, string iconPng, string fillPng, TextMeshProUGUI valueText)

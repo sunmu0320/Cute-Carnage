@@ -32,6 +32,8 @@ public class HUDController : MonoBehaviour
     [SerializeField] private Image baseHpBarFillImage;
     [Tooltip("Optional. Root hidden while no valid BaseCore exists.")]
     [SerializeField] private GameObject baseHpBarRoot;
+    [Tooltip("Optional. TMP centred on the Base HP bar; format: 150 / 200.")]
+    [SerializeField] private TextMeshProUGUI baseHpText;
 
     [Header("Resources (Bottom Left) - No Fuel")]
     [SerializeField] private TextMeshProUGUI foodText;
@@ -73,6 +75,8 @@ public class HUDController : MonoBehaviour
     private BaseCore lastBaseCore;
     private bool baseHpFillCacheValid;
     private float lastBaseHpFill;
+    private int lastBaseHpCurrent;
+    private int lastBaseHpMax;
     private float nextSourceResolveTime;
     private float nextTempDebugLogTime;
     private bool subscribedToPhaseChanges;
@@ -398,13 +402,21 @@ public class HUDController : MonoBehaviour
         if (!hasValidBaseCore)
             return;
 
-        float fill = Mathf.Clamp01(baseCore.CurrentHp / Mathf.Max(1f, baseCore.MaxHp));
+        float fill = baseCore.MaxHp > 0f ? Mathf.Clamp01(baseCore.CurrentHp / baseCore.MaxHp) : 0f;
         if (baseHpBarFillImage != null
             && (!baseHpFillCacheValid || Mathf.Abs(lastBaseHpFill - fill) > BaseHpFillEpsilon))
         {
             baseHpBarFillImage.fillAmount = fill;
         }
 
+        // Ceil so a non-destroyed base never reads 0.
+        int current = Mathf.CeilToInt(baseCore.CurrentHp);
+        int max = Mathf.RoundToInt(baseCore.MaxHp);
+        if (!baseHpFillCacheValid || lastBaseHpCurrent != current || lastBaseHpMax != max)
+            SetTextOrIgnore(baseHpText, $"{current} / {max}");
+
+        lastBaseHpCurrent = current;
+        lastBaseHpMax = max;
         lastBaseHpFill = fill;
         baseHpFillCacheValid = true;
     }
