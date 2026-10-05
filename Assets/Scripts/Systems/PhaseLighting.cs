@@ -12,7 +12,9 @@ public class PhaseLighting : MonoBehaviour
     [SerializeField] private Light sun;
     [SerializeField] private Volume nightVolume;
     [SerializeField] private ParticleSystem nightMist; // child of PlayerRoot, world-space sim: spawns only around the view
-    [SerializeField, Min(0.01f)] private float blendSeconds = 3f;
+    [SerializeField, Min(0.01f)] private float blendSeconds = 3f;      // sun + night Volume
+    [SerializeField, Min(0.01f)] private float fogBlendSeconds = 10f;   // fog + mist
+    [SerializeField, Min(0f)] private float fogNightDelaySeconds = 3f; // fog waits this long after Night starts
 
     [Header("Night preset")]
     [SerializeField] private Color nightSunColor = new Color(0.55f, 0.65f, 1f);
@@ -25,7 +27,7 @@ public class PhaseLighting : MonoBehaviour
     private Color daySunColor;
     private float daySunIntensity;
     private Coroutine blend;
-    private float t; // 0 = day, 1 = night
+    private float t, tFog; // 0 = day, 1 = night
     private MaterialPropertyBlock mistBlock;
     private Color mistBaseColor;
 
@@ -40,7 +42,7 @@ public class PhaseLighting : MonoBehaviour
             mistBlock = new MaterialPropertyBlock();
             mistBaseColor = nightMist.GetComponent<ParticleSystemRenderer>().sharedMaterial.GetColor(BaseColorId);
         }
-        Apply(0f);
+        Apply(0f, 0f);
     }
 
     private void Start()
@@ -62,28 +64,33 @@ public class PhaseLighting : MonoBehaviour
 
     private IEnumerator BlendTo(float target)
     {
-        float start = t;
-        for (float e = 0f; e < blendSeconds; e += Time.deltaTime)
+        float start = t, startFog = tFog;
+        float delay = target > startFog ? fogNightDelaySeconds : 0f;
+        float total = Mathf.Max(blendSeconds, delay + fogBlendSeconds);
+        for (float e = 0f; e < total; e += Time.deltaTime)
         {
-            Apply(Mathf.Lerp(start, target, Mathf.SmoothStep(0f, 1f, e / blendSeconds)));
+            Apply(Mathf.Lerp(start, target, Mathf.SmoothStep(0f, 1f, e / blendSeconds)),
+                  Mathf.Lerp(startFog, target, Mathf.SmoothStep(0f, 1f, (e - delay) / fogBlendSeconds)));
             yield return null;
         }
-        Apply(target);
+        Apply(target, target);
         blend = null;
     }
 
-    private void Apply(float k)
+    private void Apply(float k, float kFog)
     {
         t = k;
+        tFog = kFog;
         if (sun != null)
         {
             sun.color = Color.Lerp(daySunColor, nightSunColor, k);
             sun.intensity = Mathf.Lerp(daySunIntensity, nightSunIntensity, k);
         }
+        if (nightVolume != null) nightVolume.weight = k;
+        k = kFog; // everything below is fog/mist
         RenderSettings.fog = k > 0.001f;
         RenderSettings.fogColor = nightFogColor;
         RenderSettings.fogDensity = nightFogDensity * k;
-        if (nightVolume != null) nightVolume.weight = k;
         if (nightMist != null)
         {
             // Fade every live puff via the renderer's property block (never touches the material asset).
