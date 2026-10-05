@@ -11,7 +11,8 @@ public class GameManager : MonoBehaviour
         Unknown,
         Day,
         Night,
-        GameOver
+        GameOver,
+        Victory
     }
 
     public enum GameOverCause
@@ -73,6 +74,7 @@ public class GameManager : MonoBehaviour
     private DayCheckpoint lastDayCheckpoint;
     private readonly ResourceNodeRegistry resourceNodeRegistry = new ResourceNodeRegistry();
     private Coroutine gameOverPanelDelayCoroutine;
+    [SerializeField, Min(0f)] private float victoryPanelDelaySeconds = 2f;
     private GamePhase currentPhase = GamePhase.Unknown;
     private RunRuntimeState currentRunState;
     private bool hasInitializedRunState;
@@ -86,6 +88,7 @@ public class GameManager : MonoBehaviour
     public int CurrentDay => currentDay;
     public bool IsDay => currentPhase == GamePhase.Day;
     public bool IsGameOver => currentPhase == GamePhase.GameOver;
+    public const int FinalDay = 7;
     public GameOverCause LastGameOverCause { get; private set; } = GameOverCause.None;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -245,7 +248,7 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToNight()
     {
-        if (currentPhase == GamePhase.Night || currentPhase == GamePhase.GameOver)
+        if (currentPhase == GamePhase.Night || currentPhase == GamePhase.GameOver || currentPhase == GamePhase.Victory)
         {
             return;
         }
@@ -278,19 +281,18 @@ public class GameManager : MonoBehaviour
 
     public void TransitionToDay()
     {
-        if (currentPhase == GamePhase.Day || currentPhase == GamePhase.GameOver)
+        if (currentPhase == GamePhase.Day || currentPhase == GamePhase.GameOver || currentPhase == GamePhase.Victory)
         {
             return;
         }
 
-        currentDay++;
-        if (currentDay > 7)
+        if (currentDay >= FinalDay)
         {
-            Debug.Log("<color=green>[GameManager] PROTOTYPE CLEAR: Day 7 Survived! All nights cleared.</color>");
-            // For prototype, we stay in Night phase or stop logic.
-            // In a real game, you might load a Win scene.
+            EnterVictory();
             return;
         }
+
+        currentDay++;
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         LogTransition($"TransitionToDay(): Day {currentDay}.");
@@ -443,7 +445,7 @@ public class GameManager : MonoBehaviour
     /// future death animation) to read before the UI covers the screen.</summary>
     private void EnterGameOver(GameOverCause cause, float panelDelaySeconds)
     {
-        if (currentPhase == GamePhase.GameOver)
+        if (currentPhase == GamePhase.GameOver || currentPhase == GamePhase.Victory)
         {
             return;
         }
@@ -471,14 +473,43 @@ public class GameManager : MonoBehaviour
             StopCoroutine(gameOverPanelDelayCoroutine);
         }
 
-        gameOverPanelDelayCoroutine = StartCoroutine(ShowGameOverPanelAfterDelay(panelDelaySeconds));
+        gameOverPanelDelayCoroutine = StartCoroutine(AnnouncePhaseAfterDelay(GamePhase.GameOver, panelDelaySeconds));
     }
 
-    private IEnumerator ShowGameOverPanelAfterDelay(float delaySeconds)
+    /// <summary>Final night cleared (reached only via SimpleZombieSpawner -> TransitionToDay). Freezes play
+    /// like GameOver, then announces Victory so the end panel shows and lighting fades to morning.</summary>
+    private void EnterVictory()
+    {
+        LogTransition($"Victory: survived {FinalDay} nights.");
+        currentPhase = GamePhase.Victory;
+        SetPlayerInputLocked(true);
+        SetZombiesFrozen(true);
+        if (cachedNightSpawner != null)
+        {
+            cachedNightSpawner.SetPaused(true);
+        }
+
+        if (boundDayTimeManager != null)
+        {
+            boundDayTimeManager.Pause();
+        }
+
+        CloseDayOnlyPanels();
+        CloseNightOnlyPanels();
+
+        if (gameOverPanelDelayCoroutine != null)
+        {
+            StopCoroutine(gameOverPanelDelayCoroutine);
+        }
+
+        gameOverPanelDelayCoroutine = StartCoroutine(AnnouncePhaseAfterDelay(GamePhase.Victory, victoryPanelDelaySeconds));
+    }
+
+    private IEnumerator AnnouncePhaseAfterDelay(GamePhase phase, float delaySeconds)
     {
         yield return new WaitForSecondsRealtime(delaySeconds);
         gameOverPanelDelayCoroutine = null;
-        OnPhaseChanged?.Invoke(GamePhase.GameOver);
+        OnPhaseChanged?.Invoke(phase);
     }
 
     /// <summary>Locks/unlocks player movement, interaction, auto-attack, food consumption, and hunger drain
