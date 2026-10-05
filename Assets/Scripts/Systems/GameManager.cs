@@ -223,8 +223,10 @@ public class GameManager : MonoBehaviour
 
     private void OnGUI()
     {
-        GUI.Box(new Rect(10, 10, 340, 130), GUIContent.none);
-        GUILayout.BeginArea(new Rect(18, 18, 320, 114));
+        // Top-right so it doesn't cover the top-left HP/Hunger HUD.
+        float x = Screen.width - 350f;
+        GUI.Box(new Rect(x, 10, 340, 130), GUIContent.none);
+        GUILayout.BeginArea(new Rect(x + 8, 18, 320, 114));
 
         GUILayout.Label($"Day: {currentDay}   Phase: {currentPhase}");
 

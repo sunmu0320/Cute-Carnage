@@ -7,6 +7,8 @@ public class HUDController : MonoBehaviour
 {
     [Header("Player HP (Top Left)")]
     [SerializeField] private TextMeshProUGUI hpText;
+    [Tooltip("Optional. Filled (Horizontal) Image for the HP gauge.")]
+    [SerializeField] private Image hpBarFillImage;
 
     [Header("Player Hunger (Top Left, below HP)")]
     [Tooltip("Optional. If assigned, HUD shows current/max hunger on hungerText.")]
@@ -14,6 +16,8 @@ public class HUDController : MonoBehaviour
 
     [Tooltip("Optional. TMP line directly under HP; format: Hunger 80 / 100.")]
     [SerializeField] private TextMeshProUGUI hungerText;
+    [Tooltip("Optional. Filled (Horizontal) Image for the hunger (satiety) gauge.")]
+    [SerializeField] private Image hungerBarFillImage;
 
     [Header("Gameplay Sources (Optional)")]
     [Tooltip("Optional. If assigned, HUD will read current/max HP from this component.")]
@@ -175,13 +179,11 @@ public class HUDController : MonoBehaviour
 
     public void UpdateHP(int current, int max)
     {
-        if (hpText == null)
-            return;
-
         if (hpCacheValid && lastHpCurrent == current && lastHpMax == max)
             return;
 
-        SetTextOrIgnore(hpText, $"HP {current} / {max}");
+        SetTextOrIgnore(hpText, $"{current} / {max}");
+        SetFillOrIgnore(hpBarFillImage, current, max);
         lastHpCurrent = current;
         lastHpMax = max;
         hpCacheValid = true;
@@ -189,11 +191,11 @@ public class HUDController : MonoBehaviour
 
     private void ApplyPlaceholderText()
     {
-        SetTextOrIgnore(hpText, "HP 100 / 100");
+        SetTextOrIgnore(hpText, "100 / 100");
         SetTextOrIgnore(hungerText, GetFallbackHungerText());
-        SetTextOrIgnore(foodText, "Food : 0");
-        SetTextOrIgnore(scrapText, "Scrap : 0");
-        SetTextOrIgnore(woodText, "Wood : 0");
+        SetTextOrIgnore(foodText, "0");
+        SetTextOrIgnore(scrapText, "0");
+        SetTextOrIgnore(woodText, "0");
         SetTextOrIgnore(dayText, GetFallbackDayText());
     }
 
@@ -212,18 +214,18 @@ public class HUDController : MonoBehaviour
         RefreshBaseHp();
 
         // Resources
-        if (resourceManager != null && (foodText != null || scrapText != null || woodText != null))
+        if (resourceManager != null)
         {
             int food = resourceManager.GetAmount(ResourceType.Food);
             int scrap = resourceManager.GetAmount(ResourceType.Scrap);
             int wood = resourceManager.GetAmount(ResourceType.Wood);
 
             if (!resourceCacheValid || lastFood != food)
-                SetTextOrIgnore(foodText, $"Food : {food}");
+                SetTextOrIgnore(foodText, food.ToString());
             if (!resourceCacheValid || lastScrap != scrap)
-                SetTextOrIgnore(scrapText, $"Scrap : {scrap}");
+                SetTextOrIgnore(scrapText, scrap.ToString());
             if (!resourceCacheValid || lastWood != wood)
-                SetTextOrIgnore(woodText, $"Wood : {wood}");
+                SetTextOrIgnore(woodText, wood.ToString());
 
             lastFood = food;
             lastScrap = scrap;
@@ -233,11 +235,11 @@ public class HUDController : MonoBehaviour
         else
         {
             if (!resourceCacheValid || lastFood != 0)
-                SetTextOrIgnore(foodText, "Food : 0");
+                SetTextOrIgnore(foodText, "0");
             if (!resourceCacheValid || lastScrap != 0)
-                SetTextOrIgnore(scrapText, "Scrap : 0");
+                SetTextOrIgnore(scrapText, "0");
             if (!resourceCacheValid || lastWood != 0)
-                SetTextOrIgnore(woodText, "Wood : 0");
+                SetTextOrIgnore(woodText, "0");
 
             lastFood = 0;
             lastScrap = 0;
@@ -246,12 +248,15 @@ public class HUDController : MonoBehaviour
         }
 
         // Hunger (optional). HungerSystem owns values; HUD only displays rounded integers.
-        if (hungerSystem != null && hungerText != null)
+        if (hungerSystem != null)
         {
             int cur = Mathf.RoundToInt(hungerSystem.CurrentHunger);
             int max = Mathf.RoundToInt(hungerSystem.MaxHunger);
             if (!hungerCacheValid || lastHungerCurrent != cur || lastHungerMax != max)
-                SetTextOrIgnore(hungerText, $"Hunger {cur} / {max}");
+            {
+                SetTextOrIgnore(hungerText, $"{cur} / {max}");
+                SetFillOrIgnore(hungerBarFillImage, cur, max);
+            }
 
             lastHungerCurrent = cur;
             lastHungerMax = max;
@@ -260,7 +265,10 @@ public class HUDController : MonoBehaviour
         else
         {
             if (!hungerCacheValid || lastHungerCurrent != 100 || lastHungerMax != 100)
+            {
                 SetTextOrIgnore(hungerText, GetFallbackHungerText());
+                SetFillOrIgnore(hungerBarFillImage, 100, 100);
+            }
 
             lastHungerCurrent = 100;
             lastHungerMax = 100;
@@ -446,7 +454,7 @@ public class HUDController : MonoBehaviour
     }
 
     private static string GetFallbackDayText() => "DAY 1";
-    private static string GetFallbackHungerText() => "Hunger 100 / 100";
+    private static string GetFallbackHungerText() => "100 / 100";
     private static string GetFallbackPhaseText() => "SCAVENGE";
 
     private static string FormatRemainingTime(int totalSeconds)
@@ -454,6 +462,14 @@ public class HUDController : MonoBehaviour
         int minutes = totalSeconds / 60;
         int remainingSeconds = totalSeconds % 60;
         return $"{minutes:00}:{remainingSeconds:00}";
+    }
+
+    private static void SetFillOrIgnore(Image target, int current, int max)
+    {
+        if (target == null)
+            return;
+
+        target.fillAmount = max > 0 ? Mathf.Clamp01((float)current / max) : 0f;
     }
 
     private static void SetTextOrIgnore(TextMeshProUGUI target, string value)
