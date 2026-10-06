@@ -26,6 +26,8 @@
    Continue를 눌러 `RetryCurrentDay()`가 호출되는 경우는 Night 클리어
    조기종료가 아니라 패배 후 같은 Day 재시도이므로 Day로 직접 전환한다.
    이 경로 외에 Day 전환을 추가로 만들지 말 것.
+   (참고: 7번째 Night 클리어 시 Spawner가 부른 `TransitionToDay()` 안에서
+   Day 대신 `EnterVictory()`로 게임이 끝난다 — 새 Day 전환 경로가 아님.)
 
 ## 현재 아키텍처 (확정)
 
@@ -36,6 +38,31 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
 펜스/타워/Base Core 손상 상태는 씬 전환 사이에 자연히 유지된다.
 `BaseManager`는 현재 빈 스텁이며 (캡처/적용할 대상이 없으므로),
 `BaseRuntimeState`는 `baseLevel`/`baseUpgradeId`만 보유한다.
+
+**게임 흐름 (2026-10-05 구현):** `MainMenu.unity`(빌드 인덱스 0, 타이틀
+"Press any key" → 메뉴: Continue / New Game / Settings / Quit) →
+`Day.unity`(게임 세계, 단일 씬). 씬 로드는 메뉴 진입/복귀 때만 UI
+(`MainMenuUI`, `GameOverPanelUI`)에서 하고 `GameManager`는 여전히
+`LoadScene`을 호출하지 않는다.
+- **Victory:** `GamePhase.Victory` (`GameManager.FinalDay = 7`). 7번째 밤
+  클리어 → GameOver와 같은 정지 → 2초 뒤 `GameOverPanelUI`가 "YOU SURVIVED
+  7 NIGHTS" 표시 → 클릭 시 MainMenu. Victory 시 저장 삭제.
+- **자동 저장 (슬롯 1개):** `SaveSystem` — 매 Day 시작의 `DayCheckpoint`를
+  `persistentDataPath/save.json`에 기록(임시파일 후 교체, version 체크).
+  Continue는 `SaveSystem.LoadOnNextStart`를 세우고 `GameManager.Start()`가
+  재시도 복원 경로로 복원. Fence는 FenceData 대신 tier 번호로 저장하고
+  `FenceSlot.FenceDataForTier()`로 복원. 저장이 있는 상태에서 New Game은
+  덮어쓰기 확인 팝업을 띄움. 플레이어 위치는 저장 안 함.
+  에디터에서 Day 씬을 직접 Play하면 새 게임 취급 → 기존 저장을 Day 1로
+  덮어씀 (저장 유지 테스트는 MainMenu에서 시작).
+- 위 세 가지(메뉴/Victory/저장) — **Reported implemented.** Claude가 Play
+  Mode 자동 테스트로 확인(Day/자원/T2 펜스 HP/소진 노드 복원, 확인 팝업,
+  Victory 시 삭제). 실제 마우스/키 입력 플레이테스트는 아직.
+- **밤 조명/안개:** `PhaseLighting`이 `OnPhaseChanged`로 태양·Night Volume
+  (3초)과 Fog·안개 파티클(3초 지연 후 10초)을 보간. 안개는 `PlayerRoot`
+  child `NightMist` 파티클 + `NightMist.shader`(soft particle, 화면 중앙
+  불규칙 구멍), 펜스 안은 `MistBlocker`(VFXVolume 레이어, 충돌 없음) +
+  `MistFadeZone`으로 20%만 유지 — **Verified** (사용자 플레이 확인).
 
 `Single_Scene_Migration_Proposal.md`는 이 마이그레이션이 완료되기 전에
 작성된 계획 문서로, 지금은 **참조용 과거 작업물**이다 — 더 이상
@@ -64,10 +91,8 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
     `TowerSlot.RestoreTowerInternal` 등 새 메서드)에 걸쳐 있음.
     복원 후 플레이어는 `GameManager.playerRespawnPoint`(HomeBase 프리팹
     child `RespawnPoint`)로 이동(Rigidbody 위치 직접 설정) — **Verified.**
-  - `GameOverPanelUI`는 씬에 배치·연결은 됐으나(Panel Root/Background
-    Button/Continue Hint), 새로 추가된 `Title Text` 필드는 아직 씬에
-    연결 안 됐을 수 있음 — 연결 안 해도 에러는 안 나고 그냥 타이틀
-    텍스트만 안 바뀜.
+  - `GameOverPanelUI`의 Panel Root/Background Button/Continue Hint/
+    `Title Text` 모두 씬에 연결됨 (2026-10-05 확인).
 - `TowerSlot.EnsureCurrentTowerReference()`의 반경 기반 타워 자동 채택
   로직이 단일 씬 모델에서는 죽은 코드일 가능성이 있으나 미확인 —
   건드리기 전에 pre-placed tower 존재 여부부터 확인할 것.
@@ -115,7 +140,7 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   채집→소진, 3~5일 뒤 재생성, 재생성 노드 재채집, GameOver 재시도 복원).**
   `ResourceNodeRegistry`(GameManager 소유) + `Tools/Cute Carnage/Assign Resource
   Node PersistentIds` 메뉴(Day.unity 336개 부여 완료). 새 자원 노드를 배치하면
-  이 메뉴를 다시 실행할 것. 디스크 저장은 아직 없음(메모리 + DayCheckpoint만).
+  이 메뉴를 다시 실행할 것. 소진 목록은 DayCheckpoint와 함께 `SaveSystem`으로 디스크 저장됨.
   확정 설계 (2026-09-29):
   - 맵에 보이는 나무/스크랩/음식은 거의 전부 채집 가능. 숲 나무를 캐서 길이
     뚫리는 것도 의도된 것 (Day 시간 제한이 채집량을 제한).
