@@ -52,12 +52,30 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   Continue는 `SaveSystem.LoadOnNextStart`를 세우고 `GameManager.Start()`가
   재시도 복원 경로로 복원. Fence는 FenceData 대신 tier 번호로 저장하고
   `FenceSlot.FenceDataForTier()`로 복원. 저장이 있는 상태에서 New Game은
-  덮어쓰기 확인 팝업을 띄움. 플레이어 위치는 저장 안 함.
+  덮어쓰기 확인 팝업을 띄움.
+- **플레이어 시작 위치:** 새 게임(이어하기가 아닌 모든 시작, 에디터에서 Day
+  직접 Play 포함) → `playerRespawnPoint`. 이어하기 → 저장된 Day 시작 위치/
+  방향(`DayCheckpoint.playerPosition/playerYaw`, 포즈 없는 예전 저장은 씬
+  위치). GameOver 재시도 → `playerRespawnPoint`. 이동은 `TeleportPlayer()`
+  하나로 처리.
+- **Esc 일시정지 메뉴:** `PauseMenuUI` (`UIRoot` 프리팹 안 `PauseMenuCanvas`,
+  sortOrder 50). Resume / Settings / Main Menu / Quit Game, 뒤의 둘은 확인
+  팝업("이번 Day 시작 이후 진행은 저장 안 됨"). `Time.timeScale = 0` +
+  `PlayerInteractor`/`PlayerConsume` 비활성. `[DefaultExecutionOrder(-100)]`로
+  Structure/NightRepair 패널이 열려 있으면 Esc를 그 패널에 양보,
+  GameOver/Victory 중엔 무시. 설정 UI는 공용 `SettingsPanelUI`(메인·일시정지
+  메뉴 공유, PlayerPrefs).
+- ⚠️ `UIRoot` 프리팹을 에디터 스크립트로 저장한 뒤 `Day.unity`가 다시
+  저장되면서 UIRoot 인스턴스의 RectTransform 오버라이드(약 40개)가 0으로
+  바뀐 적 있음 (2026-10-06, 커밋 전 되돌림). UIRoot 프리팹 수정 후엔
+  `Day.unity` diff를 꼭 확인할 것.
   에디터에서 Day 씬을 직접 Play하면 새 게임 취급 → 기존 저장을 Day 1로
   덮어씀 (저장 유지 테스트는 MainMenu에서 시작).
-- 위 세 가지(메뉴/Victory/저장) — **Reported implemented.** Claude가 Play
+- 위 항목들(메뉴/Victory/저장/시작 위치/일시정지) — **Reported implemented.** Claude가 Play
   Mode 자동 테스트로 확인(Day/자원/T2 펜스 HP/소진 노드 복원, 확인 팝업,
-  Victory 시 삭제). 실제 마우스/키 입력 플레이테스트는 아직.
+  Victory 시 삭제, 포즈 저장·복원, 새 게임/재시도 리스폰, 일시정지 버튼
+  흐름). 사용자가 "잘 된 것 같다"고 했으나 항목별 실제 키/마우스 플레이테스트
+  (특히 Esc 키 동작)는 명시적으로 확인 안 됨.
 - **밤 조명/안개:** `PhaseLighting`이 `OnPhaseChanged`로 태양·Night Volume
   (3초)과 Fog·안개 파티클(3초 지연 후 10초)을 보간. 안개는 `PlayerRoot`
   child `NightMist` 파티클 + `NightMist.shader`(soft particle, 화면 중앙
