@@ -88,6 +88,7 @@ public class GameManager : MonoBehaviour
     public int CurrentDay => currentDay;
     public bool IsDay => currentPhase == GamePhase.Day;
     public bool IsGameOver => currentPhase == GamePhase.GameOver;
+    public bool IsVictory => currentPhase == GamePhase.Victory;
     public const int FinalDay = 7;
     public GameOverCause LastGameOverCause { get; private set; } = GameOverCause.None;
 
