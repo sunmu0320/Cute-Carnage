@@ -58,6 +58,9 @@ public class SaveData
     public float baseCoreHp;
     public int wood, scrap, food;
     public float playerHp, playerHunger;
+    public bool hasPlayerPose;
+    public Vector3 playerPosition;
+    public float playerYaw;
     public List<FenceSave> fences = new List<FenceSave>();
     public List<TowerSave> towers = new List<TowerSave>();
     public List<NodeSave> depletedNodes = new List<NodeSave>();

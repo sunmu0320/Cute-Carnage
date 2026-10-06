@@ -9,6 +9,10 @@ public class DayCheckpoint
     public ResourceRuntimeState resourceState = new ResourceRuntimeState();
     public float playerHp;
     public float playerHunger;
+    /// <summary>Player pose at Day start. Used only by Continue (load); GameOver retry uses playerRespawnPoint.</summary>
+    public bool hasPlayerPose;
+    public UnityEngine.Vector3 playerPosition;
+    public float playerYaw;
     public Dictionary<string, FenceCheckpoint> fenceSlots = new Dictionary<string, FenceCheckpoint>();
     public Dictionary<string, TowerCheckpoint> towerSlots = new Dictionary<string, TowerCheckpoint>();
     /// <summary>Depleted ResourceNodes (PersistentId -> respawnDay), captured after that Day's regrowth.</summary>

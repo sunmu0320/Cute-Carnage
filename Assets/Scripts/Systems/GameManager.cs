@@ -609,14 +609,17 @@ public class GameManager : MonoBehaviour
             return;
         }
 
+        TeleportPlayer(playerRespawnPoint.position, Quaternion.Euler(0f, playerRespawnPoint.eulerAngles.y, 0f));
+    }
+
+    private void TeleportPlayer(Vector3 position, Quaternion rotation)
+    {
         PlayerMovement player = FindFirstObjectByType<PlayerMovement>();
         if (player == null)
         {
             return;
         }
 
-        Vector3 position = playerRespawnPoint.position;
-        Quaternion rotation = Quaternion.Euler(0f, playerRespawnPoint.eulerAngles.y, 0f);
         player.transform.SetPositionAndRotation(position, rotation);
 
         Rigidbody rb = player.GetComponent<Rigidbody>();
@@ -657,6 +660,14 @@ public class GameManager : MonoBehaviour
         if (hungerSystem != null)
         {
             checkpoint.playerHunger = hungerSystem.CurrentHunger;
+        }
+
+        PlayerMovement player = FindFirstObjectByType<PlayerMovement>();
+        if (player != null)
+        {
+            checkpoint.hasPlayerPose = true;
+            checkpoint.playerPosition = player.transform.position;
+            checkpoint.playerYaw = player.transform.eulerAngles.y;
         }
 
         FenceSlot[] fenceSlots = FindObjectsByType<FenceSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None);
@@ -726,6 +737,10 @@ public class GameManager : MonoBehaviour
         currentDay = data.day;
         lastDayCheckpoint = FromSaveData(data);
         RestoreDayCheckpoint();
+        if (data.hasPlayerPose)
+        {
+            TeleportPlayer(data.playerPosition, Quaternion.Euler(0f, data.playerYaw, 0f));
+        }
         LogTransition($"Loaded save: Day {currentDay}.");
     }
 
@@ -739,7 +754,10 @@ public class GameManager : MonoBehaviour
             scrap = checkpoint.resourceState.scrap,
             food = checkpoint.resourceState.food,
             playerHp = checkpoint.playerHp,
-            playerHunger = checkpoint.playerHunger
+            playerHunger = checkpoint.playerHunger,
+            hasPlayerPose = checkpoint.hasPlayerPose,
+            playerPosition = checkpoint.playerPosition,
+            playerYaw = checkpoint.playerYaw
         };
 
         foreach (KeyValuePair<string, FenceCheckpoint> kv in checkpoint.fenceSlots)
@@ -773,7 +791,10 @@ public class GameManager : MonoBehaviour
             baseCoreHp = data.baseCoreHp,
             resourceState = new ResourceRuntimeState { wood = data.wood, scrap = data.scrap, food = data.food },
             playerHp = data.playerHp,
-            playerHunger = data.playerHunger
+            playerHunger = data.playerHunger,
+            hasPlayerPose = data.hasPlayerPose,
+            playerPosition = data.playerPosition,
+            playerYaw = data.playerYaw
         };
 
         Dictionary<string, FenceSlot> fenceSlotsById = new Dictionary<string, FenceSlot>();
