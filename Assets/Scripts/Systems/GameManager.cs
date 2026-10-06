@@ -133,7 +133,11 @@ public class GameManager : MonoBehaviour
     {
         resourceNodeRegistry.BuildLookup();
         AfterEnterDayScene();
-        LoadSaveIfRequested();
+        if (!LoadSaveIfRequested())
+        {
+            RespawnPlayer(); // new game starts at the HomeBase respawn point
+        }
+
         CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
     }
@@ -719,19 +723,20 @@ public class GameManager : MonoBehaviour
     }
 
     /// <summary>Continue from MainMenu: replaces the fresh scene state with the saved Day-start checkpoint
-    /// (same restore path as RetryCurrentDay). Start() then re-captures it, which rewrites the same save.</summary>
-    private void LoadSaveIfRequested()
+    /// (same restore path as RetryCurrentDay). Start() then re-captures it, which rewrites the same save.
+    /// Returns false when nothing was loaded (new game).</summary>
+    private bool LoadSaveIfRequested()
     {
         if (!SaveSystem.LoadOnNextStart)
         {
-            return;
+            return false;
         }
 
         SaveSystem.LoadOnNextStart = false;
         if (!SaveSystem.TryRead(out SaveData data))
         {
             Debug.LogWarning("[GameManager] Continue requested but no valid save found; starting a new game.", this);
-            return;
+            return false;
         }
 
         currentDay = data.day;
@@ -742,6 +747,7 @@ public class GameManager : MonoBehaviour
             TeleportPlayer(data.playerPosition, Quaternion.Euler(0f, data.playerYaw, 0f));
         }
         LogTransition($"Loaded save: Day {currentDay}.");
+        return true;
     }
 
     private SaveData ToSaveData(DayCheckpoint checkpoint)
