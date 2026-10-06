@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 /// <summary>MainMenu scene flow: title ("press any key") -> menu (Continue / New Game / Settings / Quit).
 /// Settings (master volume, fullscreen) persist in PlayerPrefs and are applied on boot.
-/// Continue stays disabled until the single-slot autosave exists.</summary>
+/// Continue loads the single-slot autosave; New Game asks before overwriting an existing save.</summary>
 public class MainMenuUI : MonoBehaviour
 {
     private const string VolumeKey = "settings.masterVolume";
@@ -16,6 +16,7 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private GameObject titlePanel;
     [SerializeField] private GameObject menuPanel;
     [SerializeField] private GameObject settingsPanel;
+    [SerializeField] private GameObject overwriteConfirmPanel;
 
     [Header("Menu")]
     [SerializeField] private Button continueButton;
@@ -28,14 +29,24 @@ public class MainMenuUI : MonoBehaviour
     [SerializeField] private Toggle fullscreenToggle;
     [SerializeField] private Button settingsBackButton;
 
+    [Header("Overwrite Confirm")]
+    [SerializeField] private Button overwriteYesButton;
+    [SerializeField] private Button overwriteNoButton;
+
     private void Awake()
     {
         AudioListener.volume = PlayerPrefs.GetFloat(VolumeKey, 1f);
         Screen.fullScreen = PlayerPrefs.GetInt(FullscreenKey, Screen.fullScreen ? 1 : 0) == 1;
 
-        // ponytail: no save system yet; enable once the single-slot autosave lands.
-        continueButton.interactable = false;
-        newGameButton.onClick.AddListener(() => SceneManager.LoadScene(gameSceneName));
+        continueButton.interactable = SaveSystem.HasSave;
+        continueButton.onClick.AddListener(() => StartGame(loadSave: true));
+        newGameButton.onClick.AddListener(() =>
+        {
+            if (SaveSystem.HasSave) ShowOnly(overwriteConfirmPanel);
+            else StartGame(loadSave: false);
+        });
+        overwriteYesButton.onClick.AddListener(() => StartGame(loadSave: false));
+        overwriteNoButton.onClick.AddListener(() => ShowOnly(menuPanel));
         settingsButton.onClick.AddListener(() => ShowOnly(settingsPanel));
         quitButton.onClick.AddListener(Quit);
         settingsBackButton.onClick.AddListener(() => ShowOnly(menuPanel));
@@ -54,11 +65,19 @@ public class MainMenuUI : MonoBehaviour
         if (titlePanel.activeSelf && Input.anyKeyDown) ShowOnly(menuPanel);
     }
 
+    private void StartGame(bool loadSave)
+    {
+        if (!loadSave) SaveSystem.Delete();
+        SaveSystem.LoadOnNextStart = loadSave;
+        SceneManager.LoadScene(gameSceneName);
+    }
+
     private void ShowOnly(GameObject panel)
     {
         titlePanel.SetActive(panel == titlePanel);
         menuPanel.SetActive(panel == menuPanel);
         settingsPanel.SetActive(panel == settingsPanel);
+        overwriteConfirmPanel.SetActive(panel == overwriteConfirmPanel);
     }
 
     private static void Quit()

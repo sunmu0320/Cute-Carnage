@@ -1,8 +1,8 @@
 using System.Collections.Generic;
 
 /// <summary>In-memory snapshot of everything GameManager.RetryCurrentDay() restores: captured at the start
-/// of each Day (Start()/TransitionToDay()), restored when the player continues from GameOver. Not persisted
-/// to disk - a same-session checkpoint only.</summary>
+/// of each Day (Start()/TransitionToDay()), restored when the player continues from GameOver. Also written
+/// to disk as the single-slot autosave (see SaveSystem / GameManager.ToSaveData).</summary>
 public class DayCheckpoint
 {
     public float baseCoreHp;

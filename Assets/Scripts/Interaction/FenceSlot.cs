@@ -422,6 +422,18 @@ public class FenceSlot : MonoBehaviour, IInteractable
         return true;
     }
 
+    /// <summary>Walks this slot's tier chain (startingFenceData -> NextFence ...) to the given tier number;
+    /// null if the chain has no such tier. Used to rebuild a saved fence from its tier.</summary>
+    public FenceData FenceDataForTier(int tier)
+    {
+        for (FenceData d = startingFenceData; d != null; d = d.NextFence)
+        {
+            if (d.TierNumber == tier) return d;
+        }
+
+        return null;
+    }
+
     /// <summary>Restores this slot directly to the given fence tier and HP, bypassing resource costs
     /// (day-checkpoint restore). Passing null data clears the slot to empty.</summary>
     public void RestoreFenceInternal(FenceData data, float hp)

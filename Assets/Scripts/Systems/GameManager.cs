@@ -132,6 +132,7 @@ public class GameManager : MonoBehaviour
     {
         resourceNodeRegistry.BuildLookup();
         AfterEnterDayScene();
+        LoadSaveIfRequested();
         CaptureDayCheckpoint();
         OnPhaseChanged?.Invoke(GamePhase.Day);
     }
@@ -481,6 +482,7 @@ public class GameManager : MonoBehaviour
     private void EnterVictory()
     {
         LogTransition($"Victory: survived {FinalDay} nights.");
+        SaveSystem.Delete();
         currentPhase = GamePhase.Victory;
         SetPlayerInputLocked(true);
         SetZombiesFrozen(true);
@@ -696,11 +698,116 @@ public class GameManager : MonoBehaviour
         checkpoint.depletedResourceNodes = resourceNodeRegistry.CaptureState();
 
         lastDayCheckpoint = checkpoint;
+        SaveSystem.Write(ToSaveData(checkpoint));
         LogTransition(
             $"Captured day checkpoint for Day {currentDay}: baseHp={checkpoint.baseCoreHp:0.#}, " +
             $"wood={checkpoint.resourceState.wood} scrap={checkpoint.resourceState.scrap} food={checkpoint.resourceState.food}, " +
             $"fenceSlots={checkpoint.fenceSlots.Count}, towerSlots={checkpoint.towerSlots.Count}, " +
             $"depletedNodes={checkpoint.depletedResourceNodes.Count}.");
+    }
+
+    /// <summary>Continue from MainMenu: replaces the fresh scene state with the saved Day-start checkpoint
+    /// (same restore path as RetryCurrentDay). Start() then re-captures it, which rewrites the same save.</summary>
+    private void LoadSaveIfRequested()
+    {
+        if (!SaveSystem.LoadOnNextStart)
+        {
+            return;
+        }
+
+        SaveSystem.LoadOnNextStart = false;
+        if (!SaveSystem.TryRead(out SaveData data))
+        {
+            Debug.LogWarning("[GameManager] Continue requested but no valid save found; starting a new game.", this);
+            return;
+        }
+
+        currentDay = data.day;
+        lastDayCheckpoint = FromSaveData(data);
+        RestoreDayCheckpoint();
+        LogTransition($"Loaded save: Day {currentDay}.");
+    }
+
+    private SaveData ToSaveData(DayCheckpoint checkpoint)
+    {
+        SaveData data = new SaveData
+        {
+            day = currentDay,
+            baseCoreHp = checkpoint.baseCoreHp,
+            wood = checkpoint.resourceState.wood,
+            scrap = checkpoint.resourceState.scrap,
+            food = checkpoint.resourceState.food,
+            playerHp = checkpoint.playerHp,
+            playerHunger = checkpoint.playerHunger
+        };
+
+        foreach (KeyValuePair<string, FenceCheckpoint> kv in checkpoint.fenceSlots)
+        {
+            data.fences.Add(new FenceSave
+            {
+                id = kv.Key,
+                hasFence = kv.Value.hasFence,
+                tier = kv.Value.fenceData != null ? kv.Value.fenceData.TierNumber : 0,
+                hp = kv.Value.currentHp
+            });
+        }
+
+        foreach (KeyValuePair<string, TowerCheckpoint> kv in checkpoint.towerSlots)
+        {
+            data.towers.Add(new TowerSave { id = kv.Key, hasTower = kv.Value.hasTower, hp = kv.Value.currentHp });
+        }
+
+        foreach (KeyValuePair<string, int> kv in checkpoint.depletedResourceNodes)
+        {
+            data.depletedNodes.Add(new NodeSave { id = kv.Key, respawnDay = kv.Value });
+        }
+
+        return data;
+    }
+
+    private DayCheckpoint FromSaveData(SaveData data)
+    {
+        DayCheckpoint checkpoint = new DayCheckpoint
+        {
+            baseCoreHp = data.baseCoreHp,
+            resourceState = new ResourceRuntimeState { wood = data.wood, scrap = data.scrap, food = data.food },
+            playerHp = data.playerHp,
+            playerHunger = data.playerHunger
+        };
+
+        Dictionary<string, FenceSlot> fenceSlotsById = new Dictionary<string, FenceSlot>();
+        foreach (FenceSlot slot in FindObjectsByType<FenceSlot>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+        {
+            if (!string.IsNullOrEmpty(slot.PersistentSlotId))
+            {
+                fenceSlotsById[slot.PersistentSlotId] = slot;
+            }
+        }
+
+        foreach (FenceSave fence in data.fences)
+        {
+            FenceData fenceData = fence.hasFence && fenceSlotsById.TryGetValue(fence.id, out FenceSlot slot)
+                ? slot.FenceDataForTier(fence.tier)
+                : null;
+            checkpoint.fenceSlots[fence.id] = new FenceCheckpoint
+            {
+                hasFence = fenceData != null,
+                fenceData = fenceData,
+                currentHp = fence.hp
+            };
+        }
+
+        foreach (TowerSave tower in data.towers)
+        {
+            checkpoint.towerSlots[tower.id] = new TowerCheckpoint { hasTower = tower.hasTower, currentHp = tower.hp };
+        }
+
+        foreach (NodeSave node in data.depletedNodes)
+        {
+            checkpoint.depletedResourceNodes[node.id] = node.respawnDay;
+        }
+
+        return checkpoint;
     }
 
     /// <summary>Restores the checkpoint captured by CaptureDayCheckpoint(). No-op if none was ever captured.</summary>
