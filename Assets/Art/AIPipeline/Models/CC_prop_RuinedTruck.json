@@ -1,0 +1,37 @@
+{
+  "name": "CC_prop_RuinedTruck",
+  "category": "prop",
+  "fbx": "CC_prop_RuinedTruck.fbx",
+  "triangles": 3130,
+  "source_triangles": 3130,
+  "size": {
+    "x": 4.5485,
+    "y": 1.7,
+    "z": 3.0797
+  },
+  "textures": {
+    "albedo": "Textures/CC_prop_RuinedTruck_abandoned_rusted_truck_3d_model_basecolor.JPEG",
+    "normal": "Textures/abandoned_rusted_truck_3d_model_normal.JPEG",
+    "roughness": "Textures/abandoned_rusted_truck_3d_model_roughness.JPEG",
+    "metallic": "Textures/abandoned_rusted_truck_3d_model_metallic.JPEG"
+  },
+  "collider": "box",
+  "lods": [
+    {
+      "name": "CC_prop_RuinedTruck_LOD0",
+      "triangles": 3130
+    },
+    {
+      "name": "CC_prop_RuinedTruck_LOD1",
+      "triangles": 1565
+    },
+    {
+      "name": "CC_prop_RuinedTruck_LOD2",
+      "triangles": 959
+    }
+  ],
+  "removed_loose_parts": 8,
+  "warnings": [
+    "fixed 1396 inverted faces"
+  ]
+}

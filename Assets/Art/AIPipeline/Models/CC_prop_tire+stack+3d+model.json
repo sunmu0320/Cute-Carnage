@@ -1,0 +1,35 @@
+{
+  "name": "CC_prop_tire+stack+3d+model",
+  "category": "prop",
+  "fbx": "CC_prop_tire+stack+3d+model.fbx",
+  "triangles": 4000,
+  "source_triangles": 1885601,
+  "size": {
+    "x": 2.2395,
+    "y": 1.3055,
+    "z": 1.8652
+  },
+  "textures": {
+    "albedo": "Textures/CC_prop_tire+stack+3d+model_tire+stack+3d+model_basecolor.jpg",
+    "normal": "Textures/tire+stack+3d+model_normal.png"
+  },
+  "collider": "convex",
+  "lods": [
+    {
+      "name": "CC_prop_tire+stack+3d+model_LOD0",
+      "triangles": 4000
+    },
+    {
+      "name": "CC_prop_tire+stack+3d+model_LOD1",
+      "triangles": 2000
+    },
+    {
+      "name": "CC_prop_tire+stack+3d+model_LOD2",
+      "triangles": 1000
+    }
+  ],
+  "removed_loose_parts": 0,
+  "warnings": [
+    "heavy decimation (1885601 -> 4000 tris), check silhouette"
+  ]
+}

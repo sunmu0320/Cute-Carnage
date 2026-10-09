@@ -1,0 +1,37 @@
+{
+  "name": "CC_prop_Abandoned_Car",
+  "category": "prop",
+  "fbx": "CC_prop_Abandoned_Car.fbx",
+  "triangles": 3000,
+  "source_triangles": 1849780,
+  "size": {
+    "x": 2.4764,
+    "y": 1.4825,
+    "z": 4.1889
+  },
+  "textures": {
+    "albedo": "Textures/CC_prop_Abandoned_Car_rusty_abandoned_car_3d_model_basecolor.JPEG",
+    "normal": "Textures/rusty_abandoned_car_3d_model_normal.PNG",
+    "roughness": "Textures/rusty_abandoned_car_3d_model_roughness.JPEG",
+    "metallic": "Textures/rusty_abandoned_car_3d_model_metallic.JPEG"
+  },
+  "collider": "box",
+  "lods": [
+    {
+      "name": "CC_prop_Abandoned_Car_LOD0",
+      "triangles": 3000
+    },
+    {
+      "name": "CC_prop_Abandoned_Car_LOD1",
+      "triangles": 1500
+    },
+    {
+      "name": "CC_prop_Abandoned_Car_LOD2",
+      "triangles": 996
+    }
+  ],
+  "removed_loose_parts": 6,
+  "warnings": [
+    "heavy decimation (1849780 -> 3000 tris), check silhouette"
+  ]
+}

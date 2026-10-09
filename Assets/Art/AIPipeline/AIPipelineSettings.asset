@@ -32,6 +32,7 @@ MonoBehaviour:
       Platform\Tower+Platform.fbx
     assetName: TowerSlot
     category: Base
+    useBlender: 1
     resizeHeight: 1
     reduceTriangles: 1
     height: 0.3
@@ -42,9 +43,79 @@ MonoBehaviour:
     sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Base\Slots\Fence+track\tripo_convert_0907c5b8-5bbb-4b4c-a8ce-7b179e7ea225.fbx
     assetName: FenceSlot
     category: Base
+    useBlender: 1
     resizeHeight: 0
     reduceTriangles: 1
     height: 1
     triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\wooden
+      box\wooden+box.fbx
+    assetName: woodenbox
+    category: prop
+    useBlender: 1
+    resizeHeight: 0
+    reduceTriangles: 1
+    height: 1
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\wooden
+      pallet 3d model\wooden+pallet+3d+model.fbx
+    assetName: wooden+pallet
+    category: prop
+    useBlender: 1
+    resizeHeight: 0
+    reduceTriangles: 1
+    height: 1
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\rusty+abandoned+car+3d+model\tripo_convert_347f0ea7-bba6-4795-91f2-ffdc10d45854.fbx
+    assetName: Abandoned Car
+    category: prop
+    useBlender: 1
+    resizeHeight: 1
+    reduceTriangles: 1
+    height: 1.5
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\abandoned+rusted+truck+3d+model\tripo_convert_6766fb7e-0d14-45bb-9411-d8d3ede9d709.fbx
+    assetName: RuinedTruck
+    category: prop
+    useBlender: 1
+    resizeHeight: 1
+    reduceTriangles: 0
+    height: 1.7
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\off-road+tire+3d+model\tripo_convert_d381556c-a498-4a74-a184-398821899623.fbx
+    assetName: Tire
+    category: prop
+    useBlender: 1
+    resizeHeight: 1
+    reduceTriangles: 1
+    height: 0.45
+    triangles: 1500
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Props\tire
+      stack 3d model\tire+stack+3d+model.fbx
+    assetName: tire+stack+3d+model
+    category: prop
+    useBlender: 1
+    resizeHeight: 1
+    reduceTriangles: 1
+    height: 1.3
+    triangles: 4000
     tripoTaskId: 
     status: Done
