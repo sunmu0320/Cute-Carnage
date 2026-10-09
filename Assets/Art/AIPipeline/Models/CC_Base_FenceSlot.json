@@ -1,0 +1,35 @@
+{
+  "name": "CC_Base_FenceSlot",
+  "category": "Base",
+  "fbx": "CC_Base_FenceSlot.fbx",
+  "triangles": 2999,
+  "source_triangles": 9183,
+  "size": {
+    "x": 0.9788,
+    "y": 0.1155,
+    "z": 0.3325
+  },
+  "textures": {
+    "albedo": "Textures/CC_Base_FenceSlot_Fence_track_basecolor.JPEG",
+    "normal": "Textures/Fence_track_normal.JPEG",
+    "roughness": "Textures/Fence_track_roughness.JPEG",
+    "metallic": "Textures/Fence_track_metallic.JPEG"
+  },
+  "collider": "box",
+  "lods": [
+    {
+      "name": "CC_Base_FenceSlot_LOD0",
+      "triangles": 2999
+    },
+    {
+      "name": "CC_Base_FenceSlot_LOD1",
+      "triangles": 1498
+    },
+    {
+      "name": "CC_Base_FenceSlot_LOD2",
+      "triangles": 749
+    }
+  ],
+  "removed_loose_parts": 0,
+  "warnings": []
+}

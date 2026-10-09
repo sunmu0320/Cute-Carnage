@@ -9,6 +9,12 @@
       },
       "hash": "fd8ff1fb700caf062eb5cce364c1d0a85f99ebe6"
     },
+    "com.kyven.aipipeline": {
+      "version": "file:C:/Users/sunmu/Sunmu's Workplace/ai-3d-pipeline/unity_package",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {}
+    },
     "com.unity.ai.inference": {
       "version": "2.5.0",
       "depth": 0,

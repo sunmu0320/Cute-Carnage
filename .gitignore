@@ -67,3 +67,6 @@ unity_commands.txt
 SESSION_HANDOFF.md
 .handoffs/
 /Tools/
+
+# AI pipeline raw downloads
+/AIPipelineGenerated/

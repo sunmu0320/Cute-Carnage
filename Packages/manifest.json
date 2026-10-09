@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.kyven.aipipeline": "file:C:/Users/sunmu/Sunmu's Workplace/ai-3d-pipeline/unity_package",
     "com.boxqkrtm.ide.cursor": "https://github.com/boxqkrtm/com.unity.ide.cursor.git",
     "com.unity.ai.inference": "2.5.0",
     "com.unity.ai.navigation": "2.0.15",

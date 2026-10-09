@@ -1,0 +1,50 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7eae3ef96a5af88419e2e0d79be3cea8, type: 3}
+  m_Name: AIPipelineSettings
+  m_EditorClassIdentifier: AIPipeline.Editor::AIPipeline.AIPipelineSettings
+  blenderExe: D:\Blender5\blender.exe
+  blenderScriptsFolder: C:\Users\sunmu\Sunmu's Workplace\ai-3d-pipeline\blender_scripts
+  tripoBaseUrl: https://openapi.tripo3d.ai/v3
+  tripoModelVersion: v3.1-20260211
+  tripoTextureQuality: standard
+  generatedFolder: AIPipelineGenerated
+  packPrefix: CC
+  rootFolder: Assets/Art/AIPipeline
+  lodRatios:
+  - 1
+  - 0.5
+  - 0.25
+  minLoosePartRatio: 0.01
+  shaderName: Universal Render Pipeline/Lit
+  jobs:
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Base\Slots\Tower
+      Platform\Tower+Platform.fbx
+    assetName: TowerSlot
+    category: Base
+    resizeHeight: 1
+    reduceTriangles: 1
+    height: 0.3
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
+  - conceptImage: {fileID: 0}
+    sourceModel: C:\Users\sunmu\Sunmu's Workplace\New folder\Cute Carnage\Assets\Art\Base\Slots\Fence+track\tripo_convert_0907c5b8-5bbb-4b4c-a8ce-7b179e7ea225.fbx
+    assetName: FenceSlot
+    category: Base
+    resizeHeight: 0
+    reduceTriangles: 1
+    height: 1
+    triangles: 3000
+    tripoTaskId: 
+    status: Done
