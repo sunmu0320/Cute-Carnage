@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b06fec3f815ec2469d890158fcfd2dc, type: 3}
+  m_Name: NightSchedule
+  m_EditorClassIdentifier: Assembly-CSharp::NightSchedule
+  nights:
+  - waves:
+    - zombieCount: 2
+      spawnInterval: 1.5
+      hordes: []
+    - zombieCount: 3
+      spawnInterval: 1.5
+      hordes: []
+    - zombieCount: 3
+      spawnInterval: 1.5
+      hordes: []
+  - waves:
+    - zombieCount: 3
+      spawnInterval: 1.3
+      hordes: []
+    - zombieCount: 4
+      spawnInterval: 1.3
+      hordes: []
+    - zombieCount: 5
+      spawnInterval: 1.3
+      hordes: []
+  - waves:
+    - zombieCount: 5
+      spawnInterval: 1.1
+      hordes: []
+    - zombieCount: 6
+      spawnInterval: 1.1
+      hordes: []
+    - zombieCount: 2
+      spawnInterval: 1.1
+      hordes:
+      - count: 5
+        from: 0
+        arcWidth: 40
+        startDelay: 4
+        spawnInterval: 0.4
+  - waves:
+    - zombieCount: 7
+      spawnInterval: 0.95
+      hordes: []
+    - zombieCount: 8
+      spawnInterval: 0.95
+      hordes: []
+    - zombieCount: 9
+      spawnInterval: 0.95
+      hordes: []
+  - waves:
+    - zombieCount: 8
+      spawnInterval: 0.8
+      hordes: []
+    - zombieCount: 5
+      spawnInterval: 0.8
+      hordes:
+      - count: 6
+        from: 1
+        arcWidth: 40
+        startDelay: 4
+        spawnInterval: 0.4
+    - zombieCount: 11
+      spawnInterval: 0.8
+      hordes: []
+  - waves:
+    - zombieCount: 11
+      spawnInterval: 0.65
+      hordes: []
+    - zombieCount: 6
+      spawnInterval: 0.65
+      hordes:
+      - count: 6
+        from: 3
+        arcWidth: 40
+        startDelay: 4
+        spawnInterval: 0.4
+    - zombieCount: 15
+      spawnInterval: 0.65
+      hordes: []
+  - waves:
+    - zombieCount: 14
+      spawnInterval: 0.5
+      hordes: []
+    - zombieCount: 16
+      spawnInterval: 0.5
+      hordes: []
+    - zombieCount: 6
+      spawnInterval: 0.5
+      hordes:
+      - count: 7
+        from: 2
+        arcWidth: 40
+        startDelay: 4
+        spawnInterval: 0.4
+      - count: 7
+        from: 0
+        arcWidth: 40
+        startDelay: 4
+        spawnInterval: 0.4
