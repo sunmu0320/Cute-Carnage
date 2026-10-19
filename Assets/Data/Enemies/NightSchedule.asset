@@ -14,23 +14,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::NightSchedule
   nights:
   - waves:
-    - zombieCount: 2
+    - zombieCount: 200
+      spawnInterval: 0.1
+      hordes: []
+    - zombieCount: 20
       spawnInterval: 1.5
       hordes: []
-    - zombieCount: 3
-      spawnInterval: 1.5
-      hordes: []
-    - zombieCount: 3
+    - zombieCount: 30
       spawnInterval: 1.5
       hordes: []
   - waves:
-    - zombieCount: 15
+    - zombieCount: 3
       spawnInterval: 1.3
       hordes: []
-    - zombieCount: 20
+    - zombieCount: 5
       spawnInterval: 1.3
       hordes: []
-    - zombieCount: 30
+    - zombieCount: 7
       spawnInterval: 1.3
       hordes: []
   - waves:

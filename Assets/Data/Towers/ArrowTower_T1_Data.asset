@@ -18,9 +18,9 @@ MonoBehaviour:
   uiIcon: {fileID: 0}
   towerPrefab: {fileID: 2005347959993295351, guid: 7563e4bf939dd0b4899651e1634f0dcb, type: 3}
   maxHp: 80
-  damage: 12
-  attackInterval: 1
-  attackRange: 13.76
+  damage: 7
+  attackInterval: 1.5
+  attackRange: 12
   installWoodCost: 1
   installScrapCost: 1
   repairAmount: 20
