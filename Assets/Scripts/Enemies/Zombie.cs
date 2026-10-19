@@ -8,8 +8,11 @@ public class Zombie : MonoBehaviour
     private static readonly int DieHash = Animator.StringToHash("Die");
     private const float AttackRangeTolerance = 0.01f;
 
-    /// <summary>Prototype: zombies not yet dead (OnEnable increments, death judgment in Die() decrements).</summary>
+    /// <summary>Prototype: zombies not yet dead (OnEnable increments; Die(), or OnDestroy without a death, decrements).</summary>
     public static int AliveZombieCount { get; private set; }
+
+    /// <summary>Fires once per real death (Die()). Destroy without dying (retry cleanup, scene unload) does not fire it.</summary>
+    public static event System.Action Died;
 
     [Header("Data (optional)")]
     [SerializeField] private ZombieData zombieData;
@@ -108,6 +111,16 @@ public class Zombie : MonoBehaviour
     private void OnDisable()
     {
         ClearPendingAttack();
+    }
+
+    private void OnDestroy()
+    {
+        // Retry/scene unload destroys live zombies without Die(); without this the count stays > 0
+        // and the next night's first wave never clears.
+        if (!hasDied)
+        {
+            AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
+        }
     }
 
     private void Awake()
@@ -1113,6 +1126,7 @@ public class Zombie : MonoBehaviour
 
         hasDied = true;
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
+        Died?.Invoke();
         ClearPendingAttack();
         ClearTargetSelection();
         cachedBaseCoreTransform = null;

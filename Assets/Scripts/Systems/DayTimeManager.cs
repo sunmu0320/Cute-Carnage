@@ -17,6 +17,7 @@ public class DayTimeManager : MonoBehaviour
     private bool hasDayEnded;
     private bool isPaused;
     private bool isCountingDown;
+    private int lastWholeSecond = -1;
 
     public float RemainingTimeSeconds => Mathf.Max(0f, currentTime);
 
@@ -45,6 +46,9 @@ public class DayTimeManager : MonoBehaviour
 
     public event Action OnDayEnded;
 
+    /// <summary>Fires when the displayed whole second (ceil of remaining time) changes, and on reset.</summary>
+    public event Action<int> OnSecondChanged;
+
     private void Awake()
     {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -69,6 +73,7 @@ public class DayTimeManager : MonoBehaviour
 
         currentTime -= Time.deltaTime;
         currentTime = Mathf.Max(0f, currentTime);
+        NotifySecondIfChanged();
 
         if (currentTime <= 0f && !hasDayEnded)
         {
@@ -94,6 +99,8 @@ public class DayTimeManager : MonoBehaviour
         hasDayEnded = false;
         isPaused = false;
         isCountingDown = shouldCountDown;
+        lastWholeSecond = -1;
+        NotifySecondIfChanged();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         Debug.Log($"[TEMP-DEBUG][DayTimeManager] ResetTimerState id={GetInstanceID()} shouldCountDown={shouldCountDown} totalDuration={totalDuration}", this);
 #endif
@@ -112,6 +119,18 @@ public class DayTimeManager : MonoBehaviour
         }
 
         isPaused = false;
+    }
+
+    private void NotifySecondIfChanged()
+    {
+        int second = Mathf.CeilToInt(currentTime);
+        if (second == lastWholeSecond)
+        {
+            return;
+        }
+
+        lastWholeSecond = second;
+        OnSecondChanged?.Invoke(second);
     }
 
     private static float SafeDuration(float seconds)

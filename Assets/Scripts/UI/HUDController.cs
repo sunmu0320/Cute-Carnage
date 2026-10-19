@@ -40,20 +40,6 @@ public class HUDController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI scrapText;
     [SerializeField] private TextMeshProUGUI woodText;
 
-    [Header("Status (Top Center)")]
-    [SerializeField] private TextMeshProUGUI dayText;
-    [SerializeField] private TextMeshProUGUI phaseText;
-
-    [Header("Day Timer Bar (Top Center)")]
-    [Tooltip("Optional. If assigned, HUD will read remaining time/progress from this DayTimeManager.")]
-    [SerializeField] private DayTimeManager dayTimeManager;
-
-    [Tooltip("Optional. The UI Image used as the filled portion of the bar. Must be set to Image.Type = Filled.")]
-    [SerializeField] private Image dayTimerBarFillImage;
-
-    [Tooltip("Optional. If assigned, HUD will render remaining time as MM:SS on/within the bar.")]
-    [SerializeField] private TextMeshProUGUI dayTimerText;
-
     private PlayerHealth subscribedPlayerHealth;
     private bool hpCacheValid;
     private int lastHpCurrent;
@@ -65,35 +51,23 @@ public class HUDController : MonoBehaviour
     private int lastFood;
     private int lastScrap;
     private int lastWood;
-    private bool dayCacheValid;
-    private int lastDay;
-    private bool lastDayIsDay;
-    private bool dayTimerSecondsCacheValid;
-    private int lastDayTimerSeconds;
-    private bool dayTimerFillCacheValid;
-    private float lastDayTimerFill;
     private BaseCore lastBaseCore;
     private bool baseHpFillCacheValid;
     private float lastBaseHpFill;
     private int lastBaseHpCurrent;
     private int lastBaseHpMax;
     private float nextSourceResolveTime;
-    private float nextTempDebugLogTime;
     private bool subscribedToPhaseChanges;
     private float sourcePollingStartTime;
 
     private const float SourceRetryInterval = 1f;
     private const float SlowSourceRetryInterval = 2.5f;
     private const float FastSourceRetryWindowSeconds = 5f;
-    private const float DayTimerFillEpsilon = 0.0001f;
     private const float BaseHpFillEpsilon = 0.0001f;
 
     private void Awake()
     {
         ApplyPlaceholderText();
-
-        if (dayTimeManager == null)
-            dayTimeManager = FindFirstObjectByType<DayTimeManager>();
 
         if (Application.isPlaying)
         {
@@ -200,7 +174,6 @@ public class HUDController : MonoBehaviour
         SetTextOrIgnore(foodText, "0");
         SetTextOrIgnore(scrapText, "0");
         SetTextOrIgnore(woodText, "0");
-        SetTextOrIgnore(dayText, GetFallbackDayText());
     }
 
     private void RefreshFromSources()
@@ -278,62 +251,6 @@ public class HUDController : MonoBehaviour
             lastHungerMax = 100;
             hungerCacheValid = true;
         }
-
-        // Day (placeholder fallback; day timer bar is optional and driven by DayTimeManager).
-        // Keeps showing the actual DAY/NIGHT label through GameOver too - the GameOver panel already
-        // shows its own "Game Over" text, so this shouldn't duplicate it.
-        if (GameManager.Instance != null)
-        {
-            int currentDay = GameManager.Instance.CurrentDay;
-            bool isDay = GameManager.Instance.IsDay;
-            if (!dayCacheValid || lastDay != currentDay || lastDayIsDay != isDay)
-                SetTextOrIgnore(dayText, isDay ? $"DAY {currentDay}" : $"NIGHT {currentDay}");
-
-            lastDay = currentDay;
-            lastDayIsDay = isDay;
-            dayCacheValid = true;
-        }
-        else
-        {
-            if (!dayCacheValid || lastDay != 1 || !lastDayIsDay)
-                SetTextOrIgnore(dayText, GetFallbackDayText());
-
-            lastDay = 1;
-            lastDayIsDay = true;
-            dayCacheValid = true;
-        }
-
-        if (dayTimeManager != null)
-        {
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-            if (Time.unscaledTime >= nextTempDebugLogTime)
-            {
-                Debug.Log($"[TEMP-DEBUG][HUDController] hud id={GetInstanceID()} scene='{gameObject.scene.name}' bound dayTimeManager id={dayTimeManager.GetInstanceID()} remaining={dayTimeManager.RemainingTimeSeconds:0.0}");
-                nextTempDebugLogTime = Time.unscaledTime + 1f;
-            }
-#endif
-
-            float remainingSeconds = dayTimeManager.RemainingTimeSeconds;
-            // NormalizedTime is day-progress (0 -> 1). We want remaining fraction (1 -> 0).
-            float remainingNormalized = 1f - dayTimeManager.NormalizedTime;
-            float fillAmount = Mathf.Clamp01(remainingNormalized);
-
-            if (dayTimerBarFillImage != null
-                && (!dayTimerFillCacheValid || Mathf.Abs(lastDayTimerFill - fillAmount) > DayTimerFillEpsilon))
-            {
-                dayTimerBarFillImage.fillAmount = fillAmount;
-                lastDayTimerFill = fillAmount;
-                dayTimerFillCacheValid = true;
-            }
-
-            int displaySeconds = Mathf.Max(0, Mathf.CeilToInt(remainingSeconds));
-            if (!dayTimerSecondsCacheValid || lastDayTimerSeconds != displaySeconds)
-            {
-                SetTextOrIgnore(dayTimerText, FormatRemainingTime(displaySeconds));
-                lastDayTimerSeconds = displaySeconds;
-                dayTimerSecondsCacheValid = true;
-            }
-        }
     }
 
     private void ResolveMissingSources()
@@ -381,9 +298,6 @@ public class HUDController : MonoBehaviour
         hpCacheValid = false;
         hungerCacheValid = false;
         resourceCacheValid = false;
-        dayCacheValid = false;
-        dayTimerSecondsCacheValid = false;
-        dayTimerFillCacheValid = false;
         InvalidateBaseHpCache();
     }
 
@@ -465,16 +379,7 @@ public class HUDController : MonoBehaviour
             && candidate.gameObject.scene == scene;
     }
 
-    private static string GetFallbackDayText() => "DAY 1";
     private static string GetFallbackHungerText() => "100 / 100";
-    private static string GetFallbackPhaseText() => "SCAVENGE";
-
-    private static string FormatRemainingTime(int totalSeconds)
-    {
-        int minutes = totalSeconds / 60;
-        int remainingSeconds = totalSeconds % 60;
-        return $"{minutes:00}:{remainingSeconds:00}";
-    }
 
     private static void SetFillOrIgnore(Image target, int current, int max)
     {

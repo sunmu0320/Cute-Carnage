@@ -87,6 +87,7 @@ public class GameManager : MonoBehaviour
     public BaseRuntimeState CurrentBaseState => currentRunState?.baseState;
     public int CurrentDay => currentDay;
     public bool IsDay => currentPhase == GamePhase.Day;
+    public GamePhase CurrentPhase => currentPhase;
     public bool IsGameOver => currentPhase == GamePhase.GameOver;
     public bool IsVictory => currentPhase == GamePhase.Victory;
     public const int FinalDay = 7;

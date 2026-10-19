@@ -36,12 +36,40 @@ public class SimpleZombieSpawner : MonoBehaviour
 
     public event Action OnNightWaveCompleted;
 
+    /// <summary>Fires when NightProgress / CurrentWaveNumber / WaveCount may have changed (kill, next wave, new night).</summary>
+    public event Action OnNightProgressChanged;
+
+    public int WaveCount => nightWaves != null ? nightWaves.Length : 0;
+    public int CurrentWaveNumber => Mathf.Min(currentWaveIndex + 1, WaveCount);
+
+    /// <summary>0..1. Each wave weighs 1/WaveCount; inside a wave, kills / planned total (unspawned included).</summary>
+    public float NightProgress
+    {
+        get
+        {
+            if (waveState == WaveState.Complete)
+            {
+                return 1f;
+            }
+
+            if (WaveCount == 0)
+            {
+                return 0f;
+            }
+
+            int planned = nightWaves[currentWaveIndex].TotalCount;
+            float waveRatio = planned > 0 ? Mathf.Clamp01((float)killsThisWave / planned) : 0f;
+            return Mathf.Clamp01((currentWaveIndex + waveRatio) / WaveCount);
+        }
+    }
+
     private static readonly string[] BaseCoreNameCandidates = { "BaseCore", "Base Core", "Core", "HomeBase", "Base" };
 
     private float timer;
     private int spawnedCount;
     private int totalZombiesSpawned;
     private int currentWaveIndex;
+    private int killsThisWave;
     private WaveState waveState;
     private bool hasTriggeredDayTransition;
     private bool warnedMissingPrefab;
@@ -61,6 +89,29 @@ public class SimpleZombieSpawner : MonoBehaviour
         ClampSettings();
     }
 
+    private void OnEnable()
+    {
+        Zombie.Died += HandleZombieDied;
+    }
+
+    private void OnDisable()
+    {
+        Zombie.Died -= HandleZombieDied;
+    }
+
+    /// <summary>Every zombie comes from this spawner and waves never overlap (next wave waits for
+    /// AliveZombieCount == 0), so any death while a night is running belongs to the current wave.</summary>
+    private void HandleZombieDied()
+    {
+        if (waveState == WaveState.Complete || waveState == WaveState.Stopped)
+        {
+            return;
+        }
+
+        killsThisWave++;
+        OnNightProgressChanged?.Invoke();
+    }
+
     private void OnValidate()
     {
         ClampSettings();
@@ -77,6 +128,7 @@ public class SimpleZombieSpawner : MonoBehaviour
 
         waveState = WaveState.InitialDelay;
         timer = initialWaveStartDelay;
+        OnNightProgressChanged?.Invoke();
         Debug.Log(
             $"[SimpleZombieSpawner] Night wave countdown started ({initialWaveStartDelay:0.##}s).",
             this);
@@ -122,6 +174,7 @@ public class SimpleZombieSpawner : MonoBehaviour
         isPaused = false;
         hasTriggeredDayTransition = false;
         currentWaveIndex = 0;
+        killsThisWave = 0;
         totalZombiesSpawned = 0;
         spawnedCount = 0;
 
@@ -134,6 +187,7 @@ public class SimpleZombieSpawner : MonoBehaviour
 
         waveState = WaveState.InitialDelay;
         timer = initialWaveStartDelay;
+        OnNightProgressChanged?.Invoke();
         Debug.Log(
             $"[SimpleZombieSpawner] ResetForNewNight: wave countdown restarted ({initialWaveStartDelay:0.##}s).",
             this);
@@ -301,8 +355,10 @@ public class SimpleZombieSpawner : MonoBehaviour
         if (currentWaveIndex < nightWaves.Length - 1)
         {
             currentWaveIndex++;
+            killsThisWave = 0;
             timer = interWaveDelay;
             waveState = WaveState.InterWaveDelay;
+            OnNightProgressChanged?.Invoke();
             Debug.Log(
                 $"[SimpleZombieSpawner] Inter-wave countdown started ({interWaveDelay:0.##}s); Wave {currentWaveIndex + 1} follows.",
                 this);
@@ -322,6 +378,7 @@ public class SimpleZombieSpawner : MonoBehaviour
         hasTriggeredDayTransition = true;
         waveState = WaveState.Complete;
         OnNightWaveCompleted?.Invoke();
+        OnNightProgressChanged?.Invoke();
 
         if (GameManager.Instance != null)
         {
