@@ -22,12 +22,19 @@ public class PhaseLighting : MonoBehaviour
     [SerializeField] private Color nightFogColor = new Color(0.36f, 0.42f, 0.52f);
     [SerializeField] private float nightFogDensity = 0.012f;
 
+    [Header("Home base zone (HomeFogZone trigger)")]
+    [Tooltip("Fog density multiplier while the player is inside the home base zone (0.2 = 80% less).")]
+    [SerializeField, Range(0f, 1f)] private float homeZoneFogFactor = 0.2f;
+    [SerializeField, Min(0.01f)] private float homeZoneBlendSeconds = 1.5f;
+
     private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
 
     private Color daySunColor;
     private float daySunIntensity;
     private Coroutine blend;
     private float t, tFog; // 0 = day, 1 = night
+    private float zoneMul = 1f; // 1 = outside the home base zone
+    private Coroutine zoneBlend;
     private MaterialPropertyBlock mistBlock;
     private Color mistBaseColor;
 
@@ -62,6 +69,29 @@ public class PhaseLighting : MonoBehaviour
         blend = StartCoroutine(BlendTo(phase == GameManager.GamePhase.Night ? 1f : 0f));
     }
 
+    /// <summary>Called by HomeFogZone on player trigger enter/exit; blends the fog multiplier once.</summary>
+    public void SetPlayerInHomeZone(bool inside)
+    {
+        if (zoneBlend != null) StopCoroutine(zoneBlend);
+        zoneBlend = StartCoroutine(BlendZone(inside ? homeZoneFogFactor : 1f));
+    }
+
+    private IEnumerator BlendZone(float target)
+    {
+        float start = zoneMul;
+        for (float e = 0f; e < homeZoneBlendSeconds; e += Time.deltaTime)
+        {
+            zoneMul = Mathf.Lerp(start, target, Mathf.SmoothStep(0f, 1f, e / homeZoneBlendSeconds));
+            ApplyFogDensity();
+            yield return null;
+        }
+        zoneMul = target;
+        ApplyFogDensity();
+        zoneBlend = null;
+    }
+
+    private void ApplyFogDensity() => RenderSettings.fogDensity = nightFogDensity * tFog * zoneMul;
+
     private IEnumerator BlendTo(float target)
     {
         float start = t, startFog = tFog;
@@ -90,7 +120,7 @@ public class PhaseLighting : MonoBehaviour
         k = kFog; // everything below is fog/mist
         RenderSettings.fog = k > 0.001f;
         RenderSettings.fogColor = nightFogColor;
-        RenderSettings.fogDensity = nightFogDensity * k;
+        ApplyFogDensity();
         if (nightMist != null)
         {
             // Fade every live puff via the renderer's property block (never touches the material asset).

@@ -65,10 +65,11 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   Structure/NightRepair 패널이 열려 있으면 Esc를 그 패널에 양보,
   GameOver/Victory 중엔 무시. 설정 UI는 공용 `SettingsPanelUI`(메인·일시정지
   메뉴 공유, PlayerPrefs).
-- ⚠️ `UIRoot` 프리팹을 에디터 스크립트로 저장한 뒤 `Day.unity`가 다시
-  저장되면서 UIRoot 인스턴스의 RectTransform 오버라이드(약 40개)가 0으로
-  바뀐 적 있음 (2026-10-06, 커밋 전 되돌림). UIRoot 프리팹 수정 후엔
-  `Day.unity` diff를 꼭 확인할 것.
+- ℹ️ `Day.unity` 저장 시 UIRoot 인스턴스의 RectTransform 오버라이드 약 170개
+  (m_AnchorMin.y/m_AnchorMax.y/m_AnchoredPosition)가 0으로 바뀌는 diff가 생긴다. 확인 결과
+  (2026-10-18) 전부 Horizontal/VerticalLayoutGroup 자식의 **driven 속성**이라 Unity가 저장 때
+  0으로 쓰는 정상 동작이고, 런타임에 레이아웃이 다시 계산하므로 무해하다. 되돌리지 말 것
+  (되돌려도 다음 저장 때 다시 0이 됨). 그 외 오버라이드가 바뀌었는지만 diff로 확인할 것.
   에디터에서 Day 씬을 직접 Play하면 새 게임 취급 → 기존 저장을 Day 1로
   덮어씀 (저장 유지 테스트는 MainMenu에서 시작).
 - 위 항목들(메뉴/Victory/저장/시작 위치/일시정지) — **Reported implemented.** Claude가 Play
@@ -81,6 +82,30 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   child `NightMist` 파티클 + `NightMist.shader`(soft particle, 화면 중앙
   불규칙 구멍), 펜스 안은 `MistBlocker`(VFXVolume 레이어, 충돌 없음) +
   `MistFadeZone`으로 20%만 유지 — **Verified** (사용자 플레이 확인).
+
+- **Day/Night HUD 다이얼 (2026-10-13):** `DayNightHUD`(HUDCanvas의 `TopCenterStatus`)가
+  상단 중앙 다이얼/라벨/바/상세 텍스트를 단독 소유 (`HUDController`의 Day 타이머·DayText 코드는
+  삭제됨). `Update()` 없음 — Day는 `DayTimeManager.OnSecondChanged`(초가 바뀔 때만), Night은
+  `SimpleZombieSpawner.OnNightProgressChanged`(처치/웨이브 변경 때), 모드는 `OnPhaseChanged`.
+  밤 진행도 = (현재 웨이브 인덱스 + 처치/예정 총수)/웨이브 수, 처치는 `Zombie.Died`
+  (Die()에서 1회만 발화)로 집계. 아트 적용됨 (2026-10-14): `Art/UI/HUD/DayNightTiner/`
+  원본은 보존, HUD는 여백 정리본 `Trimmed/`(해/달/구름/마을/프레임/게이지) + 원본 하늘 3장 사용.
+  `Dial/Mask`(Knob 원형 Mask) 안에 하늘(낮/노을 알파/밤)→해·달→구름→마을, 마스크 밖 `Frame`.
+  노을 = 낮 진행도 `sunsetStartProgress`(0.8)부터 알파. 구름 이동은 `DayNightClouds`의
+  `Update()` — 규칙 6의 의도적 예외(상태 폴링이 아닌 장식 애니메이션, timeScale 0이면 정지).
+  ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
+- **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
+  30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을
+  덮음; 흙바닥 `TL_Dirt` 반지름 ~23m). 안쪽 파티클은 `MistFadeZone.keepFraction` 0.2.
+  새 `HomeFogZone`(Ignore Raycast 레이어, Capsule 반지름 20, 트리거 진입/이탈로
+  `PhaseLighting.SetPlayerInHomeZone`) → 거리 안개 밀도 ×`homeZoneFogFactor`(0.2). 거리 안개는
+  카메라 거리상 영향이 ~3%라 체감 효과의 대부분은 파티클 쪽. 횃불/라이트는 Planned.
+  — **Reported implemented** (Play Mode 자동 테스트: 구역 안/밖 밀도 전환, 시작 시 안쪽 감지,
+  구역 안 파티클 알파 ~22%, 캡처 확인; 사용자 직접 플레이는 아직).
+  같은 작업에서 Retry가 좀비를 `Destroy`만 해서 `AliveZombieCount`가 안 줄던 버그를
+  `Zombie.OnDestroy`로 수정. — **Reported implemented** (Play Mode 자동 테스트로
+  Day 0/50%, Night 처치·경계·중복 피격, GameOver→Retry→다음 밤 clear, Night→Day 2, 일시정지 확인;
+  사용자 직접 플레이는 아직).
 
 `Single_Scene_Migration_Proposal.md`는 이 마이그레이션이 완료되기 전에
 작성된 계획 문서로, 지금은 **참조용 과거 작업물**이다 — 더 이상
