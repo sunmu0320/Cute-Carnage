@@ -27,10 +27,10 @@ MonoBehaviour:
     - zombieCount: 3
       spawnInterval: 1.3
       hordes: []
-    - zombieCount: 4
+    - zombieCount: 15
       spawnInterval: 1.3
       hordes: []
-    - zombieCount: 5
+    - zombieCount: 20
       spawnInterval: 1.3
       hordes: []
   - waves:
