@@ -24674,8 +24674,8 @@ MonoBehaviour:
   blendSeconds: 3
   fogBlendSeconds: 10
   fogNightDelaySeconds: 3
-  nightSunColor: {r: 0.55, g: 0.65, b: 1, a: 1}
-  nightSunIntensity: 0.35
+  nightSunColor: {r: 0.62, g: 0.74, b: 1, a: 1}
+  nightSunIntensity: 0.75
   nightFogColor: {r: 0.36, g: 0.42, b: 0.52, a: 1}
   nightFogDensity: 0.012
   homeZoneFogFactor: 0.2
