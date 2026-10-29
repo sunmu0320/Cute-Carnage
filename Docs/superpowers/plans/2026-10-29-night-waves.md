@@ -23,7 +23,7 @@
 - PersistentId / 슬롯 구조 / `ZombieType` 기존 값(Basic=0, Runner=1, Breaker=2, Tank=3) 변경 금지. 새 값은 **뒤에만** 추가.
 - 밤 진행 상태는 저장하지 않는다. Retry는 기존 `GameManager.RetryCurrentDay()` 경로 그대로.
 - Basic 이동속도 1.3m/s (이미 반영, `BasicZombieData.asset`).
-- 수치 초안: 동시 생존 상한 500, 숨 돌리기 = 웨이브 80% 처치 → 10초 동안 스트림 30%, 체력 +15%/일(복리), 알람 = 무리 5마리 진입, 점프 쿨다운 3초 / 웅크림 0.5초.
+- 수치 초안: 동시 생존 상한 300 (2026-10-29 사용자 결정, Phase 1 측정 기준), 숨 돌리기 = 웨이브 80% 처치 → 10초 동안 스트림 30%, 체력 +15%/일(복리), 알람 = 무리 5마리 진입, 점프 쿨다운 3초 / 웅크림 0.5초.
 - 레이어: Default 0, Ignore Raycast 2, Interactable 6, Zombie 7, VFXVolume 8.
 - Play Mode 테스트 전 `%USERPROFILE%/AppData/LocalLow/DefaultCompany/Cute Carnage/save.json` 백업, 끝나면 복원. `capture_game_view` 결과는 `Assets/` 밖으로 옮기거나 지운다.
 - `Day.unity` 저장 시 UIRoot RectTransform driven 속성 0 diff는 무해 (CLAUDE.md 참고). 그 외 diff만 확인.
@@ -151,7 +151,7 @@
   - `int WaveCount`, `int WavesStarted`, `float WaveTimeAt(int i)`, `float SecondsToNextWave` (남은 웨이브 없으면 -1), `bool AllSpawned`
   - `event Action OnNightProgressChanged` — **경과 초의 정수 부분이 바뀔 때 1번** + 웨이브 시작 + 마지막 웨이브 이후 처치 때
   - `event Action<int> OnWaveStarted`
-  - Inspector: `maxAlive = 500`, `restKillFraction = 0.8f`, `restDuration = 10f`, `restStreamFactor = 0.3f`. `initialWaveStartDelay`/`interWaveDelay`/`postClearDelay`는 삭제.
+  - Inspector: `maxAlive = 300`, `restKillFraction = 0.8f`, `restDuration = 10f`, `restStreamFactor = 0.3f`. `initialWaveStartDelay`/`interWaveDelay`/`postClearDelay`는 삭제.
 
 - [ ] **Step 1: 흐름 구현** (`Update`, `isPaused`면 아무것도 안 함):
   - `NightElapsed += Time.deltaTime`.
@@ -354,4 +354,4 @@
 ## 확인 필요 (착수 전 사용자에게)
 
 - ~~플레이어 주변 스폰 금지 반경~~ — 2026-10-29 사용자 결정: **넣지 않는다** (플레이어 바로 옆 스폰 허용). 플레이해 보고 억울하면 다시 논의.
-- **풀링:** Task 1.3 측정 결과를 보고 결정.
+- ~~풀링~~ — 2026-10-29 사용자 결정: **생략** (실제 스폰 속도에서 생성·삭제 튐 없음). 문제가 생기면 그때 추가.
