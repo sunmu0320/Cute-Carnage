@@ -104,7 +104,6 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
         }
 
         currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, MaxHp);
-        Debug.Log($"[ArrowTower] Tower damaged by {damageAmount:0.##}. HP: {currentHp:0.##}/{MaxHp:0.##}", this);
 
         if (currentHp <= 0f)
         {

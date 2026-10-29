@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public class PlayerAutoCombat : MonoBehaviour
@@ -86,8 +87,8 @@ private float targetRefreshTimer;
 
     private Zombie FindNearestZombieInRange(float attackRange)
     {
-        Zombie[] zombies = FindObjectsByType<Zombie>(FindObjectsSortMode.None);
-        if (zombies == null || zombies.Length == 0)
+        IReadOnlyList<Zombie> zombies = Zombie.Active;
+        if (zombies.Count == 0)
         {
             return null;
         }
@@ -99,7 +100,7 @@ private float targetRefreshTimer;
         float nearestDistanceSqr = float.MaxValue;
         Zombie nearestZombie = null;
 
-        for (int i = 0; i < zombies.Length; i++)
+        for (int i = 0; i < zombies.Count; i++)
         {
             Zombie zombie = zombies[i];
             if (!IsValidTarget(zombie))

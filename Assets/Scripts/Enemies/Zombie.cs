@@ -14,6 +14,12 @@ public class Zombie : MonoBehaviour
     /// <summary>Fires once per real death (Die()). Destroy without dying (retry cleanup, scene unload) does not fire it.</summary>
     public static event System.Action Died;
 
+    private static readonly System.Collections.Generic.List<Zombie> active = new System.Collections.Generic.List<Zombie>();
+
+    /// <summary>Enabled zombies, so callers avoid FindObjectsByType. Includes dead ones still playing their
+    /// death animation; filter with IsDead.</summary>
+    public static System.Collections.Generic.IReadOnlyList<Zombie> Active => active;
+
     [Header("Data (optional)")]
     [SerializeField] private ZombieData zombieData;
 
@@ -106,10 +112,12 @@ public class Zombie : MonoBehaviour
     private void OnEnable()
     {
         AliveZombieCount++;
+        active.Add(this);
     }
 
     private void OnDisable()
     {
+        active.Remove(this);
         ClearPendingAttack();
     }
 
@@ -126,6 +134,9 @@ public class Zombie : MonoBehaviour
     private void Awake()
     {
         ApplyZombieData();
+
+        // Other zombies are never targets; with crowds they only filled the 64-slot hit buffer.
+        forwardDetectMask &= ~LayerMask.GetMask("Zombie");
 
         if (animator == null)
         {
@@ -174,6 +185,8 @@ public class Zombie : MonoBehaviour
         targetRefreshTimer = 0f;
         EnsureBaseCoreCached();
         SelectFrontTarget();
+        // Zombies spawned in the same frame would otherwise all re-target in the same later frame.
+        targetRefreshTimer = Random.Range(0f, Mathf.Max(0.1f, targetRefreshInterval));
     }
 
     private void Update()
@@ -426,13 +439,10 @@ public class Zombie : MonoBehaviour
                 continue;
             }
 
-            Zombie zombie = col.GetComponentInParent<Zombie>();
-            if (zombie != null)
+            // Terrain: TerrainCollider.ClosestPoint cost ~0.3ms per zombie and terrain is never a target.
+            if (col is TerrainCollider || col.GetComponentInParent<Zombie>() != null)
             {
-                if (zombie == this)
-                {
-                    continue;
-                }
+                continue;
             }
 
             Vector3 closestPoint = col.ClosestPoint(transform.position);
@@ -1109,7 +1119,6 @@ public class Zombie : MonoBehaviour
         }
 
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
-        Debug.Log($"[Zombie] Took {amount} damage. HP: {currentHp}/{maxHp}", this);
 
         if (currentHp <= 0f)
         {
@@ -1143,7 +1152,6 @@ public class Zombie : MonoBehaviour
             rootCollider.enabled = false;
         }
 
-        Debug.Log("[Zombie] Zombie died and will be destroyed.", this);
         Destroy(gameObject, deathDestroyDelay);
     }
 

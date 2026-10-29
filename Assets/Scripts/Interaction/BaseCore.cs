@@ -44,10 +44,8 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
             return;
         }
 
-        float oldHp = currentHp;
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
 
-        Debug.Log($"[BaseCore] Damaged: {amount}. HP: {oldHp:0.##} -> {currentHp:0.##}/{maxHp:0.##}", this);
 
         if (currentHp > 0f)
         {

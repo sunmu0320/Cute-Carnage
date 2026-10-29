@@ -103,7 +103,6 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
             return;
         }
 
-        float oldHp = currentHp;
         currentHp = Mathf.Max(0f, currentHp - amount);
         if (currentHp <= 0f && !isDestroyed)
         {
@@ -111,9 +110,6 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
         }
 
         ApplyDestroyedState();
-        Debug.Log(
-            $"[{nameof(FenceSegment)}] {name} took {amount} damage. HP {oldHp:0.#} -> {currentHp:0.#}/{MaxHp:0.#}. " +
-            $"Destroyed: {IsDestroyed}.");
 
         RefreshScreenSpaceHpBar();
     }
