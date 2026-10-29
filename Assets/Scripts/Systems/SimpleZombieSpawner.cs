@@ -4,8 +4,9 @@ using UnityEngine.SceneManagement;
 
 /// <summary>Runs the night on one clock (seconds since nightfall). A continuous stream spawns all around on the
 /// near ring for the whole night; each wave point starts at its scheduled time (never waiting for kills) and
-/// spawns its groups on the far ring. Killing most of a wave gives a short breather (thinner stream). The night
-/// ends only when every wave group has fully spawned and every zombie is dead — this spawner is the only thing
+/// spawns its groups on the far ring; the stream stops streamTailSeconds after the last wave starts. Killing most
+/// of a wave gives a short breather (thinner stream). The night ends only when the stream has stopped, every wave
+/// group has fully spawned and every zombie is dead — this spawner is the only thing
 /// that asks GameManager for the Day transition.</summary>
 public class SimpleZombieSpawner : MonoBehaviour
 {
@@ -31,6 +32,8 @@ public class SimpleZombieSpawner : MonoBehaviour
     [SerializeField, Min(0f)] private float restDuration = 10f;
     [SerializeField, Range(0.05f, 1f), Tooltip("Stream rate during a breather (0.3 = 30% of normal).")]
     private float restStreamFactor = 0.3f;
+    [SerializeField, Min(0f), Tooltip("The stream keeps going this long after the last wave starts.")]
+    private float streamTailSeconds = 15f;
 
     /// <summary>Fires once per whole second of night time, on each wave start, and on kills after the last wave
     /// has spawned (remaining count).</summary>
@@ -43,15 +46,35 @@ public class SimpleZombieSpawner : MonoBehaviour
     public float NightElapsed => elapsed;
     public float NightDuration => WaveCount > 0 ? WaveTimeAt(WaveCount - 1) : 0f;
     public float NightProgress => NightDuration > 0f ? Mathf.Clamp01(elapsed / NightDuration) : (AllSpawned ? 1f : 0f);
+    /// <summary>Night time at which the stream stops: last wave + tail. The dial's gauge spans 0..StreamEndTime.</summary>
+    public float StreamEndTime => NightDuration + streamTailSeconds;
+    public float GaugeProgress => StreamEndTime > 0f ? Mathf.Clamp01(elapsed / StreamEndTime) : 0f;
+    public bool StreamDone => wavesStarted == WaveCount && elapsed >= StreamEndTime;
     public bool AllSpawned => running && wavesStarted == WaveCount && runs != null && AllRunsSpawned();
     public bool IsResting => elapsed < restUntil;
-
-    /// <summary>Kept for the current HUD text until the dial switches to time-based display.</summary>
-    public int CurrentWaveNumber => Mathf.Clamp(wavesStarted, 1, Mathf.Max(1, WaveCount));
 
     public float SecondsToNextWave => wavesStarted < WaveCount ? Mathf.Max(0f, WaveTimeAt(wavesStarted) - elapsed) : -1f;
 
     public float WaveTimeAt(int index) => NightSchedule.WaveTime(waves, index);
+
+    /// <summary>True when the wave brings a Tank or Boss (the dial marks it differently).</summary>
+    public bool IsMajorWave(int index)
+    {
+        if (waves == null || index < 0 || index >= waves.Length)
+        {
+            return false;
+        }
+
+        foreach (NightSchedule.Group g in waves[index].groups)
+        {
+            if (g.zombie != null && (g.zombie.zombieType == ZombieType.Tank || g.zombie.zombieType == ZombieType.Boss))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private class WaveRun
     {
@@ -191,8 +214,8 @@ public class SimpleZombieSpawner : MonoBehaviour
             UpdateWaveGroups(i);
         }
 
-        bool allSpawned = AllSpawned;
-        if (!allSpawned)
+        bool streamDone = StreamDone;
+        if (!streamDone)
         {
             UpdateStream();
         }
@@ -204,7 +227,7 @@ public class SimpleZombieSpawner : MonoBehaviour
             OnNightProgressChanged?.Invoke();
         }
 
-        if (allSpawned && Zombie.AliveZombieCount == 0)
+        if (streamDone && AllSpawned && Zombie.AliveZombieCount == 0)
         {
             CompleteNight();
         }

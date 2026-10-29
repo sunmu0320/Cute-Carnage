@@ -16,41 +16,34 @@ MonoBehaviour:
   - stream:
       zombies: []
       intervalStart: 3
-      intervalEnd: 1.2
+      intervalEnd: 0.9
     waves:
+    - delayFromPrevious: 20
+      groups:
+      - zombie: {fileID: 0}
+        count: 15
+        allAround: 0
+        from: 0
+        arcWidth: 60
+        startDelay: 0
+        spawnInterval: 0.2
+    - delayFromPrevious: 30
+      groups:
+      - zombie: {fileID: 0}
+        count: 20
+        allAround: 0
+        from: 1
+        arcWidth: 80
+        startDelay: 0
+        spawnInterval: 0.15
     - delayFromPrevious: 40
       groups:
       - zombie: {fileID: 0}
-        count: 20
-        allAround: 0
-        from: 0
-        arcWidth: 40
-        startDelay: 0
-        spawnInterval: 0.2
-    - delayFromPrevious: 90
-      groups:
-      - zombie: {fileID: 0}
-        count: 35
-        allAround: 0
-        from: 1
-        arcWidth: 40
-        startDelay: 0
-        spawnInterval: 0.15
-    - delayFromPrevious: 140
-      groups:
-      - zombie: {fileID: 0}
-        count: 40
+        count: 25
         allAround: 0
         from: 2
-        arcWidth: 45
+        arcWidth: 90
         startDelay: 0
-        spawnInterval: 0.12
-      - zombie: {fileID: 0}
-        count: 20
-        allAround: 0
-        from: 3
-        arcWidth: 45
-        startDelay: 5
         spawnInterval: 0.15
   - stream:
       zombies: []

@@ -3,8 +3,10 @@ using UnityEngine.UI;
 using TMPro;
 
 /// <summary>Top-center Day/Night dial. Read-only view: DayTimeManager owns day time, SimpleZombieSpawner owns
-/// night progress, GameManager owns the phase. Event-driven only (no Update): day refreshes once per second,
-/// night on each kill / wave change. Cloud drift lives in DayNightClouds.</summary>
+/// night time, GameManager owns the phase. Event-driven only (no Update): day refreshes once per second, night
+/// once per second of night time plus wave starts and late kills. Night progress is time-based (elapsed / stream
+/// end = last wave + stream tail) with one marker per wave time. Cloud drift lives in DayNightClouds, the runner's glide in
+/// DayNightRunner.</summary>
 public class DayNightHUD : MonoBehaviour
 {
     [Header("Sky (inside the circular mask)")]
@@ -36,14 +38,19 @@ public class DayNightHUD : MonoBehaviour
     [SerializeField] private Image barFillImage;
     [SerializeField] private Sprite dayFillSprite;
     [SerializeField] private Sprite nightFillSprite;
-    [Tooltip("Inactive template; N-1 copies are spread over its parent at night.")]
+    [Tooltip("Inactive template; one copy per wave at its wave time.")]
     [SerializeField] private RectTransform waveDividerTemplate;
+    [Tooltip("Marker tint for waves that bring a Tank or Boss.")]
+    [SerializeField] private Color waveMarkerMajorColor = new Color(1f, 0.35f, 0.3f, 1f);
+    [Tooltip("Night progress icon riding the bar (hidden by day).")]
+    [SerializeField] private DayNightRunner nightRunner;
 
     private DayTimeManager dayTimeManager;
     private SimpleZombieSpawner spawner;
     private bool started;
     private bool subscribed;
-    private int dividerCount = -1;
+    private Color waveMarkerColor = Color.white;
+    private bool waveMarkerColorCached;
     private string lastLabel;
     private string lastDetail;
     private readonly System.Collections.Generic.List<RectTransform> dividers = new System.Collections.Generic.List<RectTransform>();
@@ -129,7 +136,8 @@ public class DayNightHUD : MonoBehaviour
         SetActive(skySunset, true);
         SetCloudColor(cloudDayColor);
         SetFillSprite(dayFillSprite);
-        SetDividerCount(0);
+        LayoutWaveMarkers(null);
+        SetActive(nightRunner, false);
         SetText(phaseLabel, ref lastLabel, $"DAY {GameManager.Instance.CurrentDay}");
         RefreshDay();
     }
@@ -143,7 +151,12 @@ public class DayNightHUD : MonoBehaviour
         SetCloudColor(cloudNightColor);
         SetFillSprite(nightFillSprite);
         SetText(phaseLabel, ref lastLabel, $"NIGHT {GameManager.Instance.CurrentDay}");
+        // Night start only: the spawner has already loaded tonight's waves (GameManager resets it before OnPhaseChanged).
+        LayoutWaveMarkers(spawner);
+        SetActive(nightRunner, true);
         RefreshNight();
+        if (nightRunner != null && spawner != null)
+            nightRunner.SetTarget(spawner.GaugeProgress, true);
     }
 
     private void RefreshDay()
@@ -170,11 +183,24 @@ public class DayNightHUD : MonoBehaviour
         if (spawner == null)
             return;
 
-        float progress = spawner.NightProgress;
+        float progress = spawner.GaugeProgress;
         PlaceOnOrbit(moonIcon, progress);
         SetFill(progress);
-        SetDividerCount(Mathf.Max(0, spawner.WaveCount - 1));
-        SetText(detailText, ref lastDetail, spawner.WaveCount > 0 ? $"WAVE {spawner.CurrentWaveNumber} / {spawner.WaveCount}" : "");
+        if (nightRunner != null)
+            nightRunner.SetTarget(progress, false);
+
+        string detail = "";
+        if (spawner.WavesStarted < spawner.WaveCount)
+        {
+            int seconds = Mathf.CeilToInt(spawner.SecondsToNextWave);
+            detail = $"WAVE {spawner.WavesStarted + 1} · {seconds / 60}:{seconds % 60:00}";
+        }
+        else if (spawner.WaveCount > 0)
+        {
+            detail = $"ZOMBIES LEFT {Zombie.AliveZombieCount}";
+        }
+
+        SetText(detailText, ref lastDetail, detail);
     }
 
     /// <summary>p = 0 east (right), 0.5 top, 1 west (left). Moves the icon only; nothing rotates.</summary>
@@ -221,17 +247,17 @@ public class DayNightHUD : MonoBehaviour
         }
     }
 
-    /// <summary>Only rebuilds when the wave count changes (night start), never per frame.</summary>
-    private void SetDividerCount(int count)
+    /// <summary>Places one marker per wave at waveTime / StreamEndTime (the stream tail after the last wave is the
+    /// space before the bar's end); tints Tank/Boss waves. Called on phase change only, never per frame. Null hides all markers.</summary>
+    private void LayoutWaveMarkers(SimpleZombieSpawner source)
     {
-        if (count == dividerCount || waveDividerTemplate == null)
+        if (waveDividerTemplate == null)
             return;
 
-        dividerCount = count;
+        int count = source != null && source.NightDuration > 0f ? source.WaveCount : 0;
         while (dividers.Count < count)
             dividers.Add(Instantiate(waveDividerTemplate, waveDividerTemplate.parent));
 
-        int waves = count + 1;
         for (int i = 0; i < dividers.Count; i++)
         {
             bool show = i < count;
@@ -239,10 +265,22 @@ public class DayNightHUD : MonoBehaviour
             if (!show)
                 continue;
 
-            float x = (i + 1f) / waves;
+            float x = Mathf.Clamp01(source.WaveTimeAt(i) / source.StreamEndTime);
             dividers[i].anchorMin = new Vector2(x, dividers[i].anchorMin.y);
             dividers[i].anchorMax = new Vector2(x, dividers[i].anchorMax.y);
             dividers[i].anchoredPosition = new Vector2(0f, dividers[i].anchoredPosition.y);
+
+            Graphic graphic = dividers[i].GetComponent<Graphic>();
+            if (graphic != null)
+            {
+                if (!waveMarkerColorCached)
+                {
+                    waveMarkerColor = graphic.color;
+                    waveMarkerColorCached = true;
+                }
+
+                graphic.color = source.IsMajorWave(i) ? waveMarkerMajorColor : waveMarkerColor;
+            }
         }
     }
 

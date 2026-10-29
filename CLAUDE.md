@@ -28,6 +28,8 @@
    이 경로 외에 Day 전환을 추가로 만들지 말 것.
    (참고: 7번째 Night 클리어 시 Spawner가 부른 `TransitionToDay()` 안에서
    Day 대신 `EnterVictory()`로 게임이 끝난다 — 새 Day 전환 경로가 아님.)
+   (2026-10-29: 스트림은 마지막 웨이브 시작 + `streamTailSeconds`(15초)까지 나오고,
+   그 꼬리가 끝나기 전엔 Night이 끝나지 않는다 — 종료를 늦추는 조건이지 조기종료가 아님.)
 
 ## 현재 아키텍처 (확정)
 
@@ -93,6 +95,11 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   `Dial/Mask`(Knob 원형 Mask) 안에 하늘(낮/노을 알파/밤)→해·달→구름→마을, 마스크 밖 `Frame`.
   노을 = 낮 진행도 `sunsetStartProgress`(0.8)부터 알파. 구름 이동은 `DayNightClouds`의
   `Update()` — 규칙 6의 의도적 예외(상태 폴링이 아닌 장식 애니메이션, timeScale 0이면 정지).
+  **밤 다이얼 시간 기반 (2026-10-29, Night waves Phase 3):** 게이지 = 밤 경과 / (마지막 웨이브 +
+  스트림 꼬리), 웨이브마다 노란 마름모 마커(Tank/Boss 웨이브는 빨강), 텍스트 `WAVE n · m:ss` →
+  마지막 웨이브 후 `ZOMBIES LEFT n`. 진행 아이콘 `DayNightRunner`(임시 그림 `RunnerPlaceholder.png`)는
+  1초마다 목표를 받아 그 사이를 매 프레임 보간 — 구름과 같은 규칙 6 예외(장식, 상태 안 읽음).
+  — **Reported implemented** (Play Mode 자동 테스트 + 사용자가 HUD 가시성 OK).
   ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
 - **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
   30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을
