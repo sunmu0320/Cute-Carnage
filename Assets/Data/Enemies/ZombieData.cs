@@ -5,7 +5,8 @@ public enum ZombieType
     Basic,
     Runner,
     Breaker,
-    Tank
+    Tank,
+    Boss
 }
 
 public enum ZombieTargetPreference
@@ -41,6 +42,12 @@ public class ZombieData : ScriptableObject
     public float forwardDetectRange = 1.6f;
     public float forwardDetectRadius = 0.6f;
 
-    [Header("Animation (optional, used later)")]
+    [Header("Spawning")]
+    [Tooltip("Prefab the spawner instantiates for this type; empty uses the spawner's default prefab.")]
+    public GameObject prefab;
+
+    [Header("Animation")]
     public RuntimeAnimatorController animatorController;
+    [Tooltip("Move speed (m/s) at which the walk clip plays at 1x; the Walk state is sped up by moveSpeed / this.")]
+    [Min(0.01f)] public float walkAnimReferenceSpeed = 0.65f;
 }

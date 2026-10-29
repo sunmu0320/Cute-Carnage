@@ -6,13 +6,14 @@ public class Zombie : MonoBehaviour
     private static readonly int SpeedHash = Animator.StringToHash("Speed");
     private static readonly int AttackHash = Animator.StringToHash("Attack");
     private static readonly int DieHash = Animator.StringToHash("Die");
+    private static readonly int WalkSpeedMulHash = Animator.StringToHash("WalkSpeedMul");
     private const float AttackRangeTolerance = 0.01f;
 
     /// <summary>Prototype: zombies not yet dead (OnEnable increments; Die(), or OnDestroy without a death, decrements).</summary>
     public static int AliveZombieCount { get; private set; }
 
     /// <summary>Fires once per real death (Die()). Destroy without dying (retry cleanup, scene unload) does not fire it.</summary>
-    public static event System.Action Died;
+    public static event System.Action<Zombie> Died;
 
     private static readonly System.Collections.Generic.List<Zombie> active = new System.Collections.Generic.List<Zombie>();
 
@@ -102,6 +103,36 @@ public class Zombie : MonoBehaviour
     public float MaxHp => maxHp;
     public bool IsDead => currentHp <= 0f;
 
+    /// <summary>Wave this zombie was spawned for; -1 = the continuous stream (or not from the spawner).</summary>
+    public int WaveIndex { get; private set; } = -1;
+
+    /// <summary>Called by the spawner right after Instantiate (after Awake, before Start). Null data keeps the
+    /// prefab's own ZombieData. emerge is reserved for the ground-emerge intro (not used yet).</summary>
+    public void Initialize(ZombieData data, float hpMultiplier, int waveIndex, bool emerge)
+    {
+        if (data != null)
+        {
+            zombieData = data;
+            ApplyZombieData();
+        }
+
+        WaveIndex = waveIndex;
+        maxHp = Mathf.Max(0.1f, maxHp * Mathf.Max(0.01f, hpMultiplier));
+        currentHp = maxHp;
+        ApplyWalkAnimSpeed();
+    }
+
+    /// <summary>Set once per zombie (not per frame): the walk clip is authored for walkAnimReferenceSpeed.</summary>
+    private void ApplyWalkAnimSpeed()
+    {
+        if (animator == null || zombieData == null)
+        {
+            return;
+        }
+
+        animator.SetFloat(WalkSpeedMulHash, moveSpeed / Mathf.Max(0.01f, zombieData.walkAnimReferenceSpeed));
+    }
+
     /// <summary>Stops movement/attacking/re-targeting while frozen (e.g. GameOver) without disabling the
     /// component or its Animator, so the zombie stays alive and visibly idles in place.</summary>
     public void SetFrozen(bool frozen)
@@ -156,6 +187,7 @@ public class Zombie : MonoBehaviour
         maxHp = Mathf.Max(0.1f, maxHp);
         currentHp = Mathf.Clamp(maxHp, 0f, maxHp);
         hasDied = false;
+        ApplyWalkAnimSpeed();
     }
 
     private void ApplyZombieData()
@@ -1135,7 +1167,7 @@ public class Zombie : MonoBehaviour
 
         hasDied = true;
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
-        Died?.Invoke();
+        Died?.Invoke(this);
         ClearPendingAttack();
         ClearTargetSelection();
         cachedBaseCoreTransform = null;
