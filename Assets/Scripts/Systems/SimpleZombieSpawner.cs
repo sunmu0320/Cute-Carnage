@@ -45,6 +45,9 @@ public class SimpleZombieSpawner : MonoBehaviour
 
     public event Action<int> OnWaveStarted;
 
+    /// <summary>restKillFraction of that wave killed (the breather starts).</summary>
+    public event Action<int> OnWaveMostlyCleared;
+
     public int WaveCount => waves != null ? waves.Length : 0;
     public int WavesStarted => wavesStarted;
     public float NightElapsed => elapsed;
@@ -339,6 +342,7 @@ public class SimpleZombieSpawner : MonoBehaviour
                 run.restTriggered = true;
                 restUntil = elapsed + restDuration;
                 Debug.Log($"[SimpleZombieSpawner] Wave {w + 1} {restKillFraction:P0} cleared: breather for {restDuration:0.#}s.", this);
+                OnWaveMostlyCleared?.Invoke(w);
             }
         }
 
