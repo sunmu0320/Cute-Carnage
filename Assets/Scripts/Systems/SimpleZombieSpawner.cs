@@ -21,6 +21,10 @@ public class SimpleZombieSpawner : MonoBehaviour
     [SerializeField, Tooltip("Wave ring (inner edge): far, off-screen.")] private float waveMinSpawnRadius = 45f;
     [SerializeField, Tooltip("Wave ring (outer edge).")] private float waveMaxSpawnRadius = 60f;
     [SerializeField] private int maxSpawnPositionAttempts = 4;
+    [SerializeField, Tooltip("Stream zombies spawning on screen rise out of the ground with this effect.")]
+    private ZombieEmergeFX emergeFX;
+    [SerializeField, Range(0f, 0.3f), Tooltip("Viewport margin counted as on screen.")]
+    private float onScreenMargin = 0.05f;
 
     [Header("Night")]
     [SerializeField, Tooltip("Per-night stream and waves; the night is picked from GameManager.CurrentDay.")]
@@ -391,16 +395,38 @@ public class SimpleZombieSpawner : MonoBehaviour
         Vector3 toBase = resolvedBaseCore.position - point;
         toBase.y = 0f;
         Quaternion facing = toBase.sqrMagnitude > 0.01f ? Quaternion.LookRotation(toBase) : Quaternion.identity;
+        // Only stream zombies the player can see emerge; waves come from far off-screen, Tank/Boss walk in.
+        bool emerge = waveIndex < 0 && IsOnScreen(point)
+            && (data == null || (data.zombieType != ZombieType.Tank && data.zombieType != ZombieType.Boss));
         GameObject spawned = Instantiate(prefab, point, facing);
         Zombie zombie = spawned.GetComponent<Zombie>();
         if (zombie != null)
         {
-            zombie.Initialize(data, hpMultiplier, waveIndex, false);
+            zombie.Initialize(data, hpMultiplier, waveIndex, emerge);
+        }
+
+        if (emerge && emergeFX != null)
+        {
+            emergeFX.Play(point, 1f);
         }
 
         spawnBudget--;
         totalZombiesSpawned++;
         return true;
+    }
+
+    private bool IsOnScreen(Vector3 point)
+    {
+        Camera cam = Camera.main;
+        if (cam == null)
+        {
+            return false;
+        }
+
+        Vector3 v = cam.WorldToViewportPoint(point);
+        return v.z > 0f
+            && v.x >= -onScreenMargin && v.x <= 1f + onScreenMargin
+            && v.y >= -onScreenMargin && v.y <= 1f + onScreenMargin;
     }
 
     /// <summary>Random point on the ring that lies on terrain (not on a rock, building, fence or prop) and has

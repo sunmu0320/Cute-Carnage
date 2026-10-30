@@ -100,6 +100,12 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   마지막 웨이브 후 `ZOMBIES LEFT n`. 진행 아이콘 `DayNightRunner`(임시 그림 `RunnerPlaceholder.png`)는
   1초마다 목표를 받아 그 사이를 매 프레임 보간 — 구름과 같은 규칙 6 예외(장식, 상태 안 읽음).
   — **Reported implemented** (Play Mode 자동 테스트 + 사용자가 HUD 가시성 OK).
+  **좀비 등장 연출 (2026-10-29, Night waves Phase 4):** 화면 안에서 스폰된 스트림 좀비만
+  땅속 0.6m에서 1.2초간 솟으며 Getting Up(×1.8) → Scream(×1.4) → 걷기, 총 4.5초 이동·공격 불가
+  (`Zombie.emergeDuration`). 흙 조각·먼지는 스포너 prefab 자식 `ZombieEmergeFX`가 공용 파티클에 Emit.
+  비명 소리는 `ZombieData.emergeScream` 연결만 됨 (오디오 파일 없음, 사용자가 나중에 추가).
+  같은 작업에서 `BasicZombieRoot`의 `Visual/BasicZombie` y를 -1.0 → -0.35로 올림 (모든 좀비 발이
+  땅 밑 0.53m에 묻혀 있었음). — **Reported implemented** (Play Mode 자동 테스트 + 사용자 만족 확인).
   ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
 - **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
   30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을

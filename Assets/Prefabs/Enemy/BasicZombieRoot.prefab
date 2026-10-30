@@ -105,6 +105,9 @@ MonoBehaviour:
   debugDamageKey: 107
   debugDamageAmount: 10
   deathDestroyDelay: 5
+  emergeDuration: 4.5
+  emergeSinkDepth: 0.6
+  emergeRiseSeconds: 1.2
 --- !u!136 &4878595367469569891
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -146,7 +149,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5884789348987489791, guid: d97239f85262c364fab0faf4644d219b, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1
+      value: -0.35
       objectReference: {fileID: 0}
     - target: {fileID: 5884789348987489791, guid: d97239f85262c364fab0faf4644d219b, type: 3}
       propertyPath: m_LocalPosition.z

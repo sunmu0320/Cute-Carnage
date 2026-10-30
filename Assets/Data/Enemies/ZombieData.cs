@@ -50,4 +50,9 @@ public class ZombieData : ScriptableObject
     public RuntimeAnimatorController animatorController;
     [Tooltip("Move speed (m/s) at which the walk clip plays at 1x; the Walk state is sped up by moveSpeed / this.")]
     [Min(0.01f)] public float walkAnimReferenceSpeed = 0.65f;
+
+    [Header("Audio")]
+    [Tooltip("Played once when an emerging zombie starts its scream; empty = silent.")]
+    public AudioClip emergeScream;
+    [Range(0f, 1f)] public float emergeScreamVolume = 0.8f;
 }

@@ -7,6 +7,8 @@ public class Zombie : MonoBehaviour
     private static readonly int AttackHash = Animator.StringToHash("Attack");
     private static readonly int DieHash = Animator.StringToHash("Die");
     private static readonly int WalkSpeedMulHash = Animator.StringToHash("WalkSpeedMul");
+    private static readonly int EmergeStateHash = Animator.StringToHash("Emerge");
+    private static readonly int ScreamStateHash = Animator.StringToHash("Scream");
     private const float AttackRangeTolerance = 0.01f;
 
     /// <summary>Prototype: zombies not yet dead (OnEnable increments; Die(), or OnDestroy without a death, decrements).</summary>
@@ -89,9 +91,25 @@ public class Zombie : MonoBehaviour
     private Collider pendingAttackCollider;
     private bool attackHitAvailable;
 
+    [Header("Emerge (ground intro)")]
+    [SerializeField, Min(0.1f), Tooltip("No moving/attacking for this long: Getting Up + Scream at their state speeds.")]
+    private float emergeDuration = 4.5f;
+    [SerializeField, Min(0f), Tooltip("Starts this far under the ground...")]
+    private float emergeSinkDepth = 0.6f;
+    [SerializeField, Min(0.05f), Tooltip("...and rises to the surface over this many seconds.")]
+    private float emergeRiseSeconds = 1.2f;
+
     private float currentHp;
     private bool hasDied;
     private bool isFrozen;
+    private float emergeTimer;
+    private float emergeBaseY;
+    private bool emergeScreamed;
+    private AudioSource voice;
+
+    // ponytail: global gap so a burst of emerging zombies doesn't stack 20 screams in one frame.
+    private const float ScreamMinGap = 0.15f;
+    private static float nextScreamTime;
     private string lastFrontTargetLogKey;
 
     // Cached from ZombieData
@@ -106,8 +124,11 @@ public class Zombie : MonoBehaviour
     /// <summary>Wave this zombie was spawned for; -1 = the continuous stream (or not from the spawner).</summary>
     public int WaveIndex { get; private set; } = -1;
 
+    /// <summary>Rising out of the ground: can be hit, but doesn't move, attack or re-target.</summary>
+    public bool IsEmerging => emergeTimer > 0f;
+
     /// <summary>Called by the spawner right after Instantiate (after Awake, before Start). Null data keeps the
-    /// prefab's own ZombieData. emerge is reserved for the ground-emerge intro (not used yet).</summary>
+    /// prefab's own ZombieData. emerge = play the Getting Up intro from under the ground first.</summary>
     public void Initialize(ZombieData data, float hpMultiplier, int waveIndex, bool emerge)
     {
         if (data != null)
@@ -120,6 +141,55 @@ public class Zombie : MonoBehaviour
         maxHp = Mathf.Max(0.1f, maxHp * Mathf.Max(0.01f, hpMultiplier));
         currentHp = maxHp;
         ApplyWalkAnimSpeed();
+
+        if (emerge)
+        {
+            emergeTimer = emergeDuration;
+            emergeScreamed = false;
+            emergeBaseY = transform.position.y;
+            transform.position += Vector3.down * emergeSinkDepth;
+            if (animator != null)
+            {
+                animator.Play(EmergeStateHash, 0, 0f);
+            }
+        }
+    }
+
+    /// <summary>Rise out of the ground over emergeRiseSeconds, finish Getting Up, scream (sound once), then walk.</summary>
+    private void UpdateEmerge()
+    {
+        emergeTimer = Mathf.Max(0f, emergeTimer - Time.deltaTime);
+        float rise = Mathf.Clamp01((emergeDuration - emergeTimer) / emergeRiseSeconds);
+        Vector3 p = transform.position;
+        p.y = emergeBaseY - emergeSinkDepth * (1f - rise);
+        transform.position = p;
+
+        if (!emergeScreamed && animator != null && animator.GetCurrentAnimatorStateInfo(0).shortNameHash == ScreamStateHash)
+        {
+            emergeScreamed = true;
+            PlayEmergeScream();
+        }
+    }
+
+    private void PlayEmergeScream()
+    {
+        if (zombieData == null || zombieData.emergeScream == null || Time.time < nextScreamTime)
+        {
+            return;
+        }
+
+        nextScreamTime = Time.time + ScreamMinGap;
+        if (voice == null)
+        {
+            voice = gameObject.AddComponent<AudioSource>();
+            voice.playOnAwake = false;
+            voice.spatialBlend = 0.6f; // mostly positional, still audible from the high top-down camera
+            voice.minDistance = 8f;
+            voice.maxDistance = 45f;
+        }
+
+        voice.pitch = Random.Range(0.9f, 1.1f);
+        voice.PlayOneShot(zombieData.emergeScream, zombieData.emergeScreamVolume);
     }
 
     /// <summary>Set once per zombie (not per frame): the walk clip is authored for walkAnimReferenceSpeed.</summary>
@@ -240,6 +310,12 @@ public class Zombie : MonoBehaviour
 
         if (isFrozen)
         {
+            return;
+        }
+
+        if (IsEmerging)
+        {
+            UpdateEmerge();
             return;
         }
 
@@ -1166,6 +1242,7 @@ public class Zombie : MonoBehaviour
         }
 
         hasDied = true;
+        emergeTimer = 0f; // dies where it is; the Death trigger overrides the Emerge clip
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
         Died?.Invoke(this);
         ClearPendingAttack();
