@@ -37,6 +37,8 @@ public class ZombieData : ScriptableObject
     public float attackRange = 1.4f;
     public float attackInterval = 1f;
     public float targetRefreshInterval = 1f;
+    [Tooltip("Damage to fences is multiplied by this (Breaker = 3).")]
+    [Min(0f)] public float fenceDamageMultiplier = 1f;
 
     [Header("Detection")]
     public float forwardDetectRange = 1.6f;
@@ -46,9 +48,15 @@ public class ZombieData : ScriptableObject
     [Tooltip("Prefab the spawner instantiates for this type; empty uses the spawner's default prefab.")]
     public GameObject prefab;
 
+    [Header("Look")]
+    [Tooltip("Uniform scale of the whole zombie (model and collider).")]
+    [Min(0.1f)] public float bodyScale = 1f;
+    [Tooltip("Multiplied into the model's base color; white = unchanged.")]
+    public Color tint = Color.white;
+
     [Header("Animation")]
     public RuntimeAnimatorController animatorController;
-    [Tooltip("Move speed (m/s) at which the walk clip plays at 1x; the Walk state is sped up by moveSpeed / this.")]
+    [Tooltip("Move speed (m/s) at which the walk clip plays at 1x (at bodyScale 1; scaled with it); the Walk state is sped up by moveSpeed / this.")]
     [Min(0.01f)] public float walkAnimReferenceSpeed = 0.65f;
 
     [Header("Audio")]

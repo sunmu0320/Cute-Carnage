@@ -15,10 +15,10 @@ MonoBehaviour:
   nights:
   - stream:
       zombies: []
-      intervalStart: 3
-      intervalEnd: 0.9
+      intervalStart: 0.2
+      intervalEnd: 1.2
     waves:
-    - delayFromPrevious: 20
+    - delayFromPrevious: 1
       groups:
       - zombie: {fileID: 0}
         count: 15
@@ -137,6 +137,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.2
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 6
+        allAround: 0
+        from: 0
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 90
       groups:
       - zombie: {fileID: 0}
@@ -146,6 +153,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 10
+        allAround: 0
+        from: 1
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 140
       groups:
       - zombie: {fileID: 0}
@@ -162,6 +176,13 @@ MonoBehaviour:
         arcWidth: 45
         startDelay: 5
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 17
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 2
+        spawnInterval: 0.3
   - stream:
       zombies: []
       intervalStart: 2.2
@@ -176,6 +197,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.2
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 6
+        allAround: 0
+        from: 0
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 90
       groups:
       - zombie: {fileID: 0}
@@ -185,6 +213,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 11
+        allAround: 0
+        from: 1
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 140
       groups:
       - zombie: {fileID: 0}
@@ -201,6 +236,20 @@ MonoBehaviour:
         arcWidth: 45
         startDelay: 5
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 19
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 2
+        spawnInterval: 0.3
+      - zombie: {fileID: 11400000, guid: 40abd6cb052cc6b44a6cbffa87088da8, type: 2}
+        count: 2
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 4
+        spawnInterval: 2
   - stream:
       zombies: []
       intervalStart: 2
@@ -215,6 +264,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.2
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 7
+        allAround: 0
+        from: 0
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 90
       groups:
       - zombie: {fileID: 0}
@@ -224,6 +280,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 12
+        allAround: 0
+        from: 1
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 140
       groups:
       - zombie: {fileID: 0}
@@ -240,6 +303,20 @@ MonoBehaviour:
         arcWidth: 45
         startDelay: 5
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 21
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 2
+        spawnInterval: 0.3
+      - zombie: {fileID: 11400000, guid: 40abd6cb052cc6b44a6cbffa87088da8, type: 2}
+        count: 2
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 4
+        spawnInterval: 2
   - stream:
       zombies: []
       intervalStart: 1.8
@@ -254,6 +331,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.2
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 8
+        allAround: 0
+        from: 0
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 90
       groups:
       - zombie: {fileID: 0}
@@ -263,6 +347,13 @@ MonoBehaviour:
         arcWidth: 40
         startDelay: 0
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 13
+        allAround: 0
+        from: 1
+        arcWidth: 40
+        startDelay: 2
+        spawnInterval: 0.3
     - delayFromPrevious: 140
       groups:
       - zombie: {fileID: 0}
@@ -279,4 +370,18 @@ MonoBehaviour:
         arcWidth: 45
         startDelay: 5
         spawnInterval: 0.15
+      - zombie: {fileID: 11400000, guid: 16e484c988e581d4281430ee0d33556e, type: 2}
+        count: 23
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 2
+        spawnInterval: 0.3
+      - zombie: {fileID: 11400000, guid: 40abd6cb052cc6b44a6cbffa87088da8, type: 2}
+        count: 3
+        allAround: 0
+        from: 2
+        arcWidth: 45
+        startDelay: 4
+        spawnInterval: 2
   hpGrowthPerDay: 0.15

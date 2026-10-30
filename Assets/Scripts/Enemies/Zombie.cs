@@ -9,6 +9,7 @@ public class Zombie : MonoBehaviour
     private static readonly int WalkSpeedMulHash = Animator.StringToHash("WalkSpeedMul");
     private static readonly int EmergeStateHash = Animator.StringToHash("Emerge");
     private static readonly int ScreamStateHash = Animator.StringToHash("Scream");
+    private static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
     private const float AttackRangeTolerance = 0.01f;
 
     /// <summary>Prototype: zombies not yet dead (OnEnable increments; Die(), or OnDestroy without a death, decrements).</summary>
@@ -35,6 +36,7 @@ public class Zombie : MonoBehaviour
 
     [Header("Attack")]
     [SerializeField] private float attackDamage = 8f;
+    [SerializeField] private float fenceDamageMultiplier = 1f;
     [SerializeField] private float attackInterval = 1f;
 
     [Header("Targeting")]
@@ -140,6 +142,7 @@ public class Zombie : MonoBehaviour
         WaveIndex = waveIndex;
         maxHp = Mathf.Max(0.1f, maxHp * Mathf.Max(0.01f, hpMultiplier));
         currentHp = maxHp;
+        ApplyLook();
         ApplyWalkAnimSpeed();
 
         if (emerge)
@@ -152,6 +155,36 @@ public class Zombie : MonoBehaviour
             {
                 animator.Play(EmergeStateHash, 0, 0f);
             }
+        }
+    }
+
+    /// <summary>Per-type scale and tint (Breaker/Tank share the Basic model). Untinted zombies keep no property
+    /// block so they stay SRP-batcher compatible.</summary>
+    private void ApplyLook()
+    {
+        if (zombieData == null)
+        {
+            return;
+        }
+
+        transform.localScale = Vector3.one * zombieData.bodyScale;
+        if (zombieData.tint == Color.white)
+        {
+            return;
+        }
+
+        var block = new MaterialPropertyBlock();
+        foreach (Renderer r in GetComponentsInChildren<Renderer>())
+        {
+            Material m = r.sharedMaterial;
+            if (m == null || !m.HasProperty(BaseColorId))
+            {
+                continue;
+            }
+
+            r.GetPropertyBlock(block);
+            block.SetColor(BaseColorId, m.GetColor(BaseColorId) * zombieData.tint);
+            r.SetPropertyBlock(block);
         }
     }
 
@@ -200,7 +233,9 @@ public class Zombie : MonoBehaviour
             return;
         }
 
-        animator.SetFloat(WalkSpeedMulHash, moveSpeed / Mathf.Max(0.01f, zombieData.walkAnimReferenceSpeed));
+        // A bigger body takes longer strides, so the clip's reference speed scales with it.
+        float reference = zombieData.walkAnimReferenceSpeed * Mathf.Max(0.1f, zombieData.bodyScale);
+        animator.SetFloat(WalkSpeedMulHash, moveSpeed / Mathf.Max(0.01f, reference));
     }
 
     /// <summary>Stops movement/attacking/re-targeting while frozen (e.g. GameOver) without disabling the
@@ -275,6 +310,7 @@ public class Zombie : MonoBehaviour
         targetRefreshInterval = zombieData.targetRefreshInterval;
         forwardDetectRange = zombieData.forwardDetectRange;
         forwardDetectRadius = zombieData.forwardDetectRadius;
+        fenceDamageMultiplier = zombieData.fenceDamageMultiplier;
 
         zombieType = zombieData.zombieType;
         targetPreference = zombieData.targetPreference;
@@ -966,7 +1002,7 @@ public class Zombie : MonoBehaviour
 
         if (pendingAttackKind == TargetKind.Fence)
         {
-            pendingAttackFence.TakeDamage(attackDamage);
+            pendingAttackFence.TakeDamage(attackDamage * fenceDamageMultiplier);
         }
         else if (pendingAttackKind == TargetKind.Tower)
         {
