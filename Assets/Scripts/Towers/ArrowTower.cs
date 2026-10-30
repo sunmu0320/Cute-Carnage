@@ -103,6 +103,7 @@ public class ArrowTower : MonoBehaviour, IStructureHpSource
             return;
         }
 
+        StructureDamageEvents.Report(this);
         currentHp = Mathf.Clamp(currentHp - damageAmount, 0f, MaxHp);
 
         if (currentHp <= 0f)

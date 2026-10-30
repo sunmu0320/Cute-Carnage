@@ -44,8 +44,8 @@ public class BaseCore : MonoBehaviour, IStructureHpSource
             return;
         }
 
+        StructureDamageEvents.Report(this);
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
-
 
         if (currentHp > 0f)
         {

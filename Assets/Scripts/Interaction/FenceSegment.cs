@@ -103,6 +103,11 @@ public class FenceSegment : MonoBehaviour, IStructureHpSource
             return;
         }
 
+        if (!isDestroyed)
+        {
+            StructureDamageEvents.Report(this);
+        }
+
         currentHp = Mathf.Max(0f, currentHp - amount);
         if (currentHp <= 0f && !isDestroyed)
         {
