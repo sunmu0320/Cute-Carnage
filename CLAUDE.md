@@ -111,8 +111,7 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   맞으면 플레이어 둘레 원 위 빨간 호 (`StructureHitIndicator`, `StructureDamageEvents.Report`, 맞을 때마다 2초
   유지). 둘 다 표시 중에만 LateUpdate — 규칙 6 표시 예외. — **Reported implemented** (Play Mode 자동 테스트 + 사용자 확인).
   **2026-11-01 변경:** 대상이 화면 안이어도 계속 표시 — `!`는 플레이어에서 대상 쪽 `onScreenRingRadius`(160)
-  위치(더 가까우면 대상 위), 빨간 호는 화면 안 구조물도 표시. — **Reported implemented** (Play Mode 짧은 확인,
-  사용자 플레이 확인 아직).
+  위치(더 가까우면 대상 위), 빨간 호는 화면 안 구조물도 표시. — **Verified** (Play Mode 짧은 확인 + 사용자 플레이 확인).
   ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
   **좀비 군중 간격 (2026-11-01, SC2식):** `ZombieCrowd`(static, 첫 `Zombie.LateUpdate`가 프레임당 1회 실행)가
   공간 해시로 겹친 좀비를 밀어냄(GC 0). 공격 범위 안·등장 중·Frozen 좀비(`IsCrowdAnchored`)는 안 밀리고 걷는
