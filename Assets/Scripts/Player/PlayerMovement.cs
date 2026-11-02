@@ -36,6 +36,7 @@ public class PlayerMovement : MonoBehaviour
     public KeyCode runKey = KeyCode.LeftShift;
 
     private Rigidbody rb;
+    private PlayerAutoCombat autoCombat;
     private float currentMoveBlend;
     private float moveBlendVelocity;
     private bool isMovementLocked;
@@ -56,6 +57,7 @@ public class PlayerMovement : MonoBehaviour
 
         if (animator == null)
             animator = GetComponentInChildren<Animator>();
+        autoCombat = GetComponent<PlayerAutoCombat>();
     }
 
     // Update is called once per frame
@@ -94,12 +96,15 @@ public class PlayerMovement : MonoBehaviour
         {
             movementInput = moveDir;
             movementSpeed = runPressed ? moveSpeed * sprintMultiplier : moveSpeed;
-            Rotate(moveDir);
         }
         else
         {
             movementInput = Vector3.zero;
         }
+
+        // With a target in range the body turns toward it (movement still follows input); otherwise it faces
+        // the move direction.
+        Rotate(autoCombat != null && autoCombat.TryGetFacingDirection(out Vector3 toTarget) ? toTarget : moveDir);
     }
 
     void FixedUpdate()

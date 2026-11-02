@@ -127,6 +127,15 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   (`AnimationEvent_Footstep`, 발 닿는 프레임)로 재생, 블렌드 중엔 가중치 > 0.5 클립만. 소리 파일은
   `Assets/Audio/` (원본은 `Raw/`, 사용자 제공, Freesound CC0). — **Verified** (발소리: Play Mode 확인 + 사용자 청취 OK;
   좀비 소리는 파일 없음).
+- **플레이어 사격 애니메이션 (2026-11-01):** 사거리 안에 대상이 있으면 몸 전체가 대상 쪽으로 부드럽게 돌고
+  (`PlayerAutoCombat.TryGetFacingDirection` → `PlayerMovement.Rotate`), 이동은 입력 방향 그대로, 다리는 걷기/idle.
+  `PlayerLocomotion.controller`의 `UpperBodyShoot` 레이어(`UpperBodyMask` 상체만, Override, 대상 있을 때 weight 1로
+  블렌드)에서 발사마다 `Shoot` 트리거 → Recoil → Draw (Mixamo `Longbow Aiming Pack`, Humanoid로 Hansoo 아바타 복사).
+  Mixamo 활 클립은 골반이 ~90° 돌아 있어 `CharacterVisual`의 `BowAimTwist`가 LateUpdate에서 척추를 비틀어
+  왼팔(어깨→손)을 정면에 맞춤. 새총은 왼손: `WeaponHoldPoint`가 `mixamorig:LeftHandIndex1` 밑(오른손 값의
+  bone-local X 미러), 모양은 `PlayerWeaponController` Weapon Visual Offsets (게임 시작 시 생성되므로 Play 중엔
+  `BirdShot(Clone)` Transform으로 맞춰 보고 오프셋에 옮겨 적을 것). 뒷걸음/옆걸음 애니는 보류(Planned).
+  — **Verified** (Play Mode 확인 + 사용자가 조준 방향·손 위치 확인).
 - **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
   30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을
   덮음; 흙바닥 `TL_Dirt` 반지름 ~23m). 안쪽 파티클은 `MistFadeZone.keepFraction` 0.2.

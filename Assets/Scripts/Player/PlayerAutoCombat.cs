@@ -22,6 +22,16 @@ public class PlayerAutoCombat : MonoBehaviour
     [SerializeField] private float feedbackDuration = 0.08f;
     [SerializeField] private bool logAttacksWhenNoFeedbackRoot = true;
 
+    [Header("Shooting Animation")]
+    [Tooltip("Body Animator with the upper-body shoot layer. Auto-found in children if left empty.")]
+    [SerializeField] private Animator bodyAnimator;
+    [SerializeField] private string shootLayerName = "UpperBodyShoot";
+    [Tooltip("Layer weight change per second when a target enters/leaves range.")]
+    [SerializeField] private float shootLayerBlendSpeed = 6f;
+
+    private static readonly int ShootHash = Animator.StringToHash("Shoot");
+    private int shootLayer = -1;
+
     private Zombie currentTarget;
 private float targetRefreshTimer;
     private float nextAttackTime;
@@ -44,6 +54,55 @@ private float targetRefreshTimer;
             feedbackStartLocalPosition = attackFeedbackRoot.localPosition;
             feedbackInitialized = true;
         }
+
+        if (bodyAnimator == null)
+        {
+            bodyAnimator = GetComponentInChildren<Animator>();
+        }
+
+        if (bodyAnimator != null)
+        {
+            shootLayer = bodyAnimator.GetLayerIndex(shootLayerName);
+        }
+    }
+
+    private void OnDisable()
+    {
+        // GameOver / pause lock: drop the bow pose instead of freezing mid-draw.
+        if (shootLayer >= 0 && bodyAnimator != null)
+        {
+            bodyAnimator.SetLayerWeight(shootLayer, 0f);
+        }
+    }
+
+    /// <summary>Flat direction to the current target while one is in range (PlayerMovement turns toward it).</summary>
+    public bool TryGetFacingDirection(out Vector3 direction)
+    {
+        direction = Vector3.zero;
+        if (!isActiveAndEnabled || !IsValidTarget(currentTarget))
+        {
+            return false;
+        }
+
+        direction = currentTarget.transform.position - transform.position;
+        direction.y = 0f;
+        return direction.sqrMagnitude > 0.0001f;
+    }
+
+    /// <summary>Bow pose fades in while a target is in range and out when there is none.</summary>
+    private void UpdateShootLayerWeight()
+    {
+        if (shootLayer < 0 || bodyAnimator == null)
+        {
+            return;
+        }
+
+        float goal = IsValidTarget(currentTarget) ? 1f : 0f;
+        float weight = bodyAnimator.GetLayerWeight(shootLayer);
+        if (weight != goal)
+        {
+            bodyAnimator.SetLayerWeight(shootLayer, Mathf.MoveTowards(weight, goal, shootLayerBlendSpeed * Time.deltaTime));
+        }
     }
 
     private void Update()
@@ -59,6 +118,7 @@ private float targetRefreshTimer;
         RefreshTargetIfNeeded(weaponData.attackRange);
         UpdateLookAtTarget();
         TryAttack(weaponData);
+        UpdateShootLayerWeight();
         UpdateAttackFeedback();
     }
 
@@ -140,6 +200,11 @@ private float targetRefreshTimer;
         }
 
         nextAttackTime = Time.time + Mathf.Max(0.05f, weaponData.attackInterval);
+        if (shootLayer >= 0)
+        {
+            bodyAnimator.SetTrigger(ShootHash); // release (Recoil), then re-draw and hold until the next shot
+        }
+
         TriggerAttackFeedback();
 
         if (!feedbackInitialized && logAttacksWhenNoFeedbackRoot)
