@@ -15,6 +15,9 @@ public class DayTimeTester : MonoBehaviour
     [SerializeField]
     private KeyCode resumeKey = KeyCode.Y;
 
+    [SerializeField, Tooltip("Free T1 fence/tower (full HP) in every empty unlocked slot. Testing only.")]
+    private KeyCode buildAllKey = KeyCode.B;
+
     private void OnEnable()
     {
         if (dayTimeManager == null)
@@ -37,6 +40,11 @@ public class DayTimeTester : MonoBehaviour
 
     private void Update()
     {
+        if (Input.GetKeyDown(buildAllKey))
+        {
+            BuildAllEmptySlots();
+        }
+
         if (dayTimeManager == null)
         {
             return;
@@ -59,6 +67,31 @@ public class DayTimeTester : MonoBehaviour
             dayTimeManager.Resume();
             Debug.Log("[DayTimeTester] Resume()");
         }
+    }
+
+    /// <summary>Uses the checkpoint-restore paths, so no resources are spent. Upgraded slots are left alone.</summary>
+    private static void BuildAllEmptySlots()
+    {
+        int fences = 0, towers = 0;
+        foreach (FenceSlot slot in FindObjectsByType<FenceSlot>(FindObjectsSortMode.None))
+        {
+            if (slot.CanInstallFence())
+            {
+                slot.RestoreFenceInternal(slot.FenceDataForTier(1), float.MaxValue);
+                fences++;
+            }
+        }
+
+        foreach (TowerSlot slot in FindObjectsByType<TowerSlot>(FindObjectsSortMode.None))
+        {
+            if (!slot.HasTower)
+            {
+                slot.RestoreTowerInternal(true, float.MaxValue);
+                towers++;
+            }
+        }
+
+        Debug.Log($"[DayTimeTester] Build all: {fences} fences, {towers} towers installed (T1).");
     }
 
     private void HandleDayEnded()

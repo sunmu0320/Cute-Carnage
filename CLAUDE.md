@@ -107,10 +107,12 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   같은 작업에서 `BasicZombieRoot`의 `Visual/BasicZombie` y를 -1.0 → -0.35로 올림 (모든 좀비 발이
   땅 밑 0.53m에 묻혀 있었음). — **Reported implemented** (Play Mode 자동 테스트 + 사용자 만족 확인).
   **밤 경고 UI (2026-10-29, Night waves Phase 5·6):** 웨이브 5마리가 HomeBase 자식 `ApproachAlarm`
-  (반경 30m 트리거)에 들어오면 웨이브당 1번 화면 가장자리 노란 `!` (`EdgeIndicatorUI`, 화면 안이면 처음
-  5초는 그 위에 표시). 화면 밖 펜스/타워/BaseCore가 맞으면 플레이어 둘레 원 위 빨간 호
-  (`StructureHitIndicator`, `StructureDamageEvents.Report`, 맞을 때마다 2초 유지). 둘 다 표시 중에만
-  LateUpdate — 규칙 6 표시 예외. — **Reported implemented** (Play Mode 자동 테스트 + 사용자 확인).
+  (반경 30m 트리거)에 들어오면 웨이브당 1번 화면 가장자리 노란 `!` (`EdgeIndicatorUI`). 펜스/타워/BaseCore가
+  맞으면 플레이어 둘레 원 위 빨간 호 (`StructureHitIndicator`, `StructureDamageEvents.Report`, 맞을 때마다 2초
+  유지). 둘 다 표시 중에만 LateUpdate — 규칙 6 표시 예외. — **Reported implemented** (Play Mode 자동 테스트 + 사용자 확인).
+  **2026-11-01 변경:** 대상이 화면 안이어도 계속 표시 — `!`는 플레이어에서 대상 쪽 `onScreenRingRadius`(160)
+  위치(더 가까우면 대상 위), 빨간 호는 화면 안 구조물도 표시. — **Reported implemented** (Play Mode 짧은 확인,
+  사용자 플레이 확인 아직).
   ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
   **좀비 군중 간격 (2026-11-01, SC2식):** `ZombieCrowd`(static, 첫 `Zombie.LateUpdate`가 프레임당 1회 실행)가
   공간 해시로 겹친 좀비를 밀어냄(GC 0). 공격 범위 안·등장 중·Frozen 좀비(`IsCrowdAnchored`)는 안 밀리고 걷는
@@ -171,7 +173,8 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   즉시 실행. Tower T1→T2+는 `TowerUpgradeConfirmPanel` 확인 팝업을 거쳐야
   함 — **Approved design, 미구현** (T2 `TowerData`도 아직 없음, 지금은
   T1이 Max Tier라 Upgrade 비활성). `DayTimeTester.resetKey`는 R 충돌을
-  피해 `0`(Alpha0)으로 변경됨.
+  피해 `0`(Alpha0)으로 변경됨. 테스트 키 `DayTimeTester.buildAllKey` = **B**: 빈(잠기지 않은) 펜스/타워 칸
+  전부에 T1을 무료·풀 HP로 설치 (복원 경로 사용, 다음 Day 시작 전 재시도하면 되돌아감).
 
 ## 참고 문서 (우선순위 순)
 
