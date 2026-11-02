@@ -82,7 +82,9 @@ MonoBehaviour:
   animator: {fileID: 1096917429507906461}
   moveSpeed: 2.5
   attackRange: 1.2
+  crowdRadius: 0.4
   attackDamage: 10
+  fenceDamageMultiplier: 1
   attackInterval: 1
   targetRefreshInterval: 1
   forwardDetectRange: 1.56
@@ -105,6 +107,8 @@ MonoBehaviour:
   debugDamageKey: 107
   debugDamageAmount: 10
   deathDestroyDelay: 5
+  hitFlashMaterial: {fileID: 2100000, guid: 34d8cebf5cd2ee9418f94e48800a6ef4, type: 2}
+  hitFlashSeconds: 0.1
   emergeDuration: 4.5
   emergeSinkDepth: 0.6
   emergeRiseSeconds: 1.2

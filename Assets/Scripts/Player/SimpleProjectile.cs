@@ -6,6 +6,8 @@ public class SimpleProjectile : MonoBehaviour
     [SerializeField] private float arrivalThreshold = 0.05f;
     [SerializeField, Tooltip("Visual-only rotation offset for mesh axis alignment. Try (0, 0, 90) or (0, 90, 0).")]
     private Vector3 rotationOffsetEuler;
+    [SerializeField, Tooltip("Child trail; detached on arrival so it fades out instead of vanishing.")]
+    private TrailRenderer trail;
 
     private Vector3 moveDirection;
     private Vector3 startPosition;
@@ -105,8 +107,14 @@ public class SimpleProjectile : MonoBehaviour
             deferredTarget.TakeDamage(deferredDamage);
             if (deferredHitVfxPrefab != null)
             {
-                Instantiate(deferredHitVfxPrefab, deferredHitPoint, Quaternion.identity);
+                Instantiate(deferredHitVfxPrefab, deferredHitPoint, Quaternion.LookRotation(moveDirection));
             }
+        }
+
+        if (trail != null)
+        {
+            trail.transform.SetParent(null, true);
+            trail.autodestruct = true;
         }
 
         Destroy(gameObject);

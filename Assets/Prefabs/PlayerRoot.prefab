@@ -269,7 +269,7 @@ MonoBehaviour:
   combatLookRoot: {fileID: 0}
   projectileVisualPrefab: {fileID: 1657205161027453845, guid: 402acb4aa3e57904da756f95e728ef55, type: 3}
   projectileSpawnPoint: {fileID: 3586155208670315295}
-  hitVfxPrefab: {fileID: 0}
+  hitVfxPrefab: {fileID: 952439576694787011, guid: bbc4007d5bc3c624990f1df0ef12b825, type: 3}
   targetLayerMask:
     serializedVersion: 2
     m_Bits: 128

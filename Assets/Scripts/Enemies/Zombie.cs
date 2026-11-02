@@ -62,6 +62,11 @@ public class Zombie : MonoBehaviour
     [SerializeField] private float debugDamageAmount = 10f;
     [SerializeField, Min(0f)] private float deathDestroyDelay = 5f;
 
+    [Header("Hit Flash")]
+    [Tooltip("Swapped onto every renderer for hitFlashSeconds when damaged (empty = no flash).")]
+    [SerializeField] private Material hitFlashMaterial;
+    [SerializeField, Min(0f)] private float hitFlashSeconds = 0.1f;
+
     private enum TargetKind
     {
         None,
@@ -70,6 +75,10 @@ public class Zombie : MonoBehaviour
         Player,
         BaseCore
     }
+
+    private Renderer[] flashRenderers;
+    private Material[][] originalMaterials;
+    private Material[][] flashMaterials;
 
     private TargetKind currentTargetKind;
     private FenceSegment currentTargetFence;
@@ -1280,6 +1289,7 @@ public class Zombie : MonoBehaviour
         }
 
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
+        FlashWhite();
 
         if (currentHp <= 0f)
         {
@@ -1289,6 +1299,50 @@ public class Zombie : MonoBehaviour
         {
             SfxPlayer.Play(zombieData.hitSound, transform.position, zombieData.hitVolume);
         }
+    }
+
+    /// <summary>Every renderer shows hitFlashMaterial for hitFlashSeconds; a hit during the flash restarts it.</summary>
+    private void FlashWhite()
+    {
+        if (hitFlashMaterial == null || hitFlashSeconds <= 0f)
+        {
+            return;
+        }
+
+        if (flashRenderers == null)
+        {
+            flashRenderers = GetComponentsInChildren<Renderer>();
+            originalMaterials = new Material[flashRenderers.Length][];
+            flashMaterials = new Material[flashRenderers.Length][];
+            for (int i = 0; i < flashRenderers.Length; i++)
+            {
+                originalMaterials[i] = flashRenderers[i].sharedMaterials;
+                flashMaterials[i] = new Material[originalMaterials[i].Length];
+                System.Array.Fill(flashMaterials[i], hitFlashMaterial);
+            }
+        }
+
+        if (!IsInvoking(nameof(EndFlash)))
+        {
+            for (int i = 0; i < flashRenderers.Length; i++)
+            {
+                flashRenderers[i].sharedMaterials = flashMaterials[i];
+                flashRenderers[i].SetPropertyBlock(null); // the tint block would recolor the flash
+            }
+        }
+
+        CancelInvoke(nameof(EndFlash));
+        Invoke(nameof(EndFlash), hitFlashSeconds);
+    }
+
+    private void EndFlash()
+    {
+        for (int i = 0; i < flashRenderers.Length; i++)
+        {
+            flashRenderers[i].sharedMaterials = originalMaterials[i];
+        }
+
+        ApplyLook(); // restores the tint block
     }
 
     private void Die()
