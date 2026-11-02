@@ -51,8 +51,6 @@ MonoBehaviour:
   speed: 20
   arrivalThreshold: 0.05
   rotationOffsetEuler: {x: 0, y: 0, z: 0}
-  hitSound: {fileID: 8300000, guid: 5acba8c95f4062e4ab952a9411156fde, type: 3}
-  hitVolume: 0.6
 --- !u!33 &1695346596684375334
 MeshFilter:
   m_ObjectHideFlags: 0
