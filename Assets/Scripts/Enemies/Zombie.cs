@@ -33,6 +33,8 @@ public class Zombie : MonoBehaviour
     [Header("Movement")]
     [SerializeField] private float moveSpeed = 2f;
     [SerializeField] private float attackRange = 1.4f;
+    [SerializeField, Min(0.05f), Tooltip("Personal space for ZombieCrowd spacing (× bodyScale). Capsule is 0.32.")]
+    private float crowdRadius = 0.4f;
 
     [Header("Attack")]
     [SerializeField] private float attackDamage = 8f;
@@ -122,6 +124,20 @@ public class Zombie : MonoBehaviour
     public float CurrentHp => currentHp;
     public float MaxHp => maxHp;
     public bool IsDead => currentHp <= 0f;
+
+    public float CrowdRadius => crowdRadius * transform.localScale.x;
+
+    /// <summary>Attacking, emerging or frozen: ZombieCrowd never pushes this one, walkers yield around it.</summary>
+    public bool IsCrowdAnchored { get; private set; }
+
+    /// <summary>+1/-1, fixed per zombie: which way it slides around a blocking attacker to find a gap.</summary>
+    public float CrowdSlideSign { get; private set; } = 1f;
+
+    /// <summary>Walking but stuck in the queue (same test as the idle anim): rows behind it slide around it too.</summary>
+    public bool IsCrowdWaiting => !IsCrowdAnchored && smoothedPlanarSpeed <= moveSpeed * 0.3f;
+
+    private Vector3 lastFramePosition;
+    private float smoothedPlanarSpeed;
 
     /// <summary>Wave this zombie was spawned for; -1 = the continuous stream (or not from the spawner).</summary>
     public int WaveIndex { get; private set; } = -1;
@@ -321,6 +337,8 @@ public class Zombie : MonoBehaviour
     {
         attackTimer = 0f;
         targetRefreshTimer = 0f;
+        lastFramePosition = transform.position;
+        CrowdSlideSign = Random.value < 0.5f ? -1f : 1f;
         EnsureBaseCoreCached();
         SelectFrontTarget();
         // Zombies spawned in the same frame would otherwise all re-target in the same later frame.
@@ -334,10 +352,8 @@ public class Zombie : MonoBehaviour
             return;
         }
 
-        if (animator != null)
-        {
-            animator.SetFloat(SpeedHash, 0f);
-        }
+        UpdateWalkAnim();
+        IsCrowdAnchored = isFrozen || IsEmerging; // HandleMovement sets it when in attack range
 
         if (Input.GetKeyDown(debugDamageKey))
         {
@@ -364,6 +380,32 @@ public class Zombie : MonoBehaviour
 
         HandleMovement();
         HandleAttack();
+    }
+
+    private void LateUpdate()
+    {
+        ZombieCrowd.ResolveOncePerFrame();
+    }
+
+    /// <summary>Walk anim from actual net movement (after last frame's crowd push), so a walker blocked by
+    /// the front line idles instead of walking in place.</summary>
+    private void UpdateWalkAnim()
+    {
+        Vector3 p = transform.position;
+        float dt = Time.deltaTime;
+        if (dt > 0f)
+        {
+            Vector3 d = p - lastFramePosition;
+            d.y = 0f;
+            smoothedPlanarSpeed = Mathf.Lerp(smoothedPlanarSpeed, d.magnitude / dt, Mathf.Clamp01(10f * dt));
+        }
+
+        lastFramePosition = p;
+        if (animator != null)
+        {
+            bool walking = !isFrozen && !IsEmerging && smoothedPlanarSpeed > moveSpeed * 0.3f;
+            animator.SetFloat(SpeedHash, walking ? 1f : 0f);
+        }
     }
 
     private void RefreshTargetIfNeeded()
@@ -837,22 +879,19 @@ public class Zombie : MonoBehaviour
         float surfaceDistance = toSurface.magnitude;
         if (surfaceDistance <= AttackRangeTolerance && TryMoveOutsideTarget(targetCollider, currentPos))
         {
+            IsCrowdAnchored = true;
             return;
         }
 
         if (surfaceDistance <= attackRange + AttackRangeTolerance)
         {
+            IsCrowdAnchored = true;
             return;
         }
 
         Vector3 moveDirection = toSurface / surfaceDistance;
         Vector3 desiredPos = closestPoint - moveDirection * attackRange;
         transform.position = Vector3.MoveTowards(currentPos, desiredPos, moveSpeed * Time.deltaTime);
-
-        if (animator != null && transform.position != currentPos)
-        {
-            animator.SetFloat(SpeedHash, 1f);
-        }
 
         if (moveDirection.sqrMagnitude > 0.0001f)
         {
@@ -1202,11 +1241,6 @@ public class Zombie : MonoBehaviour
             destination,
             moveSpeed * Time.deltaTime);
 
-        if (animator != null && transform.position != currentPosition)
-        {
-            animator.SetFloat(SpeedHash, 1f);
-        }
-
         transform.rotation = Quaternion.LookRotation(moveDirection, Vector3.up);
     }
 
@@ -1245,11 +1279,6 @@ public class Zombie : MonoBehaviour
             currentPosition,
             outsidePosition,
             moveSpeed * Time.deltaTime);
-
-        if (animator != null && transform.position != currentPosition)
-        {
-            animator.SetFloat(SpeedHash, 1f);
-        }
 
         transform.rotation = Quaternion.LookRotation(separationDirection, Vector3.up);
         return true;

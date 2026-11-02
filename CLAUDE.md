@@ -112,6 +112,13 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   (`StructureHitIndicator`, `StructureDamageEvents.Report`, 맞을 때마다 2초 유지). 둘 다 표시 중에만
   LateUpdate — 규칙 6 표시 예외. — **Reported implemented** (Play Mode 자동 테스트 + 사용자 확인).
   ⚠️ 커밋된 `Day.unity`는 UIRoot가 비활성(`m_IsActive: 0`, 895fe8b부터)이었고 작업 중 1로 복구함.
+  **좀비 군중 간격 (2026-11-01, SC2식):** `ZombieCrowd`(static, 첫 `Zombie.LateUpdate`가 프레임당 1회 실행)가
+  공간 해시로 겹친 좀비를 밀어냄(GC 0). 공격 범위 안·등장 중·Frozen 좀비(`IsCrowdAnchored`)는 안 밀리고 걷는
+  좀비만 비켜서서 앞줄만 공격, 뒷줄은 대기. 막힌 좀비는 공격 중/대기 중(`IsCrowdWaiting`) 좀비를 끼고 좀비별
+  고정 방향(`CrowdSlideSign`)으로 옆으로 미끄러져 빈자리를 찾음. 간격 `Zombie.crowdRadius`(0.4 × bodyScale),
+  미끄러짐 `ZombieCrowd.SlideFactor`(1). 걷기 애니는 실제 이동량 기준(막히면 idle). 슬롯 예약 방식은 안 씀.
+  — **Verified** (Play Mode 자동 테스트: 겹침 0, BaseCore 공격 12마리·옆면까지 퍼짐 + 사용자 플레이 OK).
+  펜스 동시 공격 수가 줄어 밤 밸런스가 바뀜 — `NightSchedule`은 사용자가 조정.
 - **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
   30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을
   덮음; 흙바닥 `TL_Dirt` 반지름 ~23m). 안쪽 파티클은 `MistFadeZone.keepFraction` 0.2.
