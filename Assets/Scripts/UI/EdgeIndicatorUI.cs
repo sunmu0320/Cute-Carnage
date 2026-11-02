@@ -2,9 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Screen-edge markers pointing at off-screen world points (wave alarm). Each Show returns a handle;
-/// once its point is on screen the marker sits over it for the first minVisibleSeconds, then hides while on
-/// screen, and disappears for good on Hide or when its time runs out. Position is re-pinned in LateUpdate while anything is shown — a deliberate
+/// <summary>Direction markers for world points (wave alarm). Each Show returns a handle; off screen the marker
+/// is pinned to the screen edge, on screen it sits on a ring around the player toward the point, and it
+/// disappears on Hide or when its time runs out. Position is re-pinned in LateUpdate while anything is shown — a deliberate
 /// rule-6 exception (display only, the camera moves every frame); the component disables itself when empty.</summary>
 public class EdgeIndicatorUI : MonoBehaviour
 {
@@ -13,8 +13,8 @@ public class EdgeIndicatorUI : MonoBehaviour
     [Tooltip("Inactive template (Image, optionally with a child label); one copy per shown marker.")]
     [SerializeField] private RectTransform template;
     [SerializeField] private float edgeMargin = 40f;
-    [Tooltip("For this long after Show the marker stays up even when its point is on screen (drawn over it).")]
-    [SerializeField, Min(0f)] private float minVisibleSeconds = 5f;
+    [Tooltip("On screen: marker sits this far (canvas units) from the player toward the point, or over the point if closer.")]
+    [SerializeField, Min(0f)] private float onScreenRingRadius = 160f;
     [Tooltip("Top-center box (width, height) kept clear for the Day/Night dial; markers there drop below it.")]
     [SerializeField] private Vector2 topCenterKeepOut = new Vector2(340f, 300f);
 
@@ -23,7 +23,6 @@ public class EdgeIndicatorUI : MonoBehaviour
         public RectTransform marker;
         public Vector3 point;
         public float hideAt;
-        public float keepOnScreenUntil;
     }
 
     private readonly Dictionary<int, Entry> entries = new Dictionary<int, Entry>();
@@ -31,12 +30,15 @@ public class EdgeIndicatorUI : MonoBehaviour
     private readonly List<int> expired = new List<int>();
     private RectTransform area;
     private Camera cam;
+    private Transform player;
     private int nextHandle = 1;
 
     private void Awake()
     {
         Instance = this;
         area = (RectTransform)transform;
+        PlayerHealth playerHealth = FindFirstObjectByType<PlayerHealth>();
+        player = playerHealth != null ? playerHealth.transform : null;
         enabled = false;
     }
 
@@ -64,8 +66,8 @@ public class EdgeIndicatorUI : MonoBehaviour
             marker = marker,
             point = worldPoint,
             hideAt = seconds > 0f ? Time.time + seconds : float.MaxValue,
-            keepOnScreenUntil = Time.time + minVisibleSeconds,
         };
+        marker.gameObject.SetActive(true);
         enabled = true;
         Pin(entries[handle]);
         return handle;
@@ -119,8 +121,8 @@ public class EdgeIndicatorUI : MonoBehaviour
             Hide(h);
     }
 
-    /// <summary>Off screen: pinned to the screen edge toward the point. On screen: drawn over the point for the
-    /// first minVisibleSeconds, hidden after that.</summary>
+    /// <summary>Off screen: pinned to the screen edge toward the point. On screen: on a ring around the player
+    /// toward the point (over the point when it is inside the ring).</summary>
     private void Pin(Entry e)
     {
         if (cam == null)
@@ -130,17 +132,21 @@ public class EdgeIndicatorUI : MonoBehaviour
 
         Vector3 vp = cam.WorldToViewportPoint(e.point);
         bool onScreen = vp.z > 0f && vp.x >= 0f && vp.x <= 1f && vp.y >= 0f && vp.y <= 1f;
-        bool visible = !onScreen || Time.time < e.keepOnScreenUntil;
-        if (e.marker.gameObject.activeSelf != visible)
-            e.marker.gameObject.SetActive(visible);
-        if (!visible)
-            return;
-
         Vector2 size = area.rect.size;
         Vector2 offset = new Vector2((vp.x - 0.5f) * size.x, (vp.y - 0.5f) * size.y);
         if (onScreen)
         {
-            e.marker.anchoredPosition = offset;
+            Vector2 origin = Vector2.zero;
+            if (player != null)
+            {
+                Vector3 pvp = cam.WorldToViewportPoint(player.position);
+                origin = new Vector2((pvp.x - 0.5f) * size.x, (pvp.y - 0.5f) * size.y);
+            }
+
+            Vector2 toPoint = offset - origin;
+            e.marker.anchoredPosition = toPoint.sqrMagnitude > onScreenRingRadius * onScreenRingRadius
+                ? origin + toPoint.normalized * onScreenRingRadius
+                : offset;
             return;
         }
 

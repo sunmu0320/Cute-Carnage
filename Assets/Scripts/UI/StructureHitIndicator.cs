@@ -2,8 +2,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
-/// <summary>Red arcs on a ring around the player pointing at off-screen structures (fence, tower, base
-/// core) that are being hit. One arc per structure; every hit holds it for holdSeconds, then it fades out.
+/// <summary>Red arcs on a ring around the player pointing at structures (fence, tower, base core) that are
+/// being hit, on screen or off. One arc per structure; every hit holds it for holdSeconds, then it fades out.
 /// Arcs are re-aimed in LateUpdate only while any is shown — display-only rule-6 exception (the camera moves
 /// every frame); the component disables itself when nothing is shown.</summary>
 public class StructureHitIndicator : MonoBehaviour
@@ -104,7 +104,7 @@ public class StructureHitIndicator : MonoBehaviour
             enabled = false;
     }
 
-    /// <summary>Rotates the arc toward the structure and fades it near the end; false once it is on screen.</summary>
+    /// <summary>Rotates the arc toward the structure and fades it near the end; false when it has no direction.</summary>
     private bool Aim(Entry e, Component structure)
     {
         if (!TryGetScreenDirection(structure.transform.position, out Vector2 dir))
@@ -121,8 +121,7 @@ public class StructureHitIndicator : MonoBehaviour
         return true;
     }
 
-    /// <summary>Screen-space direction from the player (screen center without one); false when the point is
-    /// on screen.</summary>
+    /// <summary>Screen-space direction from the player (screen center without one), on screen or off.</summary>
     private bool TryGetScreenDirection(Vector3 worldPoint, out Vector2 dir)
     {
         dir = Vector2.zero;
@@ -132,9 +131,6 @@ public class StructureHitIndicator : MonoBehaviour
             return false;
 
         Vector3 vp = cam.WorldToViewportPoint(worldPoint);
-        if (vp.z > 0f && vp.x >= 0f && vp.x <= 1f && vp.y >= 0f && vp.y <= 1f)
-            return false;
-
         Vector2 origin = player != null ? (Vector2)cam.WorldToViewportPoint(player.position) : new Vector2(0.5f, 0.5f);
         dir = new Vector2((vp.x - origin.x) * cam.pixelWidth, (vp.y - origin.y) * cam.pixelHeight);
         if (vp.z < 0f)
