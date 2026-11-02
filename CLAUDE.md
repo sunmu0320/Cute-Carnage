@@ -120,6 +120,13 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   미끄러짐 `ZombieCrowd.SlideFactor`(1). 걷기 애니는 실제 이동량 기준(막히면 idle). 슬롯 예약 방식은 안 씀.
   — **Verified** (Play Mode 자동 테스트: 겹침 0, BaseCore 공격 12마리·옆면까지 퍼짐 + 사용자 플레이 OK).
   펜스 동시 공격 수가 줄어 밤 밸런스가 바뀜 — `NightSchedule`은 사용자가 조정.
+- **사운드 (2026-11-01):** 모든 1회성 효과음은 `SfxPlayer.Play(clip 또는 clip[], 위치, 볼륨)` 하나로 재생
+  (첫 사용 시 자동 생성, AudioSource 24개 풀, 같은 소리 최소 간격 기본 0.08초, 피치 ±10%, timeScale 0이면 무음,
+  마스터 볼륨 = `AudioListener.volume`). 좀비 소리 칸은 `ZombieData`(emergeScream/hit/death/attackImpact, 비면 무음).
+  플레이어 발소리는 `CharacterVisual`의 `PlayerFootsteps` — Walking/Running FBX import 설정의 애니메이션 이벤트
+  (`AnimationEvent_Footstep`, 발 닿는 프레임)로 재생, 블렌드 중엔 가중치 > 0.5 클립만. 소리 파일은
+  `Assets/Audio/` (원본은 `Raw/`, 사용자 제공, Freesound CC0). — **Verified** (발소리: Play Mode 확인 + 사용자 청취 OK;
+  좀비 소리는 파일 없음).
 - **홈베이스 밤 안개 감소 (2026-10-18):** HomeBase 프리팹 `MistBlocker`(VFXVolume, 파티클 트리거)를
   30×30 Box → Capsule 반지름 28로 교체 (안개 파티클 지름이 18m라 중심이 28m 안이면 흙바닥 ~20m 안쪽을
   덮음; 흙바닥 `TL_Dirt` 반지름 ~23m). 안쪽 파티클은 `MistFadeZone.keepFraction` 0.2.

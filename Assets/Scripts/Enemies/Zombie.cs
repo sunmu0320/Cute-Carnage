@@ -109,11 +109,6 @@ public class Zombie : MonoBehaviour
     private float emergeTimer;
     private float emergeBaseY;
     private bool emergeScreamed;
-    private AudioSource voice;
-
-    // ponytail: global gap so a burst of emerging zombies doesn't stack 20 screams in one frame.
-    private const float ScreamMinGap = 0.15f;
-    private static float nextScreamTime;
     private string lastFrontTargetLogKey;
 
     // Cached from ZombieData
@@ -222,23 +217,11 @@ public class Zombie : MonoBehaviour
 
     private void PlayEmergeScream()
     {
-        if (zombieData == null || zombieData.emergeScream == null || Time.time < nextScreamTime)
+        if (zombieData != null)
         {
-            return;
+            // Gap so a burst of emerging zombies doesn't stack 20 screams in one frame.
+            SfxPlayer.Play(zombieData.emergeScream, transform.position, zombieData.emergeScreamVolume, 0.15f);
         }
-
-        nextScreamTime = Time.time + ScreamMinGap;
-        if (voice == null)
-        {
-            voice = gameObject.AddComponent<AudioSource>();
-            voice.playOnAwake = false;
-            voice.spatialBlend = 0.6f; // mostly positional, still audible from the high top-down camera
-            voice.minDistance = 8f;
-            voice.maxDistance = 45f;
-        }
-
-        voice.pitch = Random.Range(0.9f, 1.1f);
-        voice.PlayOneShot(zombieData.emergeScream, zombieData.emergeScreamVolume);
     }
 
     /// <summary>Set once per zombie (not per frame): the walk clip is authored for walkAnimReferenceSpeed.</summary>
@@ -1057,6 +1040,11 @@ public class Zombie : MonoBehaviour
             pendingAttackBaseCore.TakeDamage(attackDamage);
         }
 
+        if (zombieData != null)
+        {
+            SfxPlayer.Play(zombieData.attackImpactSound, transform.position, zombieData.attackImpactVolume);
+        }
+
         ClearPendingAttack();
     }
 
@@ -1297,6 +1285,10 @@ public class Zombie : MonoBehaviour
         {
             Die();
         }
+        else if (zombieData != null)
+        {
+            SfxPlayer.Play(zombieData.hitSound, transform.position, zombieData.hitVolume);
+        }
     }
 
     private void Die()
@@ -1310,6 +1302,11 @@ public class Zombie : MonoBehaviour
         emergeTimer = 0f; // dies where it is; the Death trigger overrides the Emerge clip
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
         Died?.Invoke(this);
+        if (zombieData != null)
+        {
+            SfxPlayer.Play(zombieData.deathSound, transform.position, zombieData.deathVolume);
+        }
+
         ClearPendingAttack();
         ClearTargetSelection();
         cachedBaseCoreTransform = null;

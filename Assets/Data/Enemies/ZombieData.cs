@@ -63,4 +63,13 @@ public class ZombieData : ScriptableObject
     [Tooltip("Played once when an emerging zombie starts its scream; empty = silent.")]
     public AudioClip emergeScream;
     [Range(0f, 1f)] public float emergeScreamVolume = 0.8f;
+    [Tooltip("Zombie takes damage but survives; empty = silent.")]
+    public AudioClip hitSound;
+    [Range(0f, 1f)] public float hitVolume = 0.6f;
+    [Tooltip("Zombie dies; empty = silent.")]
+    public AudioClip deathSound;
+    [Range(0f, 1f)] public float deathVolume = 0.8f;
+    [Tooltip("Zombie's attack lands on a fence/tower/player/base core; empty = silent.")]
+    public AudioClip attackImpactSound;
+    [Range(0f, 1f)] public float attackImpactVolume = 0.7f;
 }

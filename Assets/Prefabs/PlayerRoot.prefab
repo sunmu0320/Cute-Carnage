@@ -108,6 +108,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerInteractor
   interactionRadius: 2
+  structurePanelStayOpenRadius: 4
   interactableLayerMask:
     serializedVersion: 2
     m_Bits: 64
@@ -115,6 +116,7 @@ MonoBehaviour:
   resourceManager: {fileID: 0}
   interactionPromptUI: {fileID: 0}
   structureActionPanelUI: {fileID: 0}
+  nightRepairPanelUI: {fileID: 0}
   overlapBufferSize: 32
   playerAnimator: {fileID: 902382456698424084}
   playerMovement: {fileID: 8668083628741614758}
@@ -264,7 +266,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerAutoCombat
   weaponController: {fileID: 2295573965754464758}
-  interactor: {fileID: 3906453950919470430}
   combatLookRoot: {fileID: 0}
   projectileVisualPrefab: {fileID: 1657205161027453845, guid: 402acb4aa3e57904da756f95e728ef55, type: 3}
   projectileSpawnPoint: {fileID: 3586155208670315295}
@@ -357,7 +358,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -1070350730909333850, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
       insertIndex: -1
       addedObject: {fileID: 3586155208670315295}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8420830545292897616}
   m_SourcePrefab: {fileID: 100100000, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
 --- !u!95 &902382456698424084 stripped
 Animator:
@@ -369,6 +373,29 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -1070350730909333850, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
   m_PrefabInstance: {fileID: 6768767001919583877}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &5849635403593698260 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
+  m_PrefabInstance: {fileID: 6768767001919583877}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8420830545292897616
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5849635403593698260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 49c923c39cff06d458c583d0e64b397b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerFootsteps
+  footstepClips:
+  - {fileID: 8300000, guid: 609dc8ddd0067db45a8d8c1ada3d0789, type: 3}
+  - {fileID: 8300000, guid: 01808ee0e67011744a47c6ec07e3de6d, type: 3}
+  - {fileID: 8300000, guid: 6a3ddd958366a744582b9e3b1a4ed0ce, type: 3}
+  - {fileID: 8300000, guid: 230c7c0b33618b34bb205a3db50d6b62, type: 3}
+  footstepVolume: 0.35
 --- !u!4 &6513828785147613550 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
