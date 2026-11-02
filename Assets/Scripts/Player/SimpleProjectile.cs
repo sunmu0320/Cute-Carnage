@@ -6,6 +6,9 @@ public class SimpleProjectile : MonoBehaviour
     [SerializeField] private float arrivalThreshold = 0.05f;
     [SerializeField, Tooltip("Visual-only rotation offset for mesh axis alignment. Try (0, 0, 90) or (0, 90, 0).")]
     private Vector3 rotationOffsetEuler;
+    [SerializeField, Tooltip("Played where the projectile hits a zombie (empty = silent).")]
+    private AudioClip hitSound;
+    [SerializeField, Range(0f, 1f)] private float hitVolume = 0.6f;
 
     private Vector3 moveDirection;
     private Vector3 startPosition;
@@ -103,6 +106,7 @@ public class SimpleProjectile : MonoBehaviour
         if (canApplyDamage)
         {
             deferredTarget.TakeDamage(deferredDamage);
+            SfxPlayer.Play(hitSound, deferredHitPoint, hitVolume);
             if (deferredHitVfxPrefab != null)
             {
                 Instantiate(deferredHitVfxPrefab, deferredHitPoint, Quaternion.identity);

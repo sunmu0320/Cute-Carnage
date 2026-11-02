@@ -127,6 +127,11 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   (`AnimationEvent_Footstep`, 발 닿는 프레임)로 재생, 블렌드 중엔 가중치 > 0.5 클립만. 소리 파일은
   `Assets/Audio/` (원본은 `Raw/`, 사용자 제공, Freesound CC0). — **Verified** (발소리: Play Mode 확인 + 사용자 청취 OK;
   좀비 소리는 파일 없음).
+  새총 소리 (2026-11-01): 당김 = `WeaponData.drawSound`, `standing draw arrow` 클립 0.55초(손이 모였다 벌어지기
+  시작) 애니메이션 이벤트 `AnimationEvent_Draw` → `CharacterVisual`의 `PlayerWeaponSounds`. 발사 =
+  `WeaponData.releaseSounds`(Release_01/02 랜덤, `PlayerAutoCombat.TryAttack`). 피격 = 투사체 프리팹
+  `SimpleProjectile.hitSound`(Pebble, 명중 시에만). — **Reported implemented** (Play Mode 짧은 확인: 4개 모두 재생;
+  사용자 청취 전).
 - **플레이어 사격 애니메이션 (2026-11-01):** 사거리 안에 대상이 있으면 몸 전체가 대상 쪽으로 부드럽게 돌고
   (`PlayerAutoCombat.TryGetFacingDirection` → `PlayerMovement.Rotate`), 이동은 입력 방향 그대로, 다리는 걷기/idle.
   `PlayerLocomotion.controller`의 `UpperBodyShoot` 레이어(`UpperBodyMask` 상체만, Override, 대상 있을 때 weight 1로

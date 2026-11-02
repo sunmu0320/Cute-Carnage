@@ -368,6 +368,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7682461243106444803}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7994184643604480134}
   m_SourcePrefab: {fileID: 100100000, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}
 --- !u!95 &902382456698424084 stripped
 Animator:
@@ -417,6 +420,18 @@ MonoBehaviour:
   shootLayerName: UpperBodyShoot
   maxTwist: 120
   followSpeed: 12
+--- !u!114 &7994184643604480134
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5849635403593698260}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dd87d2ea518b204e91bce2968c909c7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerWeaponSounds
 --- !u!4 &6513828785147613550 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 1bb9d22c1dbf5b849b7b90cae574d780, type: 3}

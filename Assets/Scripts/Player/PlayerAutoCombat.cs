@@ -205,6 +205,7 @@ private float targetRefreshTimer;
             bodyAnimator.SetTrigger(ShootHash); // release (Recoil), then re-draw and hold until the next shot
         }
 
+        SfxPlayer.Play(weaponData.releaseSounds, transform.position, weaponData.releaseVolume);
         TriggerAttackFeedback();
 
         if (!feedbackInitialized && logAttacksWhenNoFeedbackRoot)

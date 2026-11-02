@@ -18,3 +18,9 @@ MonoBehaviour:
   attackRange: 10
   attackInterval: 1
   damage: 9
+  drawSound: {fileID: 8300000, guid: 9723cb0239c24c64483fb86e7b683a25, type: 3}
+  drawVolume: 0.5
+  releaseSounds:
+  - {fileID: 8300000, guid: 3ae54b774be409f47adc02e0ebab3944, type: 3}
+  - {fileID: 8300000, guid: 5be0fa3a9d650ad4c9b9d55549eeb11b, type: 3}
+  releaseVolume: 0.8
