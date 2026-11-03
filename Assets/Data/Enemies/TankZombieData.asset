@@ -26,8 +26,26 @@ MonoBehaviour:
   forwardDetectRadius: 1.5
   prefab: {fileID: 0}
   bodyScale: 1.4
+  knockbackMultiplier: 0.3
   tint: {r: 0.55, g: 0.65, b: 0.5, a: 1}
   animatorController: {fileID: 9100000, guid: 97bb4849f083c864c9b14709be9f0f13, type: 2}
   walkAnimReferenceSpeed: 0.65
-  emergeScream: {fileID: 0}
+  emergeScreams:
+  - {fileID: 8300000, guid: c9493940e7b89b94d8b98d9051b7bda6, type: 3}
+  - {fileID: 8300000, guid: 886b3800d2e0c4a439d519e5ea11a5b7, type: 3}
   emergeScreamVolume: 0.8
+  hitSound: {fileID: 0}
+  hitVolume: 0.6
+  groanSounds:
+  - {fileID: 8300000, guid: daf29de7ab14ad14ea4caa611e45b203, type: 3}
+  - {fileID: 8300000, guid: 99b36f09ae491574987afa98aaec869f, type: 3}
+  - {fileID: 8300000, guid: 59c431e8fc038fa40a4f059902ab9307, type: 3}
+  - {fileID: 8300000, guid: 58c7ab14a828e1e4aa8482ff01295a67, type: 3}
+  groanVolume: 0.7
+  deathSound: {fileID: 0}
+  deathVolume: 0.8
+  attackSounds:
+  - {fileID: 8300000, guid: 508b3705921b20042a634eb18d33cc09, type: 3}
+  - {fileID: 8300000, guid: 74f314dad3ac82b4e8494d5c127a0e7b, type: 3}
+  - {fileID: 8300000, guid: c2028079269f4ee4a831132bab55dee3, type: 3}
+  attackImpactVolume: 0.7

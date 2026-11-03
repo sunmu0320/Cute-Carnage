@@ -127,14 +127,26 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   (`AnimationEvent_Footstep`, 발 닿는 프레임)로 재생, 블렌드 중엔 가중치 > 0.5 클립만. 소리 파일은
   `Assets/Audio/` (원본은 `Raw/`, 사용자 제공, Freesound CC0). — **Verified** (발소리: Play Mode 확인 + 사용자 청취 OK;
   좀비 소리는 파일 없음).
+  좀비 소리 (2026-11-02, `Assets/Audio/Zombie/`): `ZombieData` — `emergeScreams`(Scream1~4, Tank는 TankScream2·3),
+  `attackSounds`(claw_strike1~3, 공격 명중 순간), `groanSounds`(ZombiePain1~4, 맞을 때 전 좀비 공용 3~7초 무작위 쿨다운으로
+  가끔만), `hitSound`(모든 타격음 — 파일 아직 없음). 웨이브 시작 = `SimpleZombieSpawner.waveStartScreams`(WaveStartScream1~6,
+  웨이브가 50m 밖이라 리스너에서 웨이브 방향 10m 지점에서 재생). — **Reported implemented** (Play Mode: pain/claw 재생
+  확인; 웨이브 비명은 실제 밤 미확인).
   새총 소리 (2026-11-01): 발사할 때만 `WeaponData.releaseSounds`(Slingshot_Release_02 하나,
   `PlayerAutoCombat.TryAttack`). 당김·피격 소리는 사용자 요청으로 삭제. — **Reported implemented**
   (Play Mode 짧은 확인; 사용자 청취 전).
 - **타격 이펙트 (2026-11-02):** `Pebble` 자식 `Trail`(TrailRenderer 0.15초, 도착 시 떼어내 `autodestruct`로 페이드).
-  좀비는 데미지마다 `Zombie.hitFlashMaterial`(`Art/VFX/Hit/HitFlash.mat`, 흰 Unlit)로 `hitFlashSeconds`(0.1) 동안
-  머티리얼 교체 후 복원(틴트 블록은 `ApplyLook`으로 재적용), 모든 데미지 소스 공통. 피 튀김은
+  좀비는 데미지마다 `hitFlashSeconds`(0.1) 동안 머티리얼 배열 끝에 `Zombie.hitFlashMaterial`(`Art/VFX/Hit/HitFlash.mat`,
+  투명 흰 Unlit)을 덧그림 — 세기 = 그 머티리얼 Base Color 알파(0.2, Linear 색공간이라 숫자보다 진해 보임). 플래시 중엔
+  틴트 블록을 끄고 `ApplyLook`으로 재적용, 모든 데미지 소스 공통. 피 튀김은
   `PlayerAutoCombat.hitVfxPrefab` = `BloodHit`(구 메시 파티클 버스트, 투사체 진행 방향, 끝나면 자동 삭제).
-  — **Verified** (Play Mode 캡처 + 사용자 확인).
+  — **Verified** (Play Mode 캡처 + 사용자 확인; 반투명 덧그리기는 2026-11-02 캡처 확인).
+- **좀비 피격 반응 (2026-11-02):** `Zombie.TakeDamage(amount, knockDirection)` — 방향이 있으면(돌멩이) 0.15초 동안
+  `knockbackDistance`(0.3m) × `ZombieData.knockbackMultiplier`(Tank 0.3) 밀림, 그동안 이동·공격 안 함. 상체 젖히기는
+  애니메이션 클립/레이어 없이 LateUpdate에서 Spine/Chest/Neck/Head를 미는 방향으로 `hitLeanAngle`(20°) 기울였다
+  `hitLeanSeconds`(0.5)에 걸쳐 복귀 (방향 없는 데미지는 앞에서 맞은 것처럼 뒤로). 휴머노이드 Override 레이어는 빈
+  상태에서도 기본 포즈로 덮어써서 클립 방식은 폐기 — `Zombie Reaction Hit(_Simple).fbx`는 미사용. 등장 중/Frozen/
+  죽는 타격은 넉백·젖히기 없음. — **Reported implemented** (Play Mode: 넉백 0.304m, 네 방향 젖힘 방향 확인; 사용자 직접 확인 전).
 - **플레이어 사격 애니메이션 (2026-11-01):** 사거리 안에 대상이 있으면 몸 전체가 대상 쪽으로 부드럽게 돌고
   (`PlayerAutoCombat.TryGetFacingDirection` → `PlayerMovement.Rotate`), 이동은 입력 방향 그대로, 다리는 걷기/idle.
   `PlayerLocomotion.controller`의 `UpperBodyShoot` 레이어(`UpperBodyMask` 상체만, Override, 대상 있을 때 weight 1로

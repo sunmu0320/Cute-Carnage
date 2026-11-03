@@ -25,6 +25,9 @@ public class SimpleZombieSpawner : MonoBehaviour
     private ZombieEmergeFX emergeFX;
     [SerializeField, Range(0f, 0.3f), Tooltip("Viewport margin counted as on screen.")]
     private float onScreenMargin = 0.05f;
+    [SerializeField, Tooltip("A random one plays when each wave starts, a short way from the player toward the wave.")]
+    private AudioClip[] waveStartScreams;
+    [SerializeField, Range(0f, 1f)] private float waveStartScreamVolume = 1f;
 
     [Header("Night")]
     [SerializeField, Tooltip("Per-night stream and waves; the night is picked from GameManager.CurrentDay.")]
@@ -212,6 +215,7 @@ public class SimpleZombieSpawner : MonoBehaviour
         {
             int started = wavesStarted++;
             Debug.Log($"[SimpleZombieSpawner] Wave {started + 1}/{waves.Length} started at {elapsed:0.0}s ({runs[started].total} zombies).", this);
+            PlayWaveStartScream(started);
             OnWaveStarted?.Invoke(started);
             OnNightProgressChanged?.Invoke();
         }
@@ -238,6 +242,29 @@ public class SimpleZombieSpawner : MonoBehaviour
         {
             CompleteNight();
         }
+    }
+
+    /// <summary>The wave spawns ~50m out, beyond hearing range, so the scream plays 10m from the listener toward
+    /// the wave's first directional group (on the listener for all-around waves).</summary>
+    private void PlayWaveStartScream(int waveIndex)
+    {
+        AudioListener listener = FindFirstObjectByType<AudioListener>();
+        if (listener == null)
+        {
+            return;
+        }
+
+        Vector3 position = listener.transform.position;
+        foreach (NightSchedule.Group group in waves[waveIndex].groups)
+        {
+            if (!group.allAround)
+            {
+                position += NightSchedule.CompassDirection(group.from) * 10f;
+                break;
+            }
+        }
+
+        SfxPlayer.Play(waveStartScreams, position, waveStartScreamVolume, 0.5f, 0.05f);
     }
 
     private void UpdateWaveGroups(int waveIndex)

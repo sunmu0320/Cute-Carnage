@@ -104,7 +104,7 @@ public class SimpleProjectile : MonoBehaviour
 
         if (canApplyDamage)
         {
-            deferredTarget.TakeDamage(deferredDamage);
+            deferredTarget.TakeDamage(deferredDamage, moveDirection);
             if (deferredHitVfxPrefab != null)
             {
                 Instantiate(deferredHitVfxPrefab, deferredHitPoint, Quaternion.LookRotation(moveDirection));

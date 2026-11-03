@@ -51,6 +51,8 @@ public class ZombieData : ScriptableObject
     [Header("Look")]
     [Tooltip("Uniform scale of the whole zombie (model and collider).")]
     [Min(0.1f)] public float bodyScale = 1f;
+    [Tooltip("Scales how far hits push this zombie back (0 = never knocked back).")]
+    [Min(0f)] public float knockbackMultiplier = 1f;
     [Tooltip("Multiplied into the model's base color; white = unchanged.")]
     public Color tint = Color.white;
 
@@ -60,16 +62,19 @@ public class ZombieData : ScriptableObject
     [Min(0.01f)] public float walkAnimReferenceSpeed = 0.65f;
 
     [Header("Audio")]
-    [Tooltip("Played once when an emerging zombie starts its scream; empty = silent.")]
-    public AudioClip emergeScream;
+    [Tooltip("Played once when an emerging zombie starts its scream (random variant); empty = silent.")]
+    public AudioClip[] emergeScreams;
     [Range(0f, 1f)] public float emergeScreamVolume = 0.8f;
-    [Tooltip("Zombie takes damage but survives; empty = silent.")]
+    [Tooltip("Impact on every hit (slingshot, arrow, tower), including the killing one; empty = silent.")]
     public AudioClip hitSound;
     [Range(0f, 1f)] public float hitVolume = 0.6f;
+    [Tooltip("Pain groans: a hit only groans when the shared cooldown (Zombie.GroanGapSeconds) has passed, so they come now and then, not every hit. Random variant; empty = silent.")]
+    public AudioClip[] groanSounds;
+    [Range(0f, 1f)] public float groanVolume = 0.7f;
     [Tooltip("Zombie dies; empty = silent.")]
     public AudioClip deathSound;
     [Range(0f, 1f)] public float deathVolume = 0.8f;
-    [Tooltip("Zombie's attack lands on a fence/tower/player/base core; empty = silent.")]
-    public AudioClip attackImpactSound;
+    [Tooltip("Zombie's attack lands on a fence/tower/player/base core (random variant); empty = silent.")]
+    public AudioClip[] attackSounds;
     [Range(0f, 1f)] public float attackImpactVolume = 0.7f;
 }

@@ -18,6 +18,9 @@ public class Zombie : MonoBehaviour
     /// <summary>Fires once per real death (Die()). Destroy without dying (retry cleanup, scene unload) does not fire it.</summary>
     public static event System.Action<Zombie> Died;
 
+    private static readonly Vector2 GroanGapSeconds = new Vector2(3f, 7f);
+    private static float nextGroanTime;
+
     private static readonly System.Collections.Generic.List<Zombie> active = new System.Collections.Generic.List<Zombie>();
 
     /// <summary>Enabled zombies, so callers avoid FindObjectsByType. Includes dead ones still playing their
@@ -63,9 +66,25 @@ public class Zombie : MonoBehaviour
     [SerializeField, Min(0f)] private float deathDestroyDelay = 5f;
 
     [Header("Hit Flash")]
-    [Tooltip("Swapped onto every renderer for hitFlashSeconds when damaged (empty = no flash).")]
+    [Tooltip("Drawn over every renderer for hitFlashSeconds when damaged (empty = no flash); its Base Color alpha is the flash strength.")]
     [SerializeField] private Material hitFlashMaterial;
     [SerializeField, Min(0f)] private float hitFlashSeconds = 0.1f;
+
+    [Header("Knockback")]
+    [Tooltip("Metres a hit pushes the zombie (× ZombieData.knockbackMultiplier); it can't move or attack meanwhile.")]
+    [SerializeField, Min(0f)] private float knockbackDistance = 0.3f;
+    [SerializeField, Min(0.01f)] private float knockbackSeconds = 0.15f;
+    private Vector3 knockbackVelocity;
+    private float knockbackTimer;
+
+    [Header("Hit Reaction")]
+    [Tooltip("Total upper-body tilt (degrees, split over spine/chest/neck/head) toward where the hit pushes.")]
+    [SerializeField, Range(0f, 60f)] private float hitLeanAngle = 20f;
+    [Tooltip("Seconds from the hit until the upper body is back upright.")]
+    [SerializeField, Min(0.05f)] private float hitLeanSeconds = 0.5f;
+    private Transform[] leanBones;
+    private Vector3 leanAxis;
+    private float leanTimer;
 
     private enum TargetKind
     {
@@ -229,7 +248,7 @@ public class Zombie : MonoBehaviour
         if (zombieData != null)
         {
             // Gap so a burst of emerging zombies doesn't stack 20 screams in one frame.
-            SfxPlayer.Play(zombieData.emergeScream, transform.position, zombieData.emergeScreamVolume, 0.15f);
+            SfxPlayer.Play(zombieData.emergeScreams, transform.position, zombieData.emergeScreamVolume, 0.15f);
         }
     }
 
@@ -363,6 +382,13 @@ public class Zombie : MonoBehaviour
             return;
         }
 
+        if (knockbackTimer > 0f)
+        {
+            knockbackTimer -= Time.deltaTime;
+            transform.position += knockbackVelocity * Time.deltaTime;
+            return;
+        }
+
         RefreshTargetIfNeeded();
 
         if (currentTargetTransform == null)
@@ -377,6 +403,7 @@ public class Zombie : MonoBehaviour
     private void LateUpdate()
     {
         ZombieCrowd.ResolveOncePerFrame();
+        ApplyHitLean();
     }
 
     /// <summary>Walk anim from actual net movement (after last frame's crowd push), so a walker blocked by
@@ -1051,7 +1078,7 @@ public class Zombie : MonoBehaviour
 
         if (zombieData != null)
         {
-            SfxPlayer.Play(zombieData.attackImpactSound, transform.position, zombieData.attackImpactVolume);
+            SfxPlayer.Play(zombieData.attackSounds, transform.position, zombieData.attackImpactVolume);
         }
 
         ClearPendingAttack();
@@ -1283,6 +1310,12 @@ public class Zombie : MonoBehaviour
 
     public void TakeDamage(float amount)
     {
+        TakeDamage(amount, Vector3.zero);
+    }
+
+    /// <summary>knockDirection (flattened) pushes the zombie back knockbackDistance; zero = no knockback.</summary>
+    public void TakeDamage(float amount, Vector3 knockDirection)
+    {
         if (amount <= 0f || IsDead)
         {
             return;
@@ -1290,15 +1323,98 @@ public class Zombie : MonoBehaviour
 
         currentHp = Mathf.Clamp(currentHp - amount, 0f, maxHp);
         FlashWhite();
+        if (zombieData != null)
+        {
+            SfxPlayer.Play(zombieData.hitSound, transform.position, zombieData.hitVolume, 0.05f);
+        }
 
         if (currentHp <= 0f)
         {
             Die();
+            return;
         }
-        else if (zombieData != null)
+
+        TryGroan();
+        if (isFrozen || IsEmerging)
         {
-            SfxPlayer.Play(zombieData.hitSound, transform.position, zombieData.hitVolume);
+            return;
         }
+
+        StartHitLean(knockDirection);
+
+        if (knockDirection.sqrMagnitude > 0.0001f)
+        {
+            knockDirection.y = 0f;
+            float distance = knockbackDistance * (zombieData != null ? zombieData.knockbackMultiplier : 1f);
+            knockbackVelocity = knockDirection.normalized * (distance / knockbackSeconds);
+            knockbackTimer = distance > 0f ? knockbackSeconds : 0f;
+        }
+    }
+
+    /// <summary>Tilt the upper body the way the hit pushes (no direction = from the front). Done on top of the
+    /// Animator pose in LateUpdate, so it works for any hit direction without extra clips or layers.</summary>
+    private void StartHitLean(Vector3 pushDirection)
+    {
+        if (animator == null || hitLeanAngle <= 0f)
+        {
+            return;
+        }
+
+        if (leanBones == null)
+        {
+            leanBones = System.Array.FindAll(new[]
+            {
+                animator.GetBoneTransform(HumanBodyBones.Spine),
+                animator.GetBoneTransform(HumanBodyBones.Chest),
+                animator.GetBoneTransform(HumanBodyBones.Neck),
+                animator.GetBoneTransform(HumanBodyBones.Head),
+            }, t => t != null);
+        }
+
+        pushDirection.y = 0f;
+        if (pushDirection.sqrMagnitude < 0.0001f)
+        {
+            pushDirection = -transform.forward;
+        }
+
+        leanAxis = Vector3.Cross(Vector3.up, pushDirection.normalized);
+        leanTimer = hitLeanSeconds;
+    }
+
+    /// <summary>Only while leaning: snap out over the first 15%, ease back upright over the rest.</summary>
+    private void ApplyHitLean()
+    {
+        if (leanTimer <= 0f || leanBones.Length == 0)
+        {
+            return;
+        }
+
+        leanTimer = Mathf.Max(0f, leanTimer - Time.deltaTime);
+        float t = 1f - leanTimer / hitLeanSeconds;
+        float amount = t < 0.15f ? t / 0.15f : 1f - Mathf.SmoothStep(0f, 1f, (t - 0.15f) / 0.85f);
+        Quaternion step = Quaternion.AngleAxis(hitLeanAngle * amount / leanBones.Length, leanAxis);
+        foreach (Transform bone in leanBones)
+        {
+            bone.rotation = step * bone.rotation;
+        }
+    }
+
+    /// <summary>One groan at a time across all zombies, then a random GroanGapSeconds cooldown.</summary>
+    private void TryGroan()
+    {
+        if (zombieData == null || zombieData.groanSounds == null || zombieData.groanSounds.Length == 0)
+        {
+            return;
+        }
+
+        // Second check: a leftover static from a previous Play session (Time.time restarted) must not block groans.
+        if (Time.time < nextGroanTime && nextGroanTime - Time.time <= GroanGapSeconds.y)
+        {
+            return;
+        }
+
+        nextGroanTime = Time.time + Random.Range(GroanGapSeconds.x, GroanGapSeconds.y);
+        SfxPlayer.Play(zombieData.groanSounds, transform.position, zombieData.groanVolume);
     }
 
     /// <summary>Every renderer shows hitFlashMaterial for hitFlashSeconds; a hit during the flash restarts it.</summary>
@@ -1316,9 +1432,12 @@ public class Zombie : MonoBehaviour
             flashMaterials = new Material[flashRenderers.Length][];
             for (int i = 0; i < flashRenderers.Length; i++)
             {
+                // Extra slot = the mesh drawn again on top with the (transparent) flash material; its alpha is
+                // the flash strength. ponytail: only the last submesh gets the overlay (zombie meshes have one).
                 originalMaterials[i] = flashRenderers[i].sharedMaterials;
-                flashMaterials[i] = new Material[originalMaterials[i].Length];
-                System.Array.Fill(flashMaterials[i], hitFlashMaterial);
+                flashMaterials[i] = new Material[originalMaterials[i].Length + 1];
+                originalMaterials[i].CopyTo(flashMaterials[i], 0);
+                flashMaterials[i][originalMaterials[i].Length] = hitFlashMaterial;
             }
         }
 
@@ -1353,6 +1472,7 @@ public class Zombie : MonoBehaviour
         }
 
         hasDied = true;
+        leanTimer = 0f;
         emergeTimer = 0f; // dies where it is; the Death trigger overrides the Emerge clip
         AliveZombieCount = Mathf.Max(0, AliveZombieCount - 1);
         Died?.Invoke(this);

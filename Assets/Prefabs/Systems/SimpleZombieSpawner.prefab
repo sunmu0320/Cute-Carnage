@@ -104,6 +104,14 @@ MonoBehaviour:
   maxSpawnPositionAttempts: 5
   emergeFX: {fileID: 7134539552488338259}
   onScreenMargin: 0.05
+  waveStartScreams:
+  - {fileID: 8300000, guid: 2bbbb70be1ef6904288ee959ccecb806, type: 3}
+  - {fileID: 8300000, guid: d55e616c54ada004580945ccc5f24382, type: 3}
+  - {fileID: 8300000, guid: 5ff0d106b69db0a4ab393d94c26626a2, type: 3}
+  - {fileID: 8300000, guid: 14efa753e3e33c04eb5e22172b546269, type: 3}
+  - {fileID: 8300000, guid: e66f1b3bf86ec804ca1741953a40b3b2, type: 3}
+  - {fileID: 8300000, guid: 915a03b785f9e2543aefc33a73aefd5b, type: 3}
+  waveStartScreamVolume: 1
   nightSchedule: {fileID: 0}
   maxAlive: 300
   restKillFraction: 0.8
