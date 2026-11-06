@@ -141,6 +141,11 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   틴트 블록을 끄고 `ApplyLook`으로 재적용, 모든 데미지 소스 공통. 피 튀김은
   `PlayerAutoCombat.hitVfxPrefab` = `BloodHit`(구 메시 파티클 버스트, 투사체 진행 방향, 끝나면 자동 삭제).
   — **Verified** (Play Mode 캡처 + 사용자 확인; 반투명 덧그리기는 2026-11-02 캡처 확인).
+- **구조물 피격 화면 흔들림 (2026-11-05):** `CameraFollow`가 `StructureDamageEvents.Damaged`를 구독해 trauma를 더함
+  (BaseCore 0.6 / ArrowTower 0.45 / 펜스 0.35, 최대 1). 구조물마다 0.5초에 1번만, 플레이어에서 10m 안은 100% → 30m에서 0.
+  흔들림 = trauma² × 0.25m 위치만(회전 없음), 초당 3씩 감소. 흔들리는 동안만 계산(규칙 6 장식 예외), timeScale 0·자유 카메라(F8)에선 없음.
+  설정 `Screen Shake` 토글(`SettingsPanelUI`, PlayerPrefs `settings.screenShake`, 메인·일시정지 메뉴 둘 다). 부서질 때도 같은 세기
+  — 부서질 때 더 세게는 **Planned**. — **Reported implemented** (Play Mode: 세기·쿨다운·거리 감쇠·끄기 값 확인; 체감은 사용자 확인 전).
 - **좀비 피격 반응 (2026-11-02):** `Zombie.TakeDamage(amount, knockDirection)` — 방향이 있으면(돌멩이) 0.15초 동안
   `knockbackDistance`(0.3m) × `ZombieData.knockbackMultiplier`(Tank 0.3) 밀림, 그동안 이동·공격 안 함. 상체 젖히기는
   애니메이션 클립/레이어 없이 LateUpdate에서 Spine/Chest/Neck/Head를 미는 방향으로 `hitLeanAngle`(20°) 기울였다
