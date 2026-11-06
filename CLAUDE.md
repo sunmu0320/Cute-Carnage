@@ -139,7 +139,7 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   좀비는 데미지마다 `hitFlashSeconds`(0.1) 동안 머티리얼 배열 끝에 `Zombie.hitFlashMaterial`(`Art/VFX/Hit/HitFlash.mat`,
   투명 흰 Unlit)을 덧그림 — 세기 = 그 머티리얼 Base Color 알파(0.38, 사용자 조정; Linear 색공간이라 숫자보다 진해 보임). 플래시 중엔
   틴트 블록을 끄고 `ApplyLook`으로 재적용, 모든 데미지 소스 공통. 피 튀김은
-  `PlayerAutoCombat.hitVfxPrefab` = `BloodHit`(구 메시 파티클 버스트, 투사체 진행 방향, 끝나면 자동 삭제).
+  `PlayerAutoCombat.hitVfxPrefab` = `BloodHit`(투사체 진행 방향, 끝나면 자동 삭제) — 2026-11-06 세 겹으로 교체: 루트 = 흩뿌려지는 핏방울(`BloodDrops.png` 2×2 시트, Stretched Billboard, 28~38개), 자식 `Burst` = 피 덩어리(`BloodBurst.png`, 사용자 제공 `blood-png-7163.png` 기반 — 라이선스 확인 필요), 자식 `Mist` = 붉은 안개. Burst/Mist는 쏜 쪽으로 0.15m 앞. — Reported implemented (사용자 확인 전).
   — **Verified** (Play Mode 캡처 + 사용자 확인; 반투명 덧그리기는 2026-11-02 캡처 확인).
 - **구조물 피격 화면 흔들림 (2026-11-05):** `CameraFollow`가 `StructureDamageEvents.Damaged`를 구독해 trauma를 더함
   (BaseCore 0.6 / ArrowTower 0.45 / 펜스 0.35, 최대 1). 구조물마다 0.5초에 1번만, 플레이어에서 10m 안은 100% → 30m에서 0.

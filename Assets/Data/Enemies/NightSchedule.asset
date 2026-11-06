@@ -15,17 +15,17 @@ MonoBehaviour:
   nights:
   - stream:
       zombies: []
-      intervalStart: 3
+      intervalStart: 0.1
       intervalEnd: 1.2
     waves:
-    - delayFromPrevious: 10
+    - delayFromPrevious: 1
       groups:
       - zombie: {fileID: 0}
         count: 300
-        allAround: 0
+        allAround: 1
         from: 0
         arcWidth: 30
-        startDelay: 0
+        startDelay: 0.1
         spawnInterval: 0.1
     - delayFromPrevious: 25
       groups:

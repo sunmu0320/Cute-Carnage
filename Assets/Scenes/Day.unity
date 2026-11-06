@@ -138897,6 +138897,14 @@ MonoBehaviour:
   orbitSpeed: 0.25
   panSpeed: 0.002
   distanceRange: {x: 3, y: 80}
+  baseCoreShake: 0.6
+  towerShake: 0.4
+  fenceShake: 0.3
+  shakeDistance: {x: 10, y: 30}
+  shakeCooldownPerStructure: 0.5
+  shakeMaxOffset: 0.25
+  shakeDecayPerSecond: 3
+  shakeFrequency: 40
 --- !u!1001 &1222467883
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -188108,6 +188116,10 @@ PrefabInstance:
     - target: {fileID: 8323288054292854364, guid: f2a826e1765828e43a2faf2529e586e7, type: 3}
       propertyPath: m_Name
       value: TesterZombie
+      objectReference: {fileID: 0}
+    - target: {fileID: 8323288054292854364, guid: f2a826e1765828e43a2faf2529e586e7, type: 3}
+      propertyPath: m_IsActive
+      value: 1
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
