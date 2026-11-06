@@ -130,14 +130,14 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   좀비 소리 (2026-11-02, `Assets/Audio/Zombie/`): `ZombieData` — `emergeScreams`(Scream1~4, Tank는 TankScream2·3),
   `attackSounds`(claw_strike1~3, 공격 명중 순간), `groanSounds`(ZombiePain1~4, 맞을 때 전 좀비 공용 3~7초 무작위 쿨다운으로
   가끔만), `hitSound`(모든 타격음 — 파일 아직 없음). 웨이브 시작 = `SimpleZombieSpawner.waveStartScreams`(WaveStartScream1~6,
-  웨이브가 50m 밖이라 리스너에서 웨이브 방향 10m 지점에서 재생). — **Reported implemented** (Play Mode: pain/claw 재생
+  웨이브가 50m 밖이라 리스너에서 웨이브 방향 10m 지점에서 재생; 파일은 원본 대비 약 +10dB 키움(리미터로 최대 -1dB), 원본은 `Raw/`). — **Reported implemented** (Play Mode: pain/claw 재생
   확인; 웨이브 비명은 실제 밤 미확인).
   새총 소리 (2026-11-01): 발사할 때만 `WeaponData.releaseSounds`(Slingshot_Release_02 하나,
   `PlayerAutoCombat.TryAttack`). 당김·피격 소리는 사용자 요청으로 삭제. — **Reported implemented**
   (Play Mode 짧은 확인; 사용자 청취 전).
 - **타격 이펙트 (2026-11-02):** `Pebble` 자식 `Trail`(TrailRenderer 0.15초, 도착 시 떼어내 `autodestruct`로 페이드).
   좀비는 데미지마다 `hitFlashSeconds`(0.1) 동안 머티리얼 배열 끝에 `Zombie.hitFlashMaterial`(`Art/VFX/Hit/HitFlash.mat`,
-  투명 흰 Unlit)을 덧그림 — 세기 = 그 머티리얼 Base Color 알파(0.2, Linear 색공간이라 숫자보다 진해 보임). 플래시 중엔
+  투명 흰 Unlit)을 덧그림 — 세기 = 그 머티리얼 Base Color 알파(0.38, 사용자 조정; Linear 색공간이라 숫자보다 진해 보임). 플래시 중엔
   틴트 블록을 끄고 `ApplyLook`으로 재적용, 모든 데미지 소스 공통. 피 튀김은
   `PlayerAutoCombat.hitVfxPrefab` = `BloodHit`(구 메시 파티클 버스트, 투사체 진행 방향, 끝나면 자동 삭제).
   — **Verified** (Play Mode 캡처 + 사용자 확인; 반투명 덧그리기는 2026-11-02 캡처 확인).
@@ -210,6 +210,8 @@ Day/Night 분리 씬 → 단일 씬 마이그레이션은 **완료됨**. 코드 
   T1이 Max Tier라 Upgrade 비활성). `DayTimeTester.resetKey`는 R 충돌을
   피해 `0`(Alpha0)으로 변경됨. 테스트 키 `DayTimeTester.buildAllKey` = **B**: 빈(잠기지 않은) 펜스/타워 칸
   전부에 T1을 무료·풀 HP로 설치 (복원 경로 사용, 다음 Day 시작 전 재시도하면 되돌아감).
+
+**다음 작업 상태 (2026-11-05):** 좀비 종류 추가(Runner/Boss 등)는 나중에 — Planned. 타워(T2+ 등)는 사용자가 제작 중.
 
 ## 참고 문서 (우선순위 순)
 

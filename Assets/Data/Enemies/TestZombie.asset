@@ -16,7 +16,7 @@ MonoBehaviour:
   zombieType: 0
   targetPreference: 0
   maxHp: 99999
-  moveSpeed: 0.74
+  moveSpeed: 0.5
   attackDamage: 10
   attackRange: 1
   attackInterval: 1
